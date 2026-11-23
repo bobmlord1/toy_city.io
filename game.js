@@ -276,9 +276,9 @@ const upgradeRamp={id:'upgrade',x:32,halfWidth:5.2,startZ:20,crestZ:26,flatEndZ:
 // Extra stunt ramps are toy props with matching drive-surface profiles. Keep their
 // footprints clear of buildings and trees when adding new scenery.
 const stuntRamps=[
- {id:'west-stunt',x:-78,halfWidth:4.6,startZ:-70,crestZ:-64,flatEndZ:-58,endZ:-52,rise:1.85,color:[.98,.36,.12]},
+ {id:'west-stunt',x:-78,halfWidth:4.6,startZ:-126,crestZ:-120,flatEndZ:-114,endZ:-108,rise:1.85,color:[.98,.36,.12]},
  {id:'east-stunt',x:78,halfWidth:4.8,startZ:-32,crestZ:-26,flatEndZ:-20,endZ:-14,rise:2.15,color:[.13,.72,.77]},
- {id:'north-stunt',x:-74,halfWidth:4.5,startZ:38,crestZ:44,flatEndZ:50,endZ:56,rise:1.75,color:[.75,.36,.92]}
+ {id:'north-stunt',x:-74,halfWidth:4.5,startZ:76,crestZ:82,flatEndZ:88,endZ:94,rise:1.75,color:[.75,.36,.92]}
 ];
 const allRamps=[upgradeRamp,...stuntRamps];
 function baseTerrainH(x,z){
@@ -328,28 +328,47 @@ for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
  const n00=terrainNormal(x0,z0),n10=terrainNormal(x1,z0),n11=terrainNormal(x1,z1),n01=terrainNormal(x0,z1);
  worldB.tri(p00,p01,p11,col,n00,n01,n11); worldB.tri(p00,p11,p10,col,n00,n11,n10);
 }
-function roadQuad(a,b,c,d,col){worldB.quad(a,b,c,d,col,[0,1,0]);}
-// Connected city street grid: eight avenues in each direction, including a continuous perimeter loop.
-worldB.useMaterial(.93,.015,2); // fine asphalt grain
+// Road and sidewalk surfaces are independent of the terrain mesh. Each asphalt
+// cross-section samples terrain at both edges, eliminating terrain clipping.
+const roadB=new MeshBuilder(),sidewalkB=new MeshBuilder();
+function roadQuad(a,b,c,d,col){roadB.quad(a,b,c,d,col,[0,1,0]);}
+const streetLines=[];
+for(let n=-3.5;n<=3.5001;n+=1)streetLines.push(n*110);
+roadB.useMaterial(.93,.015,2);
 function addNorthSouthRoad(x,zA,zB,width){
  const seg=2;
- for(let z=zA;z<zB;z+=seg){const zn=Math.min(z+seg,zB);const y0=terrainH(x,z)+.15,y1=terrainH(x,zn)+.15;
-  roadQuad([x-width/2,y0,z],[x-width/2,y1,zn],[x+width/2,y1,zn],[x+width/2,y0,z],[.18,.22,.23]);
+ for(let z=zA;z<zB;z+=seg){const zn=Math.min(z+seg,zB),xl=x-width/2,xr=x+width/2;
+  roadQuad([xl,terrainH(xl,z)+.26,z],[xl,terrainH(xl,zn)+.26,zn],[xr,terrainH(xr,zn)+.26,zn],[xr,terrainH(xr,z)+.26,z],[.18,.22,.23]);
  }
- for(let z=zA;z<zB;z+=10){const zn=Math.min(z+4,zB);const y0=terrainH(x,z)+.19,y1=terrainH(x,zn)+.19;roadQuad([x-.12,y0,z],[x-.12,y1,zn],[x+.12,y1,zn],[x+.12,y0,z],[.85,.82,.64]);}
+ for(let z=zA;z<zB;z+=10){const zn=Math.min(z+4,zB),y0=terrainH(x,z)+.33,y1=terrainH(x,zn)+.33;roadQuad([x-.12,y0,z],[x-.12,y1,zn],[x+.12,y1,zn],[x+.12,y0,z],[.85,.82,.64]);}
 }
 function addEastWestRoad(z,xA,xB,width){
  const seg=2;
- for(let x=xA;x<xB;x+=seg){const xn=Math.min(x+seg,xB);const y0=terrainH(x,z)+.16,y1=terrainH(xn,z)+.16;
-  roadQuad([x,y0,z-width/2],[xn,y1,z-width/2],[xn,y1,z+width/2],[x,y0,z+width/2],[.18,.22,.23]);
+ for(let x=xA;x<xB;x+=seg){const xn=Math.min(x+seg,xB),zn=z-width/2,zp=z+width/2;
+  roadQuad([x,terrainH(x,zn)+.26,zn],[xn,terrainH(xn,zn)+.26,zn],[xn,terrainH(xn,zp)+.26,zp],[x,terrainH(x,zp)+.26,zp],[.18,.22,.23]);
  }
- for(let x=xA;x<xB;x+=10){const xn=Math.min(x+4,xB);const y0=terrainH(x,z)+.2,y1=terrainH(xn,z)+.2;roadQuad([x,y0,z-.12],[xn,y1,z-.12],[xn,y1,z+.12],[x,y0,z+.12],[.85,.82,.64]);}
+ for(let x=xA;x<xB;x+=10){const xn=Math.min(x+4,xB),y0=terrainH(x,z)+.33,y1=terrainH(xn,z)+.33;roadQuad([x,y0,z-.12],[xn,y1,z-.12],[xn,y1,z+.12],[x,y0,z+.12],[.85,.82,.64]);}
 }
-// The 4x4 expansion uses a regular street grid. Each avenue intersects every cross street.
-const streetLines=[];
-for(let n=-3.5;n<=3.5001;n+=1)streetLines.push(n*110);
+// Sidewalks are raised only slightly, with small gaps at intersections for clean crossings.
+sidewalkB.useMaterial(.86,0,3);
+function sidewalkStrip(vertical,line,side,a,b){
+ for(let t=a;t<b;t+=2){const tn=Math.min(t+2,b),inner=line+side*4.95,outer=line+side*7.8;
+  if(vertical)sidewalkB.quad([inner,terrainH(inner,t)+.34,t],[inner,terrainH(inner,tn)+.34,tn],[outer,terrainH(outer,tn)+.34,tn],[outer,terrainH(outer,t)+.34,t],[.57,.59,.57],[0,1,0]);
+  else sidewalkB.quad([t,terrainH(t,inner)+.34,inner],[tn,terrainH(tn,inner)+.34,inner],[tn,terrainH(tn,outer)+.34,outer],[t,terrainH(t,outer)+.34,outer],[.57,.59,.57],[0,1,0]);
+ }
+}
+for(const line of streetLines)for(const side of [-1,1]){
+ let cursor=-440;
+ for(const crossLine of streetLines){const gs=crossLine-9,ge=crossLine+9;if(gs>cursor)sidewalkStrip(true,line,side,cursor,gs);cursor=Math.max(cursor,ge);}
+ if(cursor<440)sidewalkStrip(true,line,side,cursor,440);
+ cursor=-440;
+ for(const crossLine of streetLines){const gs=crossLine-9,ge=crossLine+9;if(gs>cursor)sidewalkStrip(false,line,side,cursor,gs);cursor=Math.max(cursor,ge);}
+ if(cursor<440)sidewalkStrip(false,line,side,cursor,440);
+}
+const sidewalkMesh=sidewalkB.finish();
 for(const x of streetLines)addNorthSouthRoad(x,-440,440,10);
 for(const z of streetLines)addEastWestRoad(z,-440,440,10);
+const roadMesh=roadB.finish();
 // A compact yard apron, with painted parking lines.
 worldB.useMaterial(.91,0,3); // worn concrete
 worldB.box(-29,terrainH(-29,15)+.12,5,-5,terrainH(-29,15)+.22,27,[.34,.36,.34]);
@@ -411,6 +430,7 @@ for(const r of stuntRamps){
 const buildingColliders=[];
 const staticShadowCasters=[];
 function addBuilding(x,z,w,d,h,color,roof=[.27,.30,.31],kind='house'){
+ if(streetLines.some(line=>Math.abs(x-line)<w/2+8.5||Math.abs(z-line)<d/2+8.5))return; // never place a building in a street or sidewalk corridor
  const base=terrainH(x,z),buriedBase=base-28,wallH=Math.max(8.5,h*1.52),wallTop=base+wallH;
  // IMPORTANT: extend the building mass 28 world units below the local ground.
  // Terrain height varies across each footprint; a deep foundation prevents visible hovering.
@@ -441,13 +461,13 @@ function addBuilding(x,z,w,d,h,color,roof=[.27,.30,.31],kind='house'){
  buildingColliders.push({id:'building-'+buildingColliders.length,x,z,hw:w/2+.62,hl:d/2+.62,yaw:0,bottomY:buriedBase,topY:wallTop+.62,kind:'building'});
  staticShadowCasters.push({x,z,hw:w/2,hl:d/2,yaw:0,height:wallH+.65,alpha:.32});
 }
-addBuilding(-43,31,18,19,7,[.96,.53,.22],[.18,.33,.62],'warehouse');
+addBuilding(-34,31,18,19,7,[.96,.53,.22],[.18,.33,.62],'warehouse');
 addBuilding(-20,37,9,9,4.2,[.98,.79,.27],[.74,.25,.13]);
 addBuilding(26,7,9,8,4.8,[.18,.70,.86],[.08,.30,.76]);
 addBuilding(39,-2,8,9,4.5,[.94,.39,.54],[.52,.12,.25]);
 addBuilding(28,-37,11,10,5,[.43,.78,.38],[.18,.43,.17]);
-addBuilding(52,13,12,11,5.5,[.72,.55,.94],[.28,.18,.58]);
-addBuilding(-56,-28,12,10,4.7,[.97,.61,.32],[.68,.24,.12]);
+addBuilding(78,13,12,11,5.5,[.72,.55,.94],[.28,.18,.58]);
+addBuilding(-75,-28,12,10,4.7,[.97,.61,.32],[.68,.24,.12]);
 // Expanded 4x4 city districts. The original central district remains intact; the
 // surrounding 15 chunks receive deterministic clusters of buildings with varied
 // footprints and heights. Buildings sit in street blocks, never on the road grid.
@@ -501,7 +521,7 @@ worldB.useMaterial(.94,0,3);
  for(let i=0;i<220;i++){
   const x=-428+rand()*856,z=-428+rand()*856;
   const nearBuilding=buildingColliders.some(b=>Math.abs(x-b.x)<b.hw+2&&Math.abs(z-b.z)<b.hl+2);
-  const onStreet=streetLines.some(s=>Math.abs(x-s)<7||Math.abs(z-s)<7);
+  const onStreet=streetLines.some(s=>Math.abs(x-s)<9.5||Math.abs(z-s)<9.5);
   if(nearBuilding||onStreet||isNearAnyRamp(x,z,2))continue;
   const y=terrainH(x,z);
   worldB.box(x-.42,y,z-.34,x+.42,y+.45,z+.34,[.48,.52,.49]);
@@ -658,7 +678,7 @@ for(let i=0;i<12;i++){
  v.loopS=i*LOOP_LENGTH/12+7;v.loopLane=(i%2===0?-1:1)*1.8;trafficFleet.push(v);
 }
 const props=[];
-function addProp(type,x,z){if(isNearAnyRamp(x,z,.8))return;props.push({type,x,z,y:driveSurfaceH(x,z),vx:0,vz:0,yaw:(x*z)%1,roll:0,mass:type==='barrel'?16:34,radius:type==='barrel'?.48:.72,hp:type==='barrel'?6.0:8.5,broken:false});}
+function addProp(type,x,z){if(isNearAnyRamp(x,z,.8)||streetLines.some(s=>Math.abs(x-s)<9.5||Math.abs(z-s)<9.5))return;props.push({type,x,z,y:driveSurfaceH(x,z),vx:0,vz:0,yaw:(x*z)%1,roll:0,mass:type==='barrel'?16:34,radius:type==='barrel'?.48:.72,hp:type==='barrel'?6.0:8.5,broken:false});}
 for(let i=0;i<9;i++)addProp(i%2?'crate':'barrel',-27+(i%3)*2.0,9+Math.floor(i/3)*3.0);
 for(let i=0;i<8;i++)addProp(i%3?'barrel':'crate',-4+(i%4)*1.8,32+Math.floor(i/4)*2.1);
 for(let i=0;i<8;i++)addProp(i%2?'crate':'barrel',22+(i%4)*1.8,34+Math.floor(i/4)*2.2);
@@ -1174,6 +1194,9 @@ function drawWorld(dt){
  const c=updateCamera(dt),target=c.target;const view=lookAt([camera.x,camera.y,camera.z],target,[0,1,0]);const proj=perspective(58*Math.PI/180,canvas.width/canvas.height,.1,1400);const vp=matMul(proj,view);
  gl.uniformMatrix4fv(loc.vp,false,vp);gl.uniform3fv(loc.camera,[camera.x,camera.y,camera.z]);
  draw(worldMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
+ // Render the independent sidewalk and asphalt layers above the rolling terrain.
+ draw(sidewalkMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
+ draw(roadMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
  drawShadows(vp);
  // Props are individually movable and have simple momentum.
  for(const p of props){if(p.broken)continue;const mesh=p.type==='barrel'?barrelModel:crateModel;draw(mesh,modelMatrix(p.x,p.y,p.z,p.yaw),vp,[camera.x,camera.y,camera.z]);}
