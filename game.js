@@ -267,7 +267,7 @@ function drawVehicleVisual(visual,root,spin,steer,vp,camera){
 }
 
 
-// The rolling landscape has several broad hills and low, driveable valleys.
+// The city uses a flat baseplate beneath its buildings, ramps and modular street kit.
 const MPH_PER_MS=2.2369362920544;
 const MPH_TO_MS=1/MPH_PER_MS;
 // The tuning feature is a molded tabletop ramp on a deliberately flat terrain pad.
