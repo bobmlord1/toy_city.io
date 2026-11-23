@@ -431,6 +431,9 @@ const buildingColliders=[];
 const staticShadowCasters=[];
 function addBuilding(x,z,w,d,h,color,roof=[.27,.30,.31],kind='house'){
  if(streetLines.some(line=>Math.abs(x-line)<w/2+8.5||Math.abs(z-line)<d/2+8.5))return; // never place a building in a street or sidewalk corridor
+ if(isNearAnyRamp(x,z,Math.max(w,d)*.5+1.5))return; // keep landmark and procedural buildings clear of ramp runouts
+ const newHW=w/2+.62,newHL=d/2+.62;
+ if(buildingColliders.some(b=>b.kind==='building'&&Math.abs(x-b.x)<newHW+b.hw+2.2&&Math.abs(z-b.z)<newHL+b.hl+2.2))return; // avoid overlapping building footprints
  const base=terrainH(x,z),buriedBase=base-28,wallH=Math.max(8.5,h*1.52),wallTop=base+wallH;
  // IMPORTANT: extend the building mass 28 world units below the local ground.
  // Terrain height varies across each footprint; a deep foundation prevents visible hovering.
