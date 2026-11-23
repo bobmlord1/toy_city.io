@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND — VERSION 0.9
+FREE ROAM CAR PLAYGROUND — VERSION 0.11
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -14,3 +14,9 @@ Compact Car, Pickup Truck, Semi Truck and trailer geometry are adapted from the 
 CC0 legal text: https://creativecommons.org/publicdomain/zero/1.0/
 Publisher: https://grab3d.com/kits/cozy-vehicles/
 \nVersion 0.9 changes:\n- World expanded to a 4x4 layout of the original play area.\n- Connected avenue grid and perimeter traffic circuit.\n- Twelve persistent traffic vehicles follow the city loop and can be knocked off line.\n- Added varied low-rise, mid-rise and tower buildings across the expanded districts.\n
+
+Version 0.11 changes:
+- Replaced the rolling terrain with a single flat green baseplate.
+- Rebuilt streets from reusable box-based road, intersection, sidewalk and corner modules.
+- Street layout is data-driven; each placed pavement module registers its matching ground-support collider.
+- Road runs use discrete chunks and dedicated intersection boxes to avoid overlapping top surfaces.
