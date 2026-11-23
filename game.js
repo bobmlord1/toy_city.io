@@ -281,115 +281,118 @@ const stuntRamps=[
  {id:'north-stunt',x:-74,halfWidth:4.5,startZ:76,crestZ:82,flatEndZ:88,endZ:94,rise:1.75,color:[.75,.36,.92]}
 ];
 const allRamps=[upgradeRamp,...stuntRamps];
-// Shared city grid constants are declared before terrain generation so the
-// rendered terrain and vehicle ground-contact model use the same road corridors.
+// City-wide coordinate grid and shared street-kit dimensions.
+const WORLD_HALF=440, WORLD_SIZE=880;
 const streetLines=[];
 for(let n=-3.5;n<=3.5001;n+=1)streetLines.push(n*110);
-const ROAD_HALF_WIDTH=5.0, SIDEWALK_HALF_WIDTH=8.0, ROAD_BLEND_END=12.0, ROAD_SURFACE_OFFSET=.18;
-function nearestStreetLine(value){let best=streetLines[0],distance=Infinity;for(const line of streetLines){const d=Math.abs(value-line);if(d<distance){distance=d;best=line;}}return {line:best,distance};}
-function streetCorridorWeight(distance){return distance<=SIDEWALK_HALF_WIDTH?1:1-smooth01((distance-SIDEWALK_HALF_WIDTH)/(ROAD_BLEND_END-SIDEWALK_HALF_WIDTH));}
-function streetDeckWeight(x,z){const sx=nearestStreetLine(x),sz=nearestStreetLine(z);return Math.max(streetCorridorWeight(sx.distance),streetCorridorWeight(sz.distance));}
-function baseTerrainH(x,z){
-  const hills = 4.1*Math.exp(-((x-48)*(x-48)+(z-45)*(z-45))/1000)
-              + 3.2*Math.exp(-((x+55)*(x+55)+(z+42)*(z+42))/850)
-              + 2.2*Math.exp(-((x-40)*(x-40)+(z+58)*(z+58))/700);
-  return 0.55*Math.sin(x*.052)*Math.cos(z*.047)+0.72*Math.sin(z*.071)+0.42*Math.cos(x*.09+z*.025)+hills;
+const ROAD_WIDTH=14, ROAD_HALF_WIDTH=ROAD_WIDTH/2;
+const SIDEWALK_WIDTH=5.5, SIDEWALK_OUTER=ROAD_HALF_WIDTH+SIDEWALK_WIDTH;
+const ROAD_CHUNK_LENGTH=22, ROAD_TOP_Y=.25;
+const ROAD_COLLISION_CELL=22, ROAD_COLLISION_CELLS=Math.ceil(WORLD_SIZE/ROAD_COLLISION_CELL);
+const roadCollisionBuckets=new Map();
+function registerStreetCollider(x,z,widthX,widthZ,topY){
+ const c={minX:x-widthX/2,maxX:x+widthX/2,minZ:z-widthZ/2,maxZ:z+widthZ/2,topY};
+ const loX=clamp(Math.floor((c.minX+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ const hiX=clamp(Math.floor((c.maxX+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ const loZ=clamp(Math.floor((c.minZ+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ const hiZ=clamp(Math.floor((c.maxZ+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ for(let ix=loX;ix<=hiX;ix++)for(let iz=loZ;iz<=hiZ;iz++){
+  const key=ix*ROAD_COLLISION_CELLS+iz;let bucket=roadCollisionBuckets.get(key);
+  if(!bucket){bucket=[];roadCollisionBuckets.set(key,bucket);}bucket.push(c);
+ }
 }
-const smooth01=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
-upgradeRamp.flatY=baseTerrainH(upgradeRamp.x,(upgradeRamp.startZ+upgradeRamp.endZ)*.5);
-function terrainBaseH(x,z){
-  const base=baseTerrainH(x,z);
-  // Flatten a generous central patch and blend its perimeter smoothly into the hills.
-  const innerX=upgradeRamp.halfWidth+3.0,outerX=innerX+5.0;
-  const innerZ=upgradeRamp.startZ-4.0;
-  const farInnerZ=upgradeRamp.endZ+4.0;
-  const wx=1-smooth01((Math.abs(x-upgradeRamp.x)-innerX)/(outerX-innerX));
-  const wz=1-smooth01((Math.max(innerZ-z,z-farInnerZ)-0)/(5.0));
-  const blend=wx*wz;
-  return lerp(base,upgradeRamp.flatY,blend);
-}
-// Flatten the terrain across each full road-and-sidewalk corridor. In a crossing,
-// blend both centerline elevations into one shared junction height so the two road
-// meshes meet without a step. The transition outside the sidewalk is smoothed.
-function terrainH(x,z){
- const sx=nearestStreetLine(x),sz=nearestStreetLine(z);
- const wx=streetCorridorWeight(sx.distance),wz=streetCorridorWeight(sz.distance);
- const base=terrainBaseH(x,z);
- if(wx<=0&&wz<=0)return base;
- const alongNS=terrainBaseH(sx.line,z),alongEW=terrainBaseH(x,sz.line);
- const total=wx+wz;
- const target=(alongNS*wx+alongEW*wz)/total;
- return lerp(base,target,Math.max(wx,wz));
-}
+// Current city build: one perfectly level baseplate. Hills are deferred until
+// the street kit is stable and can be reintroduced as a separate world layer.
+function baseTerrainH(){return 0;}
+upgradeRamp.flatY=0;
+function terrainH(){return 0;}
 function profileForRamp(r,x,z){
-  if(Math.abs(x-r.x)>r.halfWidth || z<=r.startZ || z>=r.endZ)return 0;
-  if(z<r.crestZ)return r.rise*(z-r.startZ)/(r.crestZ-r.startZ);
-  if(z<r.flatEndZ)return r.rise;
-  return r.rise*(r.endZ-z)/(r.endZ-r.flatEndZ);
+ if(Math.abs(x-r.x)>r.halfWidth||z<=r.startZ||z>=r.endZ)return 0;
+ if(z<r.crestZ)return r.rise*(z-r.startZ)/(r.crestZ-r.startZ);
+ if(z<r.flatEndZ)return r.rise;
+ return r.rise*(r.endZ-z)/(r.endZ-r.flatEndZ);
 }
-function rampProfile(x,z){
-  let height=0;
-  for(const r of allRamps)height=Math.max(height,profileForRamp(r,x,z));
-  return height;
+function rampProfile(x,z){let h=0;for(const r of allRamps)h=Math.max(h,profileForRamp(r,x,z));return h;}
+// Street support collision is generated from the exact same boxes as the render mesh.
+function roadSurfaceAt(x,z){
+ if(x< -WORLD_HALF||x>WORLD_HALF||z< -WORLD_HALF||z>WORLD_HALF)return null;
+ const ix=clamp(Math.floor((x+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ const iz=clamp(Math.floor((z+WORLD_HALF)/ROAD_COLLISION_CELL),0,ROAD_COLLISION_CELLS-1);
+ const bucket=roadCollisionBuckets.get(ix*ROAD_COLLISION_CELLS+iz);
+ if(!bucket)return null;
+ let top=-Infinity;
+ for(const c of bucket)if(x>=c.minX&&x<=c.maxX&&z>=c.minZ&&z<=c.maxZ&&c.topY>top)top=c.topY;
+ return Number.isFinite(top)?top:null;
 }
-// Shared physical contact height for vehicles, traffic, props, suspension and
-// ramp landings. The asphalt/sidewalk deck therefore has real ground collision.
-function driveSurfaceH(x,z){return terrainH(x,z)+rampProfile(x,z)+ROAD_SURFACE_OFFSET*streetDeckWeight(x,z);}
+function driveSurfaceH(x,z){
+ const ramp=rampProfile(x,z),rampTop=terrainH(x,z)+(ramp>0?ramp+.08:0);
+ const streetTop=roadSurfaceAt(x,z);
+ return streetTop===null?rampTop:Math.max(rampTop,streetTop);
+}
 function isOnUpgradeRamp(x,z){return Math.abs(x-upgradeRamp.x)<=upgradeRamp.halfWidth && z>=upgradeRamp.startZ && z<=upgradeRamp.endZ;}
 function isNearAnyRamp(x,z,margin=1.5){return allRamps.some(r=>Math.abs(x-r.x)<r.halfWidth+margin&&z>r.startZ-margin&&z<r.endZ+margin);}
-function terrainNormal(x,z){const e=.5;const dx=(terrainH(x+e,z)-terrainH(x-e,z))/(2*e),dz=(terrainH(x,z+e)-terrainH(x,z-e))/(2*e);return normalize([-dx,1,-dz]);}
+function terrainNormal(){return [0,1,0];}
 const worldB=new MeshBuilder();
-worldB.useMaterial(.97,0,1); // varied grass and soil
-// Terrain grid.
-const WORLD_HALF=440, WORLD_SIZE=880;
-const N=336, step=WORLD_SIZE/N, start=-WORLD_HALF;
-for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
- const x0=start+ix*step,x1=x0+step,z0=start+iz*step,z1=z0+step;
- const p00=[x0,terrainH(x0,z0),z0],p10=[x1,terrainH(x1,z0),z0],p11=[x1,terrainH(x1,z1),z1],p01=[x0,terrainH(x0,z1),z1];
- const avg=(p00[1]+p10[1]+p11[1]+p01[1])/4;
- let col=avg>3.2?[.34,.48,.29]:avg>1.6?[.31,.53,.31]:[.36,.57,.34];
- const n00=terrainNormal(x0,z0),n10=terrainNormal(x1,z0),n11=terrainNormal(x1,z1),n01=terrainNormal(x0,z1);
- worldB.tri(p00,p01,p11,col,n00,n01,n11); worldB.tri(p00,p11,p10,col,n00,n11,n10);
+worldB.useMaterial(.97,0,1);
+worldB.box(-WORLD_HALF,-.75,-WORLD_HALF,WORLD_HALF,0,WORLD_HALF,[.36,.57,.34]);
+
+// Reusable modules are stamped at coordinates in streetLayout. Render geometry
+// and rectangular surface-collision records are generated by the same placement.
+const streetBuilder=new MeshBuilder();
+const streetLayout=[];
+const streetModules={
+ road:{width:ROAD_WIDTH,thickness:.78,topY:ROAD_TOP_Y,color:[.17,.205,.22],roughness:.93,metallic:.015,texture:2,collides:true},
+ intersection:{width:ROAD_WIDTH,thickness:.78,topY:ROAD_TOP_Y,color:[.17,.205,.22],roughness:.93,metallic:.015,texture:2,collides:true},
+ sidewalk:{width:SIDEWALK_WIDTH,thickness:.72,topY:ROAD_TOP_Y,color:[.57,.59,.57],roughness:.86,metallic:0,texture:3,collides:true},
+ corner:{width:SIDEWALK_WIDTH,thickness:.72,topY:ROAD_TOP_Y,color:[.57,.59,.57],roughness:.86,metallic:0,texture:3,collides:true},
+ marking:{width:.24,thickness:.035,topY:ROAD_TOP_Y+.035,color:[.91,.85,.68],roughness:.55,metallic:0,texture:0,collides:false}
+};
+function placeStreetUnit(moduleName,x,z,axis='square',length=0){
+ const m=streetModules[moduleName];if(!m)throw new Error('Unknown street module: '+moduleName);
+ let sx=m.width,sz=m.width;if(axis==='z')sz=length;else if(axis==='x')sx=length;
+ streetBuilder.useMaterial(m.roughness,m.metallic,m.texture);
+ streetBuilder.box(x-sx/2,m.topY-m.thickness,z-sz/2,x+sx/2,m.topY,z+sz/2,m.color);
+ streetLayout.push({module:moduleName,x,z,axis,length,widthX:sx,widthZ:sz});
+ if(m.collides)registerStreetCollider(x,z,sx,sz,m.topY);
 }
-// Road and sidewalk surfaces are independent of the terrain mesh. Each asphalt
-// cross-section samples terrain at both edges, eliminating terrain clipping.
-const roadB=new MeshBuilder(),sidewalkB=new MeshBuilder();
-function roadQuad(a,b,c,d,col){roadB.quad(a,b,c,d,col,[0,1,0]);}
-roadB.useMaterial(.93,.015,2);
-function addNorthSouthRoad(x,zA,zB,width){
- const seg=2;
- for(let z=zA;z<zB;z+=seg){const zn=Math.min(z+seg,zB),xl=x-width/2,xr=x+width/2;
-  roadQuad([xl,terrainH(xl,z)+ROAD_SURFACE_OFFSET,z],[xl,terrainH(xl,zn)+ROAD_SURFACE_OFFSET,zn],[xr,terrainH(xr,zn)+ROAD_SURFACE_OFFSET,zn],[xr,terrainH(xr,z)+ROAD_SURFACE_OFFSET,z],[.18,.22,.23]);
- }
- for(let z=zA;z<zB;z+=10){const zn=Math.min(z+4,zB),y0=terrainH(x,z)+ROAD_SURFACE_OFFSET+.07,y1=terrainH(x,zn)+ROAD_SURFACE_OFFSET+.07;roadQuad([x-.12,y0,z],[x-.12,y1,zn],[x+.12,y1,zn],[x+.12,y0,z],[.85,.82,.64]);}
-}
-function addEastWestRoad(z,xA,xB,width){
- const seg=2;
- for(let x=xA;x<xB;x+=seg){const xn=Math.min(x+seg,xB),zn=z-width/2,zp=z+width/2;
-  roadQuad([x,terrainH(x,zn)+ROAD_SURFACE_OFFSET,zn],[xn,terrainH(xn,zn)+ROAD_SURFACE_OFFSET,zn],[xn,terrainH(xn,zp)+ROAD_SURFACE_OFFSET,zp],[x,terrainH(x,zp)+ROAD_SURFACE_OFFSET,zp],[.18,.22,.23]);
- }
- for(let x=xA;x<xB;x+=10){const xn=Math.min(x+4,xB),y0=terrainH(x,z)+ROAD_SURFACE_OFFSET+.07,y1=terrainH(xn,z)+ROAD_SURFACE_OFFSET+.07;roadQuad([x,y0,z-.12],[xn,y1,z-.12],[xn,y1,z+.12],[x,y0,z+.12],[.85,.82,.64]);}
-}
-// Sidewalks are raised only slightly, with small gaps at intersections for clean crossings.
-sidewalkB.useMaterial(.86,0,3);
-function sidewalkStrip(vertical,line,side,a,b){
- for(let t=a;t<b;t+=2){const tn=Math.min(t+2,b),inner=line+side*4.95,outer=line+side*7.8;
-  if(vertical)sidewalkB.quad([inner,terrainH(inner,t)+ROAD_SURFACE_OFFSET,t],[inner,terrainH(inner,tn)+ROAD_SURFACE_OFFSET,tn],[outer,terrainH(outer,tn)+ROAD_SURFACE_OFFSET,tn],[outer,terrainH(outer,t)+ROAD_SURFACE_OFFSET,t],[.57,.59,.57],[0,1,0]);
-  else sidewalkB.quad([t,terrainH(t,inner)+ROAD_SURFACE_OFFSET,inner],[tn,terrainH(tn,inner)+ROAD_SURFACE_OFFSET,inner],[tn,terrainH(tn,outer)+ROAD_SURFACE_OFFSET,outer],[t,terrainH(t,outer)+ROAD_SURFACE_OFFSET,outer],[.57,.59,.57],[0,1,0]);
+function addStreetSpan(moduleName,axis,line,start,end){
+ let at=start;
+ while(at<end-1e-4){
+  const length=Math.min(ROAD_CHUNK_LENGTH,end-at),center=at+length/2;
+  const x=axis==='z'?line:center,z=axis==='z'?center:line;
+  placeStreetUnit(moduleName,x,z,axis,length);
+  if(moduleName==='road'&&length>=8)placeStreetUnit('marking',x,z,axis,Math.min(4.8,length*.42));
+  at+=length;
  }
 }
-for(const line of streetLines)for(const side of [-1,1]){
- let cursor=-440;
- for(const crossLine of streetLines){const gs=crossLine-9,ge=crossLine+9;if(gs>cursor)sidewalkStrip(true,line,side,cursor,gs);cursor=Math.max(cursor,ge);}
- if(cursor<440)sidewalkStrip(true,line,side,cursor,440);
- cursor=-440;
- for(const crossLine of streetLines){const gs=crossLine-9,ge=crossLine+9;if(gs>cursor)sidewalkStrip(false,line,side,cursor,gs);cursor=Math.max(cursor,ge);}
- if(cursor<440)sidewalkStrip(false,line,side,cursor,440);
+function addStreetRunsAroundIntersections(moduleName,axis,line,otherLines,halfGap,offset=0){
+ const fixedLine=line+offset;let cursor=-WORLD_HALF;
+ for(const crossing of otherLines){
+  const end=Math.max(cursor,crossing-halfGap);
+  if(end>cursor)addStreetSpan(moduleName,axis,fixedLine,cursor,end);
+  cursor=Math.max(cursor,crossing+halfGap);
+ }
+ if(cursor<WORLD_HALF)addStreetSpan(moduleName,axis,fixedLine,cursor,WORLD_HALF);
 }
-const sidewalkMesh=sidewalkB.finish();
-for(const x of streetLines)addNorthSouthRoad(x,-440,440,10);
-for(const z of streetLines)addEastWestRoad(z,-440,440,10);
-const roadMesh=roadB.finish();
+function buildStreetNetwork(){
+ // One intersection box owns each junction; adjoining road chunks stop at its edges.
+ for(const x of streetLines)for(const z of streetLines)placeStreetUnit('intersection',x,z);
+ for(const x of streetLines){
+  addStreetRunsAroundIntersections('road','z',x,streetLines,ROAD_HALF_WIDTH);
+  for(const side of [-1,1])addStreetRunsAroundIntersections('sidewalk','z',x,streetLines,SIDEWALK_OUTER,side*(ROAD_HALF_WIDTH+SIDEWALK_WIDTH/2));
+ }
+ for(const z of streetLines){
+  addStreetRunsAroundIntersections('road','x',z,streetLines,ROAD_HALF_WIDTH);
+  for(const side of [-1,1])addStreetRunsAroundIntersections('sidewalk','x',z,streetLines,SIDEWALK_OUTER,side*(ROAD_HALF_WIDTH+SIDEWALK_WIDTH/2));
+ }
+ // Four square sidewalk-corner tiles join the parallel sidewalk runs at each junction.
+ const cornerOffset=ROAD_HALF_WIDTH+SIDEWALK_WIDTH/2;
+ for(const x of streetLines)for(const z of streetLines)for(const sx of [-1,1])for(const sz of [-1,1])
+  placeStreetUnit('corner',x+sx*cornerOffset,z+sz*cornerOffset);
+}
+buildStreetNetwork();
+const streetMesh=streetBuilder.finish();
+
 // A compact yard apron, with painted parking lines.
 worldB.useMaterial(.91,0,3); // worn concrete
 worldB.box(-29,terrainH(-29,15)+.12,5,-5,terrainH(-29,15)+.22,27,[.34,.36,.34]);
@@ -451,7 +454,7 @@ for(const r of stuntRamps){
 const buildingColliders=[];
 const staticShadowCasters=[];
 function addBuilding(x,z,w,d,h,color,roof=[.27,.30,.31],kind='house'){
- if(streetLines.some(line=>Math.abs(x-line)<w/2+8.5||Math.abs(z-line)<d/2+8.5))return; // never place a building in a street or sidewalk corridor
+ if(streetLines.some(line=>Math.abs(x-line)<w/2+SIDEWALK_OUTER+1.0||Math.abs(z-line)<d/2+SIDEWALK_OUTER+1.0))return; // never place a building in a street or sidewalk corridor
  if(isNearAnyRamp(x,z,Math.max(w,d)*.5+1.5))return; // keep landmark and procedural buildings clear of ramp runouts
  const newHW=w/2+.62,newHL=d/2+.62;
  if(buildingColliders.some(b=>b.kind==='building'&&Math.abs(x-b.x)<newHW+b.hw+2.2&&Math.abs(z-b.z)<newHL+b.hl+2.2))return; // avoid overlapping building footprints
@@ -526,7 +529,7 @@ worldB.useMaterial(.96,0,5);
  let seed=918273;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  for(let i=0;i<420;i++){
   const x=-425+rand()*850,z=-425+rand()*850,r=.65+rand()*.42;
-  const onStreet=streetLines.some(s=>Math.abs(x-s)<9.5||Math.abs(z-s)<9.5);
+  const onStreet=streetLines.some(s=>Math.abs(x-s)<SIDEWALK_OUTER+1.0||Math.abs(z-s)<SIDEWALK_OUTER+1.0);
   const nearBuilding=buildingColliders.some(b=>Math.abs(x-b.x)<b.hw+r+2&&Math.abs(z-b.z)<b.hl+r+2);
   if(onStreet||nearBuilding||isNearAnyRamp(x,z,2))continue;
   const y=terrainH(x,z);
@@ -545,7 +548,7 @@ worldB.useMaterial(.94,0,3);
  for(let i=0;i<220;i++){
   const x=-428+rand()*856,z=-428+rand()*856;
   const nearBuilding=buildingColliders.some(b=>Math.abs(x-b.x)<b.hw+2&&Math.abs(z-b.z)<b.hl+2);
-  const onStreet=streetLines.some(s=>Math.abs(x-s)<9.5||Math.abs(z-s)<9.5);
+  const onStreet=streetLines.some(s=>Math.abs(x-s)<SIDEWALK_OUTER+1.0||Math.abs(z-s)<SIDEWALK_OUTER+1.0);
   if(nearBuilding||onStreet||isNearAnyRamp(x,z,2))continue;
   const y=terrainH(x,z);
   worldB.box(x-.42,y,z-.34,x+.42,y+.45,z+.34,[.48,.52,.49]);
@@ -586,7 +589,7 @@ function appendShadowCaster(out,caster){
  if(hull.length<3)return;
  const first=hull[0];
  for(let i=1;i<hull.length-1;i++){
-  for(const p of [first,hull[i],hull[i+1]])out.push(p.x,(caster.useDriveSurface?driveSurfaceH(p.x,p.z):terrainH(p.x,p.z))+.245,p.z,caster.alpha??.28);
+  for(const p of [first,hull[i],hull[i+1]])out.push(p.x,driveSurfaceH(p.x,p.z)+.015,p.z,caster.alpha??.28);
  }
 }
 for(const caster of staticShadowCasters)appendShadowCaster(staticShadowVertices,caster);
@@ -702,7 +705,7 @@ for(let i=0;i<12;i++){
  v.loopS=i*LOOP_LENGTH/12+7;v.loopLane=(i%2===0?-1:1)*1.8;trafficFleet.push(v);
 }
 const props=[];
-function addProp(type,x,z){if(isNearAnyRamp(x,z,.8)||streetLines.some(s=>Math.abs(x-s)<9.5||Math.abs(z-s)<9.5))return;props.push({type,x,z,y:driveSurfaceH(x,z),vx:0,vz:0,yaw:(x*z)%1,roll:0,mass:type==='barrel'?16:34,radius:type==='barrel'?.48:.72,hp:type==='barrel'?6.0:8.5,broken:false});}
+function addProp(type,x,z){if(isNearAnyRamp(x,z,.8)||streetLines.some(s=>Math.abs(x-s)<SIDEWALK_OUTER+1.0||Math.abs(z-s)<SIDEWALK_OUTER+1.0))return;props.push({type,x,z,y:driveSurfaceH(x,z),vx:0,vz:0,yaw:(x*z)%1,roll:0,mass:type==='barrel'?16:34,radius:type==='barrel'?.48:.72,hp:type==='barrel'?6.0:8.5,broken:false});}
 for(let i=0;i<9;i++)addProp(i%2?'crate':'barrel',-27+(i%3)*2.0,9+Math.floor(i/3)*3.0);
 for(let i=0;i<8;i++)addProp(i%3?'barrel':'crate',-4+(i%4)*1.8,32+Math.floor(i/4)*2.1);
 for(let i=0;i<8;i++)addProp(i%2?'crate':'barrel',22+(i%4)*1.8,34+Math.floor(i/4)*2.2);
@@ -1218,9 +1221,8 @@ function drawWorld(dt){
  const c=updateCamera(dt),target=c.target;const view=lookAt([camera.x,camera.y,camera.z],target,[0,1,0]);const proj=perspective(58*Math.PI/180,canvas.width/canvas.height,.1,1400);const vp=matMul(proj,view);
  gl.uniformMatrix4fv(loc.vp,false,vp);gl.uniform3fv(loc.camera,[camera.x,camera.y,camera.z]);
  draw(worldMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
- // Render the independent sidewalk and asphalt layers above the rolling terrain.
- draw(sidewalkMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
- draw(roadMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
+ // A single aggregated box mesh contains roads, junctions, sidewalks and corner modules.
+ draw(streetMesh,modelMatrix(0,0,0,0),vp,[camera.x,camera.y,camera.z]);
  drawShadows(vp);
  // Props are individually movable and have simple momentum.
  for(const p of props){if(p.broken)continue;const mesh=p.type==='barrel'?barrelModel:crateModel;draw(mesh,modelMatrix(p.x,p.y,p.z,p.yaw),vp,[camera.x,camera.y,camera.z]);}
@@ -1239,7 +1241,7 @@ function updateUI(){
  const boostEl=$('boostStatus');
  if(onFoot){boostEl.textContent='BOOST · IN VEHICLE';boostEl.style.color='#a8efff';vehicleNameEl.textContent='On Foot';speedEl.innerHTML='WALK <small>MODE</small>';}
  else {vehicleNameEl.textContent=controlled.name;speedEl.innerHTML=Math.round(currentSpeed())+' <small>MPH</small>';if(controlled.boostTime>0){boostEl.textContent='BOOST ACTIVE · '+controlled.boostTime.toFixed(1)+'s';boostEl.style.color='#ffe17c';}else if(controlled.boostCooldown>0){boostEl.textContent='BOOST RECHARGE · '+controlled.boostCooldown.toFixed(1)+'s';boostEl.style.color='#c4d0d5';}else{boostEl.textContent='BOOST READY · SHIFT';boostEl.style.color='#a8efff';}}
- let hint='Explore a glossy, brick-built toy town with rolling hills and an industrial yard.';
+ let hint='Explore a glossy, brick-built toy town on a flat city baseplate with an industrial yard.';
  if(onFoot){const v=nearestVehicle(player.x,player.z);hint=v?'Press E to get into the '+v.name+'.':'Walk up to a vehicle and press E to drive it.';}
  else if(atUpgradePad()){hint='Tuning pad: stop to buy top-speed, acceleration or impact upgrades.';}
  else {hint='Shift: turbo boost  ·  E: exit vehicle  ·  C: camera  ·  Crashes, broken props and airtime earn cash.';}
