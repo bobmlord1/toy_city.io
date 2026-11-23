@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND — VERSION 0.8
+FREE ROAM CAR PLAYGROUND — VERSION 0.9
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -6,12 +6,6 @@ WHAT'S NEW
 - Wheel rotation follows signed forward/reverse speed.
 - The semi tractor has six animated wheels; its trailer has four independently animated wheels.
 - The pickup, compact car and traffic cars all animate their wheels.
-
-HOW TO RUN
-Linux: double-click start_game_linux.sh (or run ./start_game_linux.sh in a terminal).
-Windows: double-click start_game_windows.bat. Python 3 must be installed.
-The launcher serves the folder only on your own computer and opens the game in your browser.
-Keep the terminal/server window open while playing; press Ctrl+C to stop it.
 
 Do not open index.html directly using file://. The game loads its binary vehicle meshes from the assets folder, and browsers restrict fetch() from file URLs.
 
