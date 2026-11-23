@@ -281,6 +281,14 @@ const stuntRamps=[
  {id:'north-stunt',x:-74,halfWidth:4.5,startZ:76,crestZ:82,flatEndZ:88,endZ:94,rise:1.75,color:[.75,.36,.92]}
 ];
 const allRamps=[upgradeRamp,...stuntRamps];
+// Shared city grid constants are declared before terrain generation so the
+// rendered terrain and vehicle ground-contact model use the same road corridors.
+const streetLines=[];
+for(let n=-3.5;n<=3.5001;n+=1)streetLines.push(n*110);
+const ROAD_HALF_WIDTH=5.0, SIDEWALK_HALF_WIDTH=8.0, ROAD_BLEND_END=12.0, ROAD_SURFACE_OFFSET=.18;
+function nearestStreetLine(value){let best=streetLines[0],distance=Infinity;for(const line of streetLines){const d=Math.abs(value-line);if(d<distance){distance=d;best=line;}}return {line:best,distance};}
+function streetCorridorWeight(distance){return distance<=SIDEWALK_HALF_WIDTH?1:1-smooth01((distance-SIDEWALK_HALF_WIDTH)/(ROAD_BLEND_END-SIDEWALK_HALF_WIDTH));}
+function streetDeckWeight(x,z){const sx=nearestStreetLine(x),sz=nearestStreetLine(z);return Math.max(streetCorridorWeight(sx.distance),streetCorridorWeight(sz.distance));}
 function baseTerrainH(x,z){
   const hills = 4.1*Math.exp(-((x-48)*(x-48)+(z-45)*(z-45))/1000)
               + 3.2*Math.exp(-((x+55)*(x+55)+(z+42)*(z+42))/850)
@@ -289,7 +297,7 @@ function baseTerrainH(x,z){
 }
 const smooth01=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
 upgradeRamp.flatY=baseTerrainH(upgradeRamp.x,(upgradeRamp.startZ+upgradeRamp.endZ)*.5);
-function terrainH(x,z){
+function terrainBaseH(x,z){
   const base=baseTerrainH(x,z);
   // Flatten a generous central patch and blend its perimeter smoothly into the hills.
   const innerX=upgradeRamp.halfWidth+3.0,outerX=innerX+5.0;
@@ -299,6 +307,19 @@ function terrainH(x,z){
   const wz=1-smooth01((Math.max(innerZ-z,z-farInnerZ)-0)/(5.0));
   const blend=wx*wz;
   return lerp(base,upgradeRamp.flatY,blend);
+}
+// Flatten the terrain across each full road-and-sidewalk corridor. In a crossing,
+// blend both centerline elevations into one shared junction height so the two road
+// meshes meet without a step. The transition outside the sidewalk is smoothed.
+function terrainH(x,z){
+ const sx=nearestStreetLine(x),sz=nearestStreetLine(z);
+ const wx=streetCorridorWeight(sx.distance),wz=streetCorridorWeight(sz.distance);
+ const base=terrainBaseH(x,z);
+ if(wx<=0&&wz<=0)return base;
+ const alongNS=terrainBaseH(sx.line,z),alongEW=terrainBaseH(x,sz.line);
+ const total=wx+wz;
+ const target=(alongNS*wx+alongEW*wz)/total;
+ return lerp(base,target,Math.max(wx,wz));
 }
 function profileForRamp(r,x,z){
   if(Math.abs(x-r.x)>r.halfWidth || z<=r.startZ || z>=r.endZ)return 0;
@@ -311,7 +332,9 @@ function rampProfile(x,z){
   for(const r of allRamps)height=Math.max(height,profileForRamp(r,x,z));
   return height;
 }
-function driveSurfaceH(x,z){return terrainH(x,z)+rampProfile(x,z);}
+// Shared physical contact height for vehicles, traffic, props, suspension and
+// ramp landings. The asphalt/sidewalk deck therefore has real ground collision.
+function driveSurfaceH(x,z){return terrainH(x,z)+rampProfile(x,z)+ROAD_SURFACE_OFFSET*streetDeckWeight(x,z);}
 function isOnUpgradeRamp(x,z){return Math.abs(x-upgradeRamp.x)<=upgradeRamp.halfWidth && z>=upgradeRamp.startZ && z<=upgradeRamp.endZ;}
 function isNearAnyRamp(x,z,margin=1.5){return allRamps.some(r=>Math.abs(x-r.x)<r.halfWidth+margin&&z>r.startZ-margin&&z<r.endZ+margin);}
 function terrainNormal(x,z){const e=.5;const dx=(terrainH(x+e,z)-terrainH(x-e,z))/(2*e),dz=(terrainH(x,z+e)-terrainH(x,z-e))/(2*e);return normalize([-dx,1,-dz]);}
@@ -332,29 +355,27 @@ for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
 // cross-section samples terrain at both edges, eliminating terrain clipping.
 const roadB=new MeshBuilder(),sidewalkB=new MeshBuilder();
 function roadQuad(a,b,c,d,col){roadB.quad(a,b,c,d,col,[0,1,0]);}
-const streetLines=[];
-for(let n=-3.5;n<=3.5001;n+=1)streetLines.push(n*110);
 roadB.useMaterial(.93,.015,2);
 function addNorthSouthRoad(x,zA,zB,width){
  const seg=2;
  for(let z=zA;z<zB;z+=seg){const zn=Math.min(z+seg,zB),xl=x-width/2,xr=x+width/2;
-  roadQuad([xl,terrainH(xl,z)+.26,z],[xl,terrainH(xl,zn)+.26,zn],[xr,terrainH(xr,zn)+.26,zn],[xr,terrainH(xr,z)+.26,z],[.18,.22,.23]);
+  roadQuad([xl,terrainH(xl,z)+ROAD_SURFACE_OFFSET,z],[xl,terrainH(xl,zn)+ROAD_SURFACE_OFFSET,zn],[xr,terrainH(xr,zn)+ROAD_SURFACE_OFFSET,zn],[xr,terrainH(xr,z)+ROAD_SURFACE_OFFSET,z],[.18,.22,.23]);
  }
- for(let z=zA;z<zB;z+=10){const zn=Math.min(z+4,zB),y0=terrainH(x,z)+.33,y1=terrainH(x,zn)+.33;roadQuad([x-.12,y0,z],[x-.12,y1,zn],[x+.12,y1,zn],[x+.12,y0,z],[.85,.82,.64]);}
+ for(let z=zA;z<zB;z+=10){const zn=Math.min(z+4,zB),y0=terrainH(x,z)+ROAD_SURFACE_OFFSET+.07,y1=terrainH(x,zn)+ROAD_SURFACE_OFFSET+.07;roadQuad([x-.12,y0,z],[x-.12,y1,zn],[x+.12,y1,zn],[x+.12,y0,z],[.85,.82,.64]);}
 }
 function addEastWestRoad(z,xA,xB,width){
  const seg=2;
  for(let x=xA;x<xB;x+=seg){const xn=Math.min(x+seg,xB),zn=z-width/2,zp=z+width/2;
-  roadQuad([x,terrainH(x,zn)+.26,zn],[xn,terrainH(xn,zn)+.26,zn],[xn,terrainH(xn,zp)+.26,zp],[x,terrainH(x,zp)+.26,zp],[.18,.22,.23]);
+  roadQuad([x,terrainH(x,zn)+ROAD_SURFACE_OFFSET,zn],[xn,terrainH(xn,zn)+ROAD_SURFACE_OFFSET,zn],[xn,terrainH(xn,zp)+ROAD_SURFACE_OFFSET,zp],[x,terrainH(x,zp)+ROAD_SURFACE_OFFSET,zp],[.18,.22,.23]);
  }
- for(let x=xA;x<xB;x+=10){const xn=Math.min(x+4,xB),y0=terrainH(x,z)+.33,y1=terrainH(xn,z)+.33;roadQuad([x,y0,z-.12],[xn,y1,z-.12],[xn,y1,z+.12],[x,y0,z+.12],[.85,.82,.64]);}
+ for(let x=xA;x<xB;x+=10){const xn=Math.min(x+4,xB),y0=terrainH(x,z)+ROAD_SURFACE_OFFSET+.07,y1=terrainH(xn,z)+ROAD_SURFACE_OFFSET+.07;roadQuad([x,y0,z-.12],[xn,y1,z-.12],[xn,y1,z+.12],[x,y0,z+.12],[.85,.82,.64]);}
 }
 // Sidewalks are raised only slightly, with small gaps at intersections for clean crossings.
 sidewalkB.useMaterial(.86,0,3);
 function sidewalkStrip(vertical,line,side,a,b){
  for(let t=a;t<b;t+=2){const tn=Math.min(t+2,b),inner=line+side*4.95,outer=line+side*7.8;
-  if(vertical)sidewalkB.quad([inner,terrainH(inner,t)+.34,t],[inner,terrainH(inner,tn)+.34,tn],[outer,terrainH(outer,tn)+.34,tn],[outer,terrainH(outer,t)+.34,t],[.57,.59,.57],[0,1,0]);
-  else sidewalkB.quad([t,terrainH(t,inner)+.34,inner],[tn,terrainH(tn,inner)+.34,inner],[tn,terrainH(tn,outer)+.34,outer],[t,terrainH(t,outer)+.34,outer],[.57,.59,.57],[0,1,0]);
+  if(vertical)sidewalkB.quad([inner,terrainH(inner,t)+ROAD_SURFACE_OFFSET,t],[inner,terrainH(inner,tn)+ROAD_SURFACE_OFFSET,tn],[outer,terrainH(outer,tn)+ROAD_SURFACE_OFFSET,tn],[outer,terrainH(outer,t)+ROAD_SURFACE_OFFSET,t],[.57,.59,.57],[0,1,0]);
+  else sidewalkB.quad([t,terrainH(t,inner)+ROAD_SURFACE_OFFSET,inner],[tn,terrainH(tn,inner)+ROAD_SURFACE_OFFSET,inner],[tn,terrainH(tn,outer)+ROAD_SURFACE_OFFSET,outer],[t,terrainH(t,outer)+ROAD_SURFACE_OFFSET,outer],[.57,.59,.57],[0,1,0]);
  }
 }
 for(const line of streetLines)for(const side of [-1,1]){
@@ -431,6 +452,9 @@ const buildingColliders=[];
 const staticShadowCasters=[];
 function addBuilding(x,z,w,d,h,color,roof=[.27,.30,.31],kind='house'){
  if(streetLines.some(line=>Math.abs(x-line)<w/2+8.5||Math.abs(z-line)<d/2+8.5))return; // never place a building in a street or sidewalk corridor
+ if(isNearAnyRamp(x,z,Math.max(w,d)*.5+1.5))return; // keep landmark and procedural buildings clear of ramp runouts
+ const newHW=w/2+.62,newHL=d/2+.62;
+ if(buildingColliders.some(b=>b.kind==='building'&&Math.abs(x-b.x)<newHW+b.hw+2.2&&Math.abs(z-b.z)<newHL+b.hl+2.2))return; // avoid overlapping building footprints
  const base=terrainH(x,z),buriedBase=base-28,wallH=Math.max(8.5,h*1.52),wallTop=base+wallH;
  // IMPORTANT: extend the building mass 28 world units below the local ground.
  // Terrain height varies across each footprint; a deep foundation prevents visible hovering.
@@ -1157,7 +1181,7 @@ function updateProps(dt){
  for(let i=props.length-1;i>=0;i--)if(props[i].broken)props.splice(i,1);
 }
 function updateDebris(dt){
- for(const d of debris){d.life-=dt;d.vy-=10.5*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;d.yaw+=d.spin*dt;const floor=terrainH(d.x,d.z)+.06;if(d.y<floor){d.y=floor;d.vy=Math.abs(d.vy)*.28;d.vx*=.72;d.vz*=.72;d.spin*=.65;}}
+ for(const d of debris){d.life-=dt;d.vy-=10.5*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;d.yaw+=d.spin*dt;const floor=driveSurfaceH(d.x,d.z)+.06;if(d.y<floor){d.y=floor;d.vy=Math.abs(d.vy)*.28;d.vx*=.72;d.vz*=.72;d.spin*=.65;}}
  for(let i=debris.length-1;i>=0;i--)if(debris[i].life<=0)debris.splice(i,1);
  if(debris.length>180)debris.splice(0,debris.length-180);
 }
