@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#152a34">
+<title>Free Roam Car Playground · v0.9</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#8bb7c8; }
+  #game { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #vignette { position:fixed; inset:0; pointer-events:none; background:linear-gradient(180deg,rgba(7,23,31,.28),transparent 28%,transparent 75%,rgba(7,23,31,.2)); }
+  #topbar { position:fixed; left:14px; top:12px; display:flex; align-items:flex-start; flex-wrap:wrap; gap:10px; max-width:calc(100vw - 178px); pointer-events:none; }
+  .panel { background:rgba(13,28,36,.78); border:1px solid rgba(255,255,255,.18); border-radius:13px; box-shadow:0 5px 18px rgba(0,0,0,.18); backdrop-filter:blur(7px); color:#f5fbff; }
+  #brand { padding:10px 14px; min-width:190px; }
+  #brand strong { display:block; font-size:15px; letter-spacing:.04em; }
+  #brand span { display:block; margin-top:2px; font-size:11px; opacity:.75; }
+  #status { padding:9px 13px; min-width:160px; }
+  #cash { padding:9px 13px; min-width:112px; font-size:13px; font-weight:850; letter-spacing:.025em; font-variant-numeric:tabular-nums; }
+  #upgradePanel { position:fixed; right:14px; bottom:18px; width:min(290px,calc(100vw - 28px)); padding:13px 15px; display:none; z-index:3; }
+  #upgradePanel.show { display:block; }
+  #upgradePanel .eyebrow { font-size:10px; font-weight:850; letter-spacing:.11em; color:#f5d76e; }
+  #upgradePanel .upgradeTitle { margin-top:3px; font-size:15px; font-weight:850; }
+  #upgradeDetails, .upgradeDetails { margin:5px 0 8px; font-size:11px; line-height:1.4; color:#d7e7ed; }
+  #upgradeButton, #accelerationButton, #impactButton { width:100%; border:1px solid rgba(255,255,255,.25); border-radius:10px; padding:9px 11px; color:#10252c; background:#f4cf59; font:850 11px system-ui,sans-serif; cursor:pointer; }
+  #accelerationButton { background:#88d9ef; }
+  #impactButton { background:#f59a75; }
+  #upgradeButton:disabled, #accelerationButton:disabled, #impactButton:disabled { opacity:.48; cursor:not-allowed; }
+  .upgradeDivider { height:1px; background:rgba(255,255,255,.16); margin:10px 0 8px; }
+  .upgradeSubhead { margin-top:4px; font-size:13px; font-weight:850; }
+  #lightingToggle { pointer-events:auto; align-self:stretch; padding:9px 12px; border-radius:13px; color:#effcff; font:750 11px/1.25 system-ui,sans-serif; letter-spacing:.035em; cursor:pointer; background:rgba(16,56,66,.88); border:1px solid rgba(133,237,224,.55); white-space:normal; max-width:178px; }
+  #lightingToggle[data-mode="advanced"] { background:rgba(16,83,69,.91); border-color:rgba(112,246,188,.75); }
+  #lightingToggle:disabled { cursor:default; opacity:.85; }
+  #vehicleName { font-size:13px; font-weight:750; }
+  #speed { margin-top:2px; font-size:23px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; }
+  #speed small { font-size:10px; font-weight:600; opacity:.7; }
+  #message { position:fixed; left:50%; top:16px; transform:translateX(-50%); background:rgba(11,29,38,.82); color:white; border:1px solid rgba(255,255,255,.24); border-radius:22px; padding:8px 16px; font-size:13px; font-weight:650; text-align:center; max-width:min(90vw,520px); pointer-events:none; opacity:0; transition:opacity .18s; }
+  #message.show { opacity:1; }
+  #mapbox { position:fixed; right:14px; top:14px; padding:7px; pointer-events:none; }
+  #map { display:block; width:132px; height:132px; border-radius:8px; }
+  #hint { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); padding:9px 15px; font-size:13px; text-align:center; pointer-events:none; max-width:90vw; white-space:normal; }
+  #help { position:fixed; left:14px; bottom:14px; max-width:340px; padding:9px 12px; color:#f4faff; font-size:11px; line-height:1.55; opacity:.93; pointer-events:none; }
+  #help b { color:#fff; }
+  #touch { display:none; position:fixed; inset:auto 0 0; padding:14px 16px max(18px,env(safe-area-inset-bottom)); align-items:flex-end; justify-content:space-between; gap:12px; pointer-events:none; }
+  .padgroup { display:flex; align-items:flex-end; gap:9px; pointer-events:auto; }
+  .touchbtn { width:58px; height:58px; border:1px solid rgba(255,255,255,.28); border-radius:18px; background:rgba(12,29,38,.68); color:white; font-size:22px; font-weight:800; box-shadow:0 3px 12px rgba(0,0,0,.2); touch-action:none; user-select:none; -webkit-user-select:none; }
+  .touchbtn.wide { width:72px; height:66px; font-size:12px; letter-spacing:.02em; }
+  .touchbtn.active { background:rgba(52,135,166,.88); transform:scale(.97); }
+  #interact { position:fixed; right:18px; bottom:158px; display:none; pointer-events:auto; width:72px; height:54px; border-radius:16px; border:1px solid rgba(255,255,255,.3); color:white; background:rgba(11,29,38,.82); font-weight:800; }
+  #startcover { position:fixed; inset:0; display:flex; justify-content:center; align-items:center; padding:22px; background:rgba(11,26,34,.4); backdrop-filter:blur(3px); z-index:5; }
+  #startcard { width:min(520px,94vw); padding:22px 24px; text-align:center; color:white; background:rgba(13,29,38,.94); border:1px solid rgba(255,255,255,.22); border-radius:20px; box-shadow:0 15px 55px rgba(0,0,0,.3); }
+  #startcard h1 { margin:0 0 6px; font-size:25px; }
+  #startcard p { margin:8px 0; color:#d4e4eb; font-size:14px; line-height:1.5; }
+  #startcard .small { font-size:12px; opacity:.78; }
+  #startbtn { margin-top:12px; border:0; border-radius:12px; padding:12px 24px; color:#09202b; background:#8de1ef; font-size:15px; font-weight:850; cursor:pointer; }
+  #startbtn:active { transform:scale(.98); }
+  @media (pointer:coarse), (max-width:760px) {
+    #touch { display:flex; }
+    #help { display:none; }
+    #map { width:94px; height:94px; }
+    #mapbox { top:9px; right:9px; }
+    #brand { min-width:0; padding:8px 10px; }
+    #brand strong { font-size:12px; }
+    #brand span { font-size:9px; }
+    #status { min-width:112px; padding:7px 10px; }
+    #cash { min-width:85px; padding:7px 9px; font-size:11px; }
+    #boostStatus { padding:7px 8px !important; font-size:9px !important; }
+    #upgradePanel { right:9px; bottom:166px; width:min(235px,62vw); padding:10px 11px; }
+    #upgradePanel .upgradeTitle { font-size:13px; }
+    #upgradeDetails, .upgradeDetails { font-size:10px; margin:4px 0 7px; }
+    #upgradeButton, #accelerationButton, #impactButton { padding:8px 7px; font-size:10px; }
+    #lightingToggle { max-width:148px; padding:7px 9px; font-size:9px; }
+    #vehicleName { font-size:11px; }
+    #speed { font-size:19px; }
+    #message { top:auto; bottom:100px; font-size:12px; }
+    #hint { bottom:94px; font-size:11px; }
+    #interact { display:block; bottom:92px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="3D free-roam car game"></canvas>
+<div id="vignette"></div>
+<div id="topbar">
+  <div id="brand" class="panel"><strong>FREE ROAM</strong><span>CAR PLAYGROUND · v0.9</span></div>
+  <div id="status" class="panel"><div id="vehicleName">Compact Car</div><div id="speed">0 <small>MPH</small></div></div>
+  <div id="cash" class="panel">CASH&nbsp; $0</div>
+  <div id="boostStatus" class="panel" style="padding:9px 12px;font-size:11px;font-weight:850;letter-spacing:.04em;color:#a8efff">BOOST READY · SHIFT</div>
+  <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED PBR: ON</button>
+</div>
+<div id="mapbox" class="panel"><canvas id="map" width="264" height="264"></canvas></div>
+<div id="message"></div>
+<div id="hint" class="panel">Explore a 4×4 toy city with connected streets, permanent traffic, ramps and upgrades.</div>
+<div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
+<div id="touch">
+  <div class="padgroup">
+    <button class="touchbtn" data-control="left" aria-label="Steer left">◀</button>
+    <button class="touchbtn" data-control="right" aria-label="Steer right">▶</button>
+  </div>
+  <div class="padgroup">
+    <button class="touchbtn wide" data-control="brake" aria-label="Brake or reverse">BRAKE</button>
+    <button class="touchbtn wide" data-control="gas" aria-label="Accelerate">GO ▲</button>
+  </div>
+</div>
+<button id="interact">ENTER / EXIT</button>
+<div id="upgradePanel" class="panel" role="region" aria-live="polite">
+  <div class="eyebrow">TOY TOWN TUNING PAD</div>
+  <div class="upgradeTitle" id="upgradeTitle">Top Speed</div>
+  <div id="upgradeDetails">Drive onto the gold pad and stop to tune this vehicle.</div>
+  <button id="upgradeButton" type="button" disabled>TOP SPEED UPGRADE</button>
+  <div class="upgradeDivider"></div>
+  <div class="upgradeSubhead">Acceleration</div>
+  <div id="accelerationDetails" class="upgradeDetails">Improve how quickly this vehicle gets moving.</div>
+  <button id="accelerationButton" type="button" disabled>ACCELERATION UPGRADE</button>
+  <div class="upgradeDivider"></div>
+  <div class="upgradeSubhead">Impact Power</div>
+  <div id="impactDetails" class="upgradeDetails">Make ramming impacts stronger and smash tougher toy props.</div>
+  <button id="impactButton" type="button" disabled>IMPACT POWER UPGRADE</button>
+</div>
+<div id="startcover">
+  <div id="startcard">
+    <h1>Free Roam Car Playground</h1>
+    <p>No races, timers, ads or real-money purchases. Explore a colorful brick-built world, earn cash from crashes and upgrade your vehicles.</p>
+    <p><b>Explore a city four times wider and four times longer, follow the permanent traffic loop, try the stunt ramps, and find the blue tuning ramp. Smash props and earn airtime cash.</b></p>
+    <p class="small">Vehicle models: Grab3D Cozy Vehicles collection (CC0 1.0). Keyboard: WASD / arrows to drive, Shift for a short boost, E to enter or exit, Space for handbrake, C to change camera. Crashes and airtime earn cash. Drive up the blue tuning ramp to upgrade top speed or acceleration; colored stunt ramps pay airtime bonuses.</p>
+    <button id="startbtn">START DRIVING</button>
+  </div>
+</div>
+<script>
+(async()=>{
+ const button=document.getElementById("startbtn");
+ button.disabled=true;button.textContent="LOADING VEHICLES…";
+ try {
+  if(location.protocol==="file:") throw new Error("This version uses separate model files. Please start it with run_game.py (or start_game_linux.sh) instead of opening index.html directly.");
+  const [metaResponse,geometryResponse]=await Promise.all([fetch("assets/vehicle_meshes.json"),fetch("assets/vehicle_meshes.bin")]);
+  if(!metaResponse.ok||!geometryResponse.ok)throw new Error("Could not load the vehicle model files from the assets folder.");
+  const meta=await metaResponse.json();const buffer=await geometryResponse.arrayBuffer();
+  window.FREE_ROAM_VEHICLE_ASSETS={meta,buffer};
+  const script=document.createElement("script");script.src="game.js";script.onerror=()=>{const card=document.getElementById("startcard");card.innerHTML="<h1>Game script could not load</h1><p>Check that game.js is in the same folder as index.html.</p>";};document.body.appendChild(script);
+ } catch(error) {
+  const card=document.getElementById("startcard");card.innerHTML="";const h=document.createElement("h1");h.textContent="Game assets could not load";const p=document.createElement("p");p.textContent=error.message||String(error);const small=document.createElement("p");small.className="small";small.textContent="Extract the complete game folder and launch it with run_game.py or the included start script.";card.append(h,p,small);button.disabled=true;
+ }
+})();
+</script>
+
+</body>
+</html>
