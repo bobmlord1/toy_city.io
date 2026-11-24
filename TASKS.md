@@ -56,6 +56,7 @@ Done when: the primary input device is written into `DESIGN.md` under Audience.
 
 ### T-006 Traffic routing improvements (first pass)
 Assigned to: ChatGPT (delegated by the project owner on 2026-11-24).
+Status: merged as v0.13.0; the owner's follow-up playtest found the closed-loop behavior still too restrictive. T-007 addresses that limitation.
 Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `index.html`.
 Why: Improve how busy and varied traffic feels without raising rendering and physics cost.
 Done when: The same 12 persistent traffic cars are redistributed across four fixed 2×2-block district circuits on existing inner street centerlines; each circuit has traffic moving in both directions, with cars spread across both lanes. No traffic cars are added or despawned. The route samples stay within the existing road/intersection footprint, and collisions still knock cars off-line with the existing soft recovery. The smoke test checks the 12-car fleet, four circuits, direction/lane distribution, inner-grid coverage and a sustained finite AI update. In a minute of free driving, a player should see traffic using inner streets instead of only the outer perimeter.
@@ -69,7 +70,8 @@ Notes:
 
 ### T-007 Intersection-based traffic AI and distributed starts
 Assigned to: ChatGPT (requested by the project owner on 2026-11-24).
-Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md`, `index.html`.
+Status: implemented on `chatgpt/t-007-intersection-traffic`; awaiting full local smoke test, Claude review and owner browser playtest.
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md`, `index.html`, `README.txt`.
 Why: Make the existing traffic fleet behave like city traffic that can turn at intersections and travel between districts, instead of remaining locked to closed rectangular loops.
 Done when:
 - Keep the existing 12 persistent traffic cars; do not add or despawn vehicles.
@@ -87,7 +89,7 @@ Notes:
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Add the other two approved activity types after T-002 proves the activity framework.
-- Improve traffic variety and route selection; assess density before simply increasing the car count.
+- Reassess traffic density after T-007 playtesting; increase the vehicle count only if the city still feels empty.
 - Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
 - Distribute upgrade access around the city only if playtesting shows the single tuning pad is inconvenient.
 - Reapply the accepted toy-playset visual direction after the refactor, using the existing WebGL renderer and procedural geometry/material system. See the prior visual-development brief in the project conversation; do not introduce Blender or a new rendering engine.
