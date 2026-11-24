@@ -34,3 +34,11 @@ Version 0.12.1 changes:
 - Fixed a stray fin and a hole in the upgrade ramp's right side wall.
 - Fixed vehicle and prop shadows clipping through ramps and the tuning pad.
 
+Version 0.13.0 changes:
+- Replaced the single perimeter traffic loop with four fixed district circuits.
+
+Version 0.14.0 changes:
+- Traffic now starts at varied, seeded road locations across the full city grid.
+- Traffic chooses to continue, turn left or turn right at intersections and can travel between districts.
+- The traffic fleet remains at twelve persistent cars; no spawning or despawning was added.
+

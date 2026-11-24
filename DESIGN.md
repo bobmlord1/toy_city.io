@@ -24,10 +24,11 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 7. **Short loops.** A simple activity should usually take about 30–90 seconds, but there is no time limit.
 8. **Safe.** No ads, tracking, external links, chat or real-money features.
 
-## Current state (v0.13.0)
+## Current state (v0.14.0)
 
 - Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles.
-- Twelve persistent traffic cars circulate through four fixed 2×2-block district circuits on the inner street grid. Each district has traffic in both directions; cars remain persistent and gradually recover after collisions push them off their lanes.
+- Twelve persistent traffic cars start on varied road segments and navigate the connected street grid. At intersections they choose to continue, turn left or turn right, allowing them to cross between all four city quadrants instead of staying on closed district loops.
+- Traffic start placement and route choices use seeded randomness: varied but repeatable between runs. Cars retain soft recovery after collisions knock them off their lanes.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
 - The upgrade-ramp side-wall and ramp-shadow fixes are implemented; the owner still needs to confirm their appearance in a real browser.
@@ -76,3 +77,4 @@ These activities exercise navigation, destructible props, and ramps/airtime.
 
 - 2026-11-23: Project goals are only "toy-like aesthetic" and "open world". Everything else is open.
 - 2026-11-24: Approved optional delivery, marked-prop smash, and stunt-jump activities; visual beacon plus minimap guidance; activity payouts of approximately $75–$150 as primary predictable income; retain crash/airtime cash as incidental bonuses. No timers, failure states, penalties, or forced participation. T-002 authorized.
+- 2026-11-24: Owner playtest of v0.13.0 found that fixed district loops did not produce visible traffic moving through the wider street grid. T-007 replaces closed loops with simple intersection decisions and seeded, varied starting road segments.

@@ -177,6 +177,23 @@ function vehicle(id, type, name, x, z, yaw, opts = {}) {
     routeIndex: opts.routeIndex ?? -1,
     routeS: opts.routeS ?? 0,
     routeLane: opts.routeLane ?? 0,
+    trafficNodeXIndex: opts.trafficNodeXIndex ?? -1,
+    trafficNodeZIndex: opts.trafficNodeZIndex ?? -1,
+    trafficHeading: opts.trafficHeading ?? 0,
+    trafficLane: opts.trafficLane ?? -1.8,
+    trafficSeed: opts.trafficSeed ?? 0,
+    trafficLeg: null,
+    trafficProgress: 0,
+    trafficExitOffset: 0,
+    trafficTurnCount: 0,
+    trafficDecisionCount: 0,
+    trafficVisitedNodeCount: 0,
+    trafficRegionMask: 0,
+    trafficMinNodeX: 0,
+    trafficMaxNodeX: 0,
+    trafficMinNodeZ: 0,
+    trafficMaxNodeZ: 0,
+    trafficStartEdgeKey: "",
     routeLaneX: x,
     routeLaneZ: z,
     aiKnockTime: 0,
@@ -239,111 +256,253 @@ const semiVehicle = vehicle("semi", "semi", "Blue Semi Truck", -12, 16, Math.PI,
 // share each circuit, using both directions and the two opposing lanes. No spawning or
 // despawning occurs; collisions can still knock cars away and the soft AI spring guides
 // them back toward their route.
-const TRAFFIC_CORNER_RADIUS = 4.2;
-function createTrafficCircuit(id, minX, maxX, minZ, maxZ) {
-  const radius = Math.min(TRAFFIC_CORNER_RADIUS, (maxX - minX) * 0.16, (maxZ - minZ) * 0.16);
-  const arcLength = (Math.PI * radius) / 2;
-  const segments = [
-    { kind: "line", x: minX + radius, z: minZ, yaw: Math.PI / 2, length: maxX - minX - 2 * radius },
-    { kind: "arc", cx: maxX - radius, cz: minZ + radius, startAngle: -Math.PI / 2, length: arcLength },
-    { kind: "line", x: maxX, z: minZ + radius, yaw: 0, length: maxZ - minZ - 2 * radius },
-    { kind: "arc", cx: maxX - radius, cz: maxZ - radius, startAngle: 0, length: arcLength },
-    { kind: "line", x: maxX - radius, z: maxZ, yaw: -Math.PI / 2, length: maxX - minX - 2 * radius },
-    { kind: "arc", cx: minX + radius, cz: maxZ - radius, startAngle: Math.PI / 2, length: arcLength },
-    { kind: "line", x: minX, z: maxZ - radius, yaw: Math.PI, length: maxZ - minZ - 2 * radius },
-    { kind: "arc", cx: minX + radius, cz: minZ + radius, startAngle: Math.PI, length: arcLength },
-  ];
-  return {
-    id,
-    minX,
-    maxX,
-    minZ,
-    maxZ,
-    radius,
-    segments,
-    length: segments.reduce((sum, segment) => sum + segment.length, 0),
-  };
-}
-const trafficRoutes = [
-  createTrafficCircuit("northwest", -275, -55, -275, -55),
-  createTrafficCircuit("northeast", 55, 275, -275, -55),
-  createTrafficCircuit("southwest", -275, -55, 55, 275),
-  createTrafficCircuit("southeast", 55, 275, 55, 275),
+// Traffic now navigates the complete street grid instead of following closed district loops.
+// The street grid is a simple 8x8 intersection lattice. Cars follow lane-aware legs between
+// intersections and make a seeded straight/left/right decision at each one.
+const TRAFFIC_LANE_OFFSET = -1.8;
+const TRAFFIC_TURN_RADIUS = 5.7;
+const TRAFFIC_TURN_HANDLE = 3.5;
+const TRAFFIC_CURVE_STEPS = 12;
+const TRAFFIC_HEADINGS = [
+  { dx: 0, dz: 1, yaw: 0 }, // north / +Z
+  { dx: 1, dz: 0, yaw: Math.PI / 2 }, // east / +X
+  { dx: 0, dz: -1, yaw: Math.PI }, // south / -Z
+  { dx: -1, dz: 0, yaw: -Math.PI / 2 }, // west / -X
 ];
 
-function trafficRoutePoint(route, distance, direction = 1) {
-  const dir = direction < 0 ? -1 : 1;
-  let remaining = ((distance % route.length) + route.length) % route.length;
-  if (dir < 0) remaining = (route.length - remaining) % route.length;
-  let point = null;
-  for (const segment of route.segments) {
-    if (remaining > segment.length) {
-      remaining -= segment.length;
-      continue;
-    }
-    if (segment.kind === "line") {
-      point = {
-        x: segment.x + Math.sin(segment.yaw) * remaining,
-        z: segment.z + Math.cos(segment.yaw) * remaining,
-        yaw: segment.yaw,
-      };
-    } else {
-      const angle = segment.startAngle + remaining / route.radius;
-      point = {
-        x: segment.cx + Math.cos(angle) * route.radius,
-        z: segment.cz + Math.sin(angle) * route.radius,
-        yaw: Math.atan2(-Math.sin(angle), Math.cos(angle)),
-      };
-    }
-    break;
-  }
-  if (!point) point = { x: route.minX + route.radius, z: route.minZ, yaw: Math.PI / 2 };
-  if (dir < 0) point.yaw = Math.atan2(Math.sin(point.yaw + Math.PI), Math.cos(point.yaw + Math.PI));
-  return point;
+function trafficRandom(v) {
+  v.trafficSeed = (Math.imul(v.trafficSeed, 1664525) + 1013904223) >>> 0;
+  return v.trafficSeed / 4294967296;
 }
-
-function trafficLanePoint(route, distance, direction, laneOffset) {
-  const point = trafficRoutePoint(route, distance, direction);
-  const rightX = Math.cos(point.yaw);
-  const rightZ = -Math.sin(point.yaw);
+function trafficGridPosition(xIndex, zIndex, heading, laneOffset, forwardOffset = 0) {
+  const h = TRAFFIC_HEADINGS[heading];
   return {
-    x: point.x + rightX * laneOffset,
-    z: point.z + rightZ * laneOffset,
-    yaw: point.yaw,
+    x: streetLines[xIndex] + h.dx * forwardOffset + h.dz * laneOffset,
+    z: streetLines[zIndex] + h.dz * forwardOffset - h.dx * laneOffset,
+  };
+}
+function trafficRegionBit(xIndex, zIndex) {
+  const half = Math.floor(streetLines.length / 2);
+  const east = xIndex >= half ? 1 : 0;
+  const south = zIndex >= half ? 1 : 0;
+  return 1 << (south * 2 + east);
+}
+function trafficChooseNextHeading(v, heading, nodeXIndex, nodeZIndex) {
+  const options = [
+    { heading, weight: 0.56 }, // continue straight
+    { heading: (heading + 3) % 4, weight: 0.22 }, // turn left
+    { heading: (heading + 1) % 4, weight: 0.22 }, // turn right
+  ].filter((option) => {
+    const h = TRAFFIC_HEADINGS[option.heading];
+    const x = nodeXIndex + h.dx;
+    const z = nodeZIndex + h.dz;
+    return x >= 0 && x < streetLines.length && z >= 0 && z < streetLines.length;
+  });
+  if (!options.length) throw new Error("Traffic reached a grid node with no legal exit");
+  const total = options.reduce((sum, option) => sum + option.weight, 0);
+  let choice = trafficRandom(v) * total;
+  for (const option of options) {
+    choice -= option.weight;
+    if (choice <= 0) return option.heading;
+  }
+  return options[options.length - 1].heading;
+}
+function trafficAddLegSample(samples, point) {
+  const previous = samples[samples.length - 1];
+  const distance = previous
+    ? previous.distance + Math.hypot(point.x - previous.x, point.z - previous.z)
+    : 0;
+  samples.push({ x: point.x, z: point.z, distance });
+}
+function trafficBuildLeg(v) {
+  const incoming = v.trafficHeading;
+  const hIn = TRAFFIC_HEADINGS[incoming];
+  const nextXIndex = v.trafficNodeXIndex + hIn.dx;
+  const nextZIndex = v.trafficNodeZIndex + hIn.dz;
+  if (
+    nextXIndex < 0 ||
+    nextXIndex >= streetLines.length ||
+    nextZIndex < 0 ||
+    nextZIndex >= streetLines.length
+  ) {
+    throw new Error("Traffic tried to plan a road segment outside the street grid");
+  }
+
+  const outgoing = trafficChooseNextHeading(v, incoming, nextXIndex, nextZIndex);
+  const turned = outgoing !== incoming;
+  const start = trafficGridPosition(
+    v.trafficNodeXIndex,
+    v.trafficNodeZIndex,
+    incoming,
+    v.trafficLane,
+    v.trafficExitOffset,
+  );
+  const samples = [];
+  trafficAddLegSample(samples, start);
+  let lineEnd;
+  let turnEnd = null;
+
+  if (turned) {
+    const approach = trafficGridPosition(
+      nextXIndex,
+      nextZIndex,
+      incoming,
+      v.trafficLane,
+      -TRAFFIC_TURN_RADIUS,
+    );
+    lineEnd = approach;
+    trafficAddLegSample(samples, approach);
+
+    const outgoingPoint = trafficGridPosition(
+      nextXIndex,
+      nextZIndex,
+      outgoing,
+      v.trafficLane,
+      TRAFFIC_TURN_RADIUS,
+    );
+    const c1 = {
+      x: approach.x + hIn.dx * TRAFFIC_TURN_HANDLE,
+      z: approach.z + hIn.dz * TRAFFIC_TURN_HANDLE,
+    };
+    const hOut = TRAFFIC_HEADINGS[outgoing];
+    const c2 = {
+      x: outgoingPoint.x - hOut.dx * TRAFFIC_TURN_HANDLE,
+      z: outgoingPoint.z - hOut.dz * TRAFFIC_TURN_HANDLE,
+    };
+    for (let step = 1; step <= TRAFFIC_CURVE_STEPS; step++) {
+      const t = step / TRAFFIC_CURVE_STEPS;
+      const u = 1 - t;
+      trafficAddLegSample(samples, {
+        x:
+          u * u * u * approach.x +
+          3 * u * u * t * c1.x +
+          3 * u * t * t * c2.x +
+          t * t * t * outgoingPoint.x,
+        z:
+          u * u * u * approach.z +
+          3 * u * u * t * c1.z +
+          3 * u * t * t * c2.z +
+          t * t * t * outgoingPoint.z,
+      });
+    }
+    turnEnd = outgoingPoint;
+  } else {
+    lineEnd = trafficGridPosition(nextXIndex, nextZIndex, incoming, v.trafficLane);
+    trafficAddLegSample(samples, lineEnd);
+  }
+
+  v.trafficDecisionCount++;
+  return {
+    samples,
+    length: samples[samples.length - 1].distance,
+    lineLength: Math.hypot(lineEnd.x - start.x, lineEnd.z - start.z),
+    nextXIndex,
+    nextZIndex,
+    nextHeading: outgoing,
+    exitOffset: turned ? TRAFFIC_TURN_RADIUS : 0,
+    turn: turned,
+    end: turned ? turnEnd : lineEnd,
+  };
+}
+function trafficLegPoint(leg, distance) {
+  const samples = leg.samples;
+  if (distance <= 0) {
+    const a = samples[0], b = samples[1] || samples[0];
+    return { x: a.x, z: a.z, yaw: Math.atan2(b.x - a.x, b.z - a.z) };
+  }
+  if (distance >= leg.length) {
+    const p = leg.end;
+    return { x: p.x, z: p.z, yaw: TRAFFIC_HEADINGS[leg.nextHeading].yaw };
+  }
+  let index = 1;
+  while (index < samples.length && samples[index].distance < distance) index++;
+  const a = samples[index - 1], b = samples[index];
+  const span = Math.max(0.0001, b.distance - a.distance);
+  const t = clamp((distance - a.distance) / span, 0, 1);
+  return {
+    x: lerp(a.x, b.x, t),
+    z: lerp(a.z, b.z, t),
+    yaw: Math.atan2(b.x - a.x, b.z - a.z),
   };
 }
 
 const trafficFleet = [];
-for (let routeIndex = 0; routeIndex < trafficRoutes.length; routeIndex++) {
-  const route = trafficRoutes[routeIndex];
-  for (let slot = 0; slot < 3; slot++) {
-    const direction = slot === 1 ? -1 : 1;
-    const routeS = (route.length * slot) / 3 + 7;
-    const lane = -1.8;
-    const p = trafficLanePoint(route, routeS, direction, lane);
-    const fleetIndex = routeIndex * 3 + slot;
-    const v = vehicle(
-      "traffic-" + route.id + "-" + slot,
-      ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
-      ["Town Car", "Green Car", "Orange Car"][fleetIndex % 3],
-      p.x,
-      p.z,
-      p.yaw,
-      {
-        width: 1.8,
-        length: 4.2,
-        mass: 1000,
-        accel: 0,
-        maxSpeed: 10.5 + (fleetIndex % 4) * 0.75,
-        steerRate: 0,
-        ai: true,
-        route: "district",
-        routeDir: direction,
-        routeIndex,
-        routeS,
-        routeLane: lane,
-      },
-    );
-    trafficFleet.push(v);
+const trafficStartEdges = [];
+for (let z = 0; z < streetLines.length; z++)
+  for (let x = 0; x < streetLines.length - 1; x++)
+    trafficStartEdges.push({ x, z, heading: 1 }); // east-west street
+for (let x = 0; x < streetLines.length; x++)
+  for (let z = 0; z < streetLines.length - 1; z++)
+    trafficStartEdges.push({ x, z, heading: 0 }); // north-south street
+
+// Shuffle a fixed road-edge list with its own seed. This makes starts varied but repeatable.
+let trafficLayoutSeed = 0x6d2b79f5;
+function trafficLayoutRandom() {
+  trafficLayoutSeed = (Math.imul(trafficLayoutSeed, 1664525) + 1013904223) >>> 0;
+  return trafficLayoutSeed / 4294967296;
+}
+for (let i = trafficStartEdges.length - 1; i > 0; i--) {
+  const j = Math.floor(trafficLayoutRandom() * (i + 1));
+  [trafficStartEdges[i], trafficStartEdges[j]] = [trafficStartEdges[j], trafficStartEdges[i]];
+}
+
+for (let i = 0; i < 12; i++) {
+  const edge = trafficStartEdges[i];
+  let nodeXIndex = edge.x;
+  let nodeZIndex = edge.z;
+  let heading = edge.heading;
+  if (trafficLayoutRandom() < 0.5) {
+    const edgeDirection = TRAFFIC_HEADINGS[heading];
+    nodeXIndex += edgeDirection.dx;
+    nodeZIndex += edgeDirection.dz;
+    heading = (heading + 2) % 4;
   }
+  const lane = TRAFFIC_LANE_OFFSET;
+  const seed = (0x51f15e5d ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0;
+  const p = trafficGridPosition(nodeXIndex, nodeZIndex, heading, lane);
+  const fleetIndex = i;
+  const v = vehicle(
+    "traffic-grid-" + String(i + 1).padStart(2, "0"),
+    ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
+    ["Town Car", "Green Car", "Orange Car"][fleetIndex % 3],
+    p.x,
+    p.z,
+    TRAFFIC_HEADINGS[heading].yaw,
+    {
+      width: 1.8,
+      length: 4.2,
+      mass: 1000,
+      accel: 0,
+      maxSpeed: 10.5 + (fleetIndex % 4) * 0.75,
+      steerRate: 0,
+      ai: true,
+      route: "grid",
+      trafficNodeXIndex: nodeXIndex,
+      trafficNodeZIndex: nodeZIndex,
+      trafficHeading: heading,
+      trafficLane: lane,
+      trafficSeed: seed,
+    },
+  );
+  v.trafficStartEdgeKey = edge.x + "," + edge.z + "," + edge.heading;
+  v.trafficStartXIndex = nodeXIndex;
+  v.trafficStartZIndex = nodeZIndex;
+  v.trafficStartHeading = heading;
+  v.trafficMinNodeX = v.trafficMaxNodeX = nodeXIndex;
+  v.trafficMinNodeZ = v.trafficMaxNodeZ = nodeZIndex;
+  v.trafficVisitedNodeCount = 1;
+  v.trafficRegionMask = trafficRegionBit(nodeXIndex, nodeZIndex);
+  v.trafficStartRegionMask = v.trafficRegionMask;
+  v.trafficExitOffset = 0;
+  v.trafficLeg = trafficBuildLeg(v);
+  v.trafficProgress = 12 + trafficRandom(v) * Math.min(48, v.trafficLeg.lineLength * 0.62);
+  const initial = trafficLegPoint(v.trafficLeg, v.trafficProgress);
+  v.x = initial.x;
+  v.z = initial.z;
+  v.yaw = initial.yaw;
+  v.trafficStartX = v.x;
+  v.trafficStartZ = v.z;
+  v.y = driveSurfaceH(v.x, v.z) + 0.04;
+  v.previousSurfaceY = v.y;
+  trafficFleet.push(v);
 }

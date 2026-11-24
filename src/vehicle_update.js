@@ -15,12 +15,30 @@ function updateVehicle(v, dt) {
     const recovery = v.aiKnockTime > 0 ? 0.22 : 1.0;
     v.aiKnockTime = Math.max(0, v.aiKnockTime - dt);
     const targetSpeed = v.maxSpeed * (v.routeDir || 1);
-    if (v.route === "district") {
-      const route = trafficRoutes[v.routeIndex];
-      if (!route) throw new Error("Traffic vehicle has an invalid district route index: " + v.routeIndex);
-      v.routeS = (v.routeS + v.maxSpeed * dt) % route.length;
-      const lookAhead = Math.max(7, v.maxSpeed * 0.92);
-      const target = trafficLanePoint(route, v.routeS + lookAhead, v.routeDir, v.routeLane);
+    if (v.route === "grid") {
+      if (!v.trafficLeg) throw new Error("Traffic vehicle has no active grid leg: " + v.id);
+      v.trafficProgress += v.maxSpeed * dt;
+      while (v.trafficProgress >= v.trafficLeg.length) {
+        v.trafficProgress -= v.trafficLeg.length;
+        const completed = v.trafficLeg;
+        if (completed.turn) v.trafficTurnCount++;
+        v.trafficNodeXIndex = completed.nextXIndex;
+        v.trafficNodeZIndex = completed.nextZIndex;
+        v.trafficHeading = completed.nextHeading;
+        v.trafficExitOffset = completed.exitOffset;
+        v.trafficVisitedNodeCount++;
+        v.trafficMinNodeX = Math.min(v.trafficMinNodeX, v.trafficNodeXIndex);
+        v.trafficMaxNodeX = Math.max(v.trafficMaxNodeX, v.trafficNodeXIndex);
+        v.trafficMinNodeZ = Math.min(v.trafficMinNodeZ, v.trafficNodeZIndex);
+        v.trafficMaxNodeZ = Math.max(v.trafficMaxNodeZ, v.trafficNodeZIndex);
+        v.trafficRegionMask |= trafficRegionBit(v.trafficNodeXIndex, v.trafficNodeZIndex);
+        v.trafficLeg = trafficBuildLeg(v);
+      }
+      const lookAhead = Math.max(5.5, v.maxSpeed * 0.62);
+      const target = trafficLegPoint(
+        v.trafficLeg,
+        Math.min(v.trafficProgress + lookAhead, v.trafficLeg.length),
+      );
       const desiredYaw = Math.atan2(target.x - v.x, target.z - v.z);
       let yawError = ((desiredYaw - v.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       const steeringLimit = clamp(yawError, -1.55 * dt, 1.55 * dt);
@@ -34,9 +52,9 @@ function updateVehicle(v, dt) {
       const laneErrorX = target.x - v.x,
         laneErrorZ = target.z - v.z;
       const sideCorrection =
-        clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.8, -4.5, 4.5) * recovery;
+        clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.55, -3.0, 3.0) * recovery;
       const nextForward = lerp(currentForward, v.maxSpeed, 1 - Math.exp(-dt * 1.8));
-      const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 2.0));
+      const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 3.5));
       v.vx = f[0] * nextForward + right[0] * nextSide;
       v.vz = f[1] * nextForward + right[1] * nextSide;
       v.x += v.vx * dt;

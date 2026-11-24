@@ -56,6 +56,7 @@ Done when: the primary input device is written into `DESIGN.md` under Audience.
 
 ### T-006 Traffic routing improvements (first pass)
 Assigned to: ChatGPT (delegated by the project owner on 2026-11-24).
+Status: merged as v0.13.0; the owner's follow-up playtest found the closed-loop behavior still too restrictive. T-007 addresses that limitation.
 Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `index.html`.
 Why: Improve how busy and varied traffic feels without raising rendering and physics cost.
 Done when: The same 12 persistent traffic cars are redistributed across four fixed 2×2-block district circuits on existing inner street centerlines; each circuit has traffic moving in both directions, with cars spread across both lanes. No traffic cars are added or despawned. The route samples stay within the existing road/intersection footprint, and collisions still knock cars off-line with the existing soft recovery. The smoke test checks the 12-car fleet, four circuits, direction/lane distribution, inner-grid coverage and a sustained finite AI update. In a minute of free driving, a player should see traffic using inner streets instead of only the outer perimeter.
@@ -65,11 +66,31 @@ Notes:
 - Traffic cars are never spawned or despawned. Collisions push them off their lane and a soft spring guides them back. Keep that behavior.
 - Run `node tools/smoke_test.js` and keep crash cash, delivery activities and the rest of free roam working.
 - Implementation notes (2026-11-24): four 2×2-block circuits are aligned to inner street lines; three of the existing 12 cars are assigned to each route. The new route/lane checks are in `tools/smoke_test.js`. The full smoke test has not yet been run in the implementation environment; syntax and standalone route/AI simulations passed.
+- Owner playtest finding (2026-11-24): despite the four predefined district loops, the owner watched the minimap for several minutes and observed that the cars started and stayed on the outer portion of their assigned loops, never using the connecting grid as intended. T-007 addresses that gap rather than increasing the fleet.
+
+### T-007 Intersection-based traffic AI and distributed starts
+Assigned to: ChatGPT (requested by the project owner on 2026-11-24).
+Status: implemented on `chatgpt/t-007-intersection-traffic`; awaiting full local smoke test, Claude review and owner browser playtest.
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md`, `index.html`, `README.txt`.
+Why: Make the existing traffic fleet behave like city traffic that can turn at intersections and travel between districts, instead of remaining locked to closed rectangular loops.
+Done when:
+- Keep the existing 12 persistent traffic cars; do not add or despawn vehicles.
+- Replace closed-circuit-only movement with simple intersection decisions: at each grid intersection a car can continue, turn left, or turn right when the road grid allows it. It must be able to leave the area/circuit where it started and use connecting streets across the city.
+- Turns follow a smooth, lane-aware path through the existing intersection surface; no snapping/teleporting, no driving across sidewalks, buildings or off-road ground.
+- Give cars semi-randomized but repeatable starting positions across distinct road segments in the full city grid. Use seeded randomness so tests and play sessions are reproducible.
+- Preserve collision knockback and soft recovery; cars continue making route decisions while recovering.
+- Smoke tests verify start distribution, valid intersection choices, actual turns, travel across multiple districts/grid regions, 12-car persistence, and finite road-constrained AI updates.
+Notes:
+- This is a direct response to the owner's v0.13.0 playtest: they watched for several minutes using the minimap indicators, confirmed v0.13.0, and saw that traffic cars started and stayed on the outer loop without coming inside the grid.
+- The owner proposed (1) "some rudimentary AI that can choose to make a turn jumping onto another predefined circuit" and (2) "Semi-randomized starting locations on the circuit." Implement both, with intersection decisions taking priority over decorative variation.
+- The owner also asked to confirm whether cars could ever leave the outer grid in the current code. The v0.13.0 route code had no transition: each car retained one `routeIndex` and advanced `routeS` modulo that route's length. T-007 must make cross-grid travel possible and prove it in the smoke test.
+- Keep this deliberately simple: no pathfinding engine, road graph editor, new vehicles, traffic lights, or rendering system.
+- Implementation (2026-11-24): PR #6 replaces T-006 closed circuits with an 8×8 grid controller. Standalone simulation confirms repeated turns and cross-quadrant travel; the full jsdom smoke test and real-browser playtest remain pending.
 
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Add the other two approved activity types after T-002 proves the activity framework.
-- Improve traffic variety and route selection; assess density before simply increasing the car count.
+- Reassess traffic density after T-007 playtesting; increase the vehicle count only if the city still feels empty.
 - Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
 - Distribute upgrade access around the city only if playtesting shows the single tuning pad is inconvenient.
 - Reapply the accepted toy-playset visual direction after the refactor, using the existing WebGL renderer and procedural geometry/material system. See the prior visual-development brief in the project conversation; do not introduce Blender or a new rendering engine.

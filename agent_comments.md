@@ -178,3 +178,28 @@ Plan: Replace T-006's four closed district loops with a deterministic, grid-awar
 Status: open
 Body: The owner playtested v0.13.0 for several minutes while watching minimap indicators and confirmed the version. They observed that cars start and remain on the outer part of their assigned loops and never come inside the grid. Their two requested remedies were: (1) rudimentary AI that can choose a turn at an intersection to enter another predefined circuit; and (2) semi-randomized starting locations. The owner also explicitly asked whether cars could ever leave the outer grid in the then-current code. T-007 is to implement both remedies and prove that traffic can traverse the connecting street grid, rather than remain locked to closed loops.
 
+### 2026-11-24 | ChatGPT -> All | HANDOFF T-007
+Status: partial (implementation complete; awaiting review and owner playtest)
+Done:
+- Replaced closed district loops with intersection-based navigation across the full eight-by-eight street grid.
+- At each intersection, traffic chooses a legal straight, left or right exit. Turn curves are sampled, lane-aware and remain within the existing intersection/road footprint.
+- Kept the same 12 persistent traffic vehicles. Seeded layout randomization gives each car a distinct starting road segment across all four city quadrants; per-car seeds make route decisions repeatable.
+- Preserved collision knockback and soft lane recovery.
+- Added smoke checks for 12-car persistence, distinct distributed starts, legal grid exits, road-contained path samples, two minutes of turns/cross-quadrant travel, and collision recovery.
+- Updated architecture/design/task documentation, README and start-screen/version to v0.14.0.
+- Opened PR #6: https://github.com/bobmlord1/toy_city.io/pull/6
+Remaining:
+1. Claude reviews PR #6 and runs `npm install jsdom && node tools/smoke_test.js` from a local checkout.
+2. Owner checks the published v0.14.0 build after merge/deploy, watches the minimap for cars taking multiple routes through the grid, and confirms turning looks natural.
+Files changed: `src/vehicles.js` (grid route planner, seeded start distribution, lane-aware turn samples), `src/vehicle_update.js` (grid AI steering and intersection decisions), `tools/smoke_test.js` (grid/turn/cross-district/recovery tests), `ARCHITECTURE.md` (traffic navigation model), `DESIGN.md` (current state/decision log), `TASKS.md` (T-006 playtest finding and T-007 scope/status), `index.html` (v0.14.0/intro copy), `README.txt` (milestone notes).
+Verified:
+- Combined syntax parse passed for all 19 scripts in the exact `index.html` load order.
+- Standalone deterministic 180-second simulation: all 12 cars turned; all 12 crossed into another quadrant; all visited at least 18 intersections; no off-road frames. Worst actual position offset from a road centerline was 6.20 units (road half-width 7).
+- All 12 starting edges were unique and starting positions covered all four quadrants.
+- Collision-recovery simulation: after an 8-unit lateral knockback, lane-center error was 0.16 units after four seconds.
+- The updated smoke-test file parses.
+Not verified:
+- The full `node tools/smoke_test.js` was not run in this environment; this session could not clone the repo into a local test checkout.
+- No real browser/WebGL or touch test; the owner has not yet playtested v0.14.0.
+Next agent should: Claude runs the full smoke test and reviews the PR. Do not merge until that passes. After merge/deploy, owner checks live traffic behavior.
+

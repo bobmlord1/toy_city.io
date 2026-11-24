@@ -68,9 +68,11 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 - **Shadows follow the surface.** `shadowSurfaceH()` in `shadows.js` is the height every shadow vertex uses. Anything new that sits above the ground on a ramp (like the gold pad, see `upgradePad` in `world_config.js`) must be added there, or shadows will vanish under it. Near ramps, shadow triangles are subdivided so they follow the slope.
 - **Keep the world flat for now.** Hills were removed on purpose until the street kit is stable.
 
-## Traffic routes
+## Traffic navigation
 
-The 12 persistent traffic cars are split evenly across four fixed 2×2-block district circuits. Circuit bounds use existing interior street centerlines (no new road geometry or colliders). Each circuit is a rounded rectangle with a 4.2-unit corner radius, three cars, and traffic travelling in both directions on opposing lanes. The route sampler is `trafficRoutePoint()`; `trafficLanePoint()` applies each car's lane offset. `updateVehicle()` advances the route progress and uses a short look-ahead target plus the existing soft spring recovery after impacts. Cars are never spawned or despawned.
+The 12 persistent traffic cars use the full street grid, not closed loops. `streetLines` supplies the eight north-south/east-west road centerlines. `trafficBuildLeg()` plans one road segment to the next intersection and chooses a legal straight, left or right exit (weighted 56% / 22% / 22%, renormalized at city edges). Cars follow a sampled lane-center path; turns use a short cubic curve within the intersection. The next leg is planned when the current one completes, so routes can continue across all four city quadrants without a pathfinding engine.
+
+Starting road edges are shuffled with a fixed layout seed, so the 12 vehicles begin on distinct, varied street segments across the full grid while remaining reproducible. Each vehicle has its own deterministic decision seed. The AI stores its current grid node, heading, leg progress and visited-region mask for validation. Traffic remains persistent, and `aiKnockTime` still reduces the lane-recovery spring after collisions.
 
 ## Activities
 
@@ -93,7 +95,7 @@ The 12 persistent traffic cars are split evenly across four fixed 2×2-block dis
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 12-car traffic fleet and four district circuits (street alignment, route/lane distribution and sustained finite movement), plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 12-car persistent grid fleet, unique seeded starts across the four quadrants, legal intersection decisions, sampled turn geometry, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt
