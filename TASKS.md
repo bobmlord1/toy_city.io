@@ -70,7 +70,7 @@ Notes:
 
 ### T-007 Intersection-based traffic AI and distributed starts
 Assigned to: ChatGPT (requested by the project owner on 2026-11-24).
-Status: implemented on `chatgpt/t-007-intersection-traffic`; awaiting full local smoke test, Claude review and owner browser playtest.
+Status: merged to `main` as v0.14.0 (PR #6). Owner browser playtest passed the key intersection-collision recovery check on 2026-11-24.
 Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md`, `index.html`, `README.txt`.
 Why: Make the existing traffic fleet behave like city traffic that can turn at intersections and travel between districts, instead of remaining locked to closed rectangular loops.
 Done when:
@@ -85,7 +85,8 @@ Notes:
 - The owner proposed (1) "some rudimentary AI that can choose to make a turn jumping onto another predefined circuit" and (2) "Semi-randomized starting locations on the circuit." Implement both, with intersection decisions taking priority over decorative variation.
 - The owner also asked to confirm whether cars could ever leave the outer grid in the current code. The v0.13.0 route code had no transition: each car retained one `routeIndex` and advanced `routeS` modulo that route's length. T-007 must make cross-grid travel possible and prove it in the smoke test.
 - Keep this deliberately simple: no pathfinding engine, road graph editor, new vehicles, traffic lights, or rendering system.
-- Implementation (2026-11-24): PR #6 replaces T-006 closed circuits with an 8×8 grid controller. Standalone simulation confirms repeated turns and cross-quadrant travel; the full jsdom smoke test and real-browser playtest remain pending.
+- Implementation (2026-11-24): PR #6 replaces T-006 closed circuits with an 8×8 grid controller. Standalone simulation confirms repeated turns and cross-quadrant travel.
+- Owner browser playtest (2026-11-24): deliberately hit a traffic car as it approached an intersection. It continued through the intersection and corrected its path afterward. Record this as a pass for collision recovery during intersection navigation.
 
 ## Later: proposed order, not yet authorized as coding tasks
 
