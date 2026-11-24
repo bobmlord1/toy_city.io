@@ -1,7 +1,7 @@
 "use strict";
 // =============================================================================
 // src/vehicles.js
-// Vehicle asset loading, toy models, vehicle() factory, player car, semi + trailer, traffic loop.
+// Vehicle asset loading, toy models, vehicle() factory, player car, semi + trailer, district traffic routes.
 // Reads window.FREE_ROAM_VEHICLE_ASSETS (set by the boot script in index.html).
 // =============================================================================
 
@@ -174,6 +174,9 @@ function vehicle(id, type, name, x, z, yaw, opts = {}) {
     parked: !!opts.parked,
     route: opts.route || null,
     routeDir: opts.routeDir || 1,
+    routeIndex: opts.routeIndex ?? -1,
+    routeS: opts.routeS ?? 0,
+    routeLane: opts.routeLane ?? 0,
     routeLaneX: x,
     routeLaneZ: z,
     aiKnockTime: 0,
@@ -231,44 +234,116 @@ const semiVehicle = vehicle("semi", "semi", "Blue Semi Truck", -12, 16, Math.PI,
     model: trailerModel,
   };
 }
-// A fixed fleet of traffic cars follows one continuous, rounded rectangular circuit
-// around the full city. Vehicles are never spawned or despawned; collisions can push
-// them off their lane and their steering gradually guides them back.
-const LOOP_HALF = 385,
-  LOOP_SIDE = LOOP_HALF * 2,
-  LOOP_LENGTH = LOOP_SIDE * 4;
-function loopPoint(distance) {
-  let s = ((distance % LOOP_LENGTH) + LOOP_LENGTH) % LOOP_LENGTH;
-  if (s < LOOP_SIDE) return { x: -LOOP_HALF + s, z: -LOOP_HALF, yaw: Math.PI / 2 };
-  s -= LOOP_SIDE;
-  if (s < LOOP_SIDE) return { x: LOOP_HALF, z: -LOOP_HALF + s, yaw: 0 };
-  s -= LOOP_SIDE;
-  if (s < LOOP_SIDE) return { x: LOOP_HALF - s, z: LOOP_HALF, yaw: -Math.PI / 2 };
-  s -= LOOP_SIDE;
-  return { x: -LOOP_HALF, z: LOOP_HALF - s, yaw: Math.PI };
+// Traffic uses four fixed district circuits aligned to the existing inner street grid.
+// Each route rounds its corners inside the intersection footprint. Three persistent cars
+// share each circuit, using both directions and the two opposing lanes. No spawning or
+// despawning occurs; collisions can still knock cars away and the soft AI spring guides
+// them back toward their route.
+const TRAFFIC_CORNER_RADIUS = 4.2;
+function createTrafficCircuit(id, minX, maxX, minZ, maxZ) {
+  const radius = Math.min(TRAFFIC_CORNER_RADIUS, (maxX - minX) * 0.16, (maxZ - minZ) * 0.16);
+  const arcLength = (Math.PI * radius) / 2;
+  const segments = [
+    { kind: "line", x: minX + radius, z: minZ, yaw: Math.PI / 2, length: maxX - minX - 2 * radius },
+    { kind: "arc", cx: maxX - radius, cz: minZ + radius, startAngle: -Math.PI / 2, length: arcLength },
+    { kind: "line", x: maxX, z: minZ + radius, yaw: 0, length: maxZ - minZ - 2 * radius },
+    { kind: "arc", cx: maxX - radius, cz: maxZ - radius, startAngle: 0, length: arcLength },
+    { kind: "line", x: maxX - radius, z: maxZ, yaw: -Math.PI / 2, length: maxX - minX - 2 * radius },
+    { kind: "arc", cx: minX + radius, cz: maxZ - radius, startAngle: Math.PI / 2, length: arcLength },
+    { kind: "line", x: minX, z: maxZ - radius, yaw: Math.PI, length: maxZ - minZ - 2 * radius },
+    { kind: "arc", cx: minX + radius, cz: minZ + radius, startAngle: Math.PI, length: arcLength },
+  ];
+  return {
+    id,
+    minX,
+    maxX,
+    minZ,
+    maxZ,
+    radius,
+    segments,
+    length: segments.reduce((sum, segment) => sum + segment.length, 0),
+  };
 }
+const trafficRoutes = [
+  createTrafficCircuit("northwest", -275, -55, -275, -55),
+  createTrafficCircuit("northeast", 55, 275, -275, -55),
+  createTrafficCircuit("southwest", -275, -55, 55, 275),
+  createTrafficCircuit("southeast", 55, 275, 55, 275),
+];
+
+function trafficRoutePoint(route, distance, direction = 1) {
+  const dir = direction < 0 ? -1 : 1;
+  let remaining = ((distance % route.length) + route.length) % route.length;
+  if (dir < 0) remaining = (route.length - remaining) % route.length;
+  let point = null;
+  for (const segment of route.segments) {
+    if (remaining > segment.length) {
+      remaining -= segment.length;
+      continue;
+    }
+    if (segment.kind === "line") {
+      point = {
+        x: segment.x + Math.sin(segment.yaw) * remaining,
+        z: segment.z + Math.cos(segment.yaw) * remaining,
+        yaw: segment.yaw,
+      };
+    } else {
+      const angle = segment.startAngle + remaining / route.radius;
+      point = {
+        x: segment.cx + Math.cos(angle) * route.radius,
+        z: segment.cz + Math.sin(angle) * route.radius,
+        yaw: Math.atan2(-Math.sin(angle), Math.cos(angle)),
+      };
+    }
+    break;
+  }
+  if (!point) point = { x: route.minX + route.radius, z: route.minZ, yaw: Math.PI / 2 };
+  if (dir < 0) point.yaw = Math.atan2(Math.sin(point.yaw + Math.PI), Math.cos(point.yaw + Math.PI));
+  return point;
+}
+
+function trafficLanePoint(route, distance, direction, laneOffset) {
+  const point = trafficRoutePoint(route, distance, direction);
+  const rightX = Math.cos(point.yaw);
+  const rightZ = -Math.sin(point.yaw);
+  return {
+    x: point.x + rightX * laneOffset,
+    z: point.z + rightZ * laneOffset,
+    yaw: point.yaw,
+  };
+}
+
 const trafficFleet = [];
-for (let i = 0; i < 12; i++) {
-  const p = loopPoint((i * LOOP_LENGTH) / 12 + 7);
-  const v = vehicle(
-    "traffic-loop-" + i,
-    ["trafficA", "trafficB", "trafficC"][i % 3],
-    ["Town Car", "Green Car", "Orange Car"][i % 3],
-    p.x,
-    p.z,
-    p.yaw,
-    {
-      width: 1.8,
-      length: 4.2,
-      mass: 1000,
-      accel: 0,
-      maxSpeed: 10.5 + (i % 4) * 0.75,
-      steerRate: 0,
-      ai: true,
-      route: "loop",
-    },
-  );
-  v.loopS = (i * LOOP_LENGTH) / 12 + 7;
-  v.loopLane = (i % 2 === 0 ? -1 : 1) * 1.8;
-  trafficFleet.push(v);
+for (let routeIndex = 0; routeIndex < trafficRoutes.length; routeIndex++) {
+  const route = trafficRoutes[routeIndex];
+  for (let slot = 0; slot < 3; slot++) {
+    const direction = slot === 1 ? -1 : 1;
+    const routeS = (route.length * slot) / 3 + 7;
+    const lane = -1.8;
+    const p = trafficLanePoint(route, routeS, direction, lane);
+    const fleetIndex = routeIndex * 3 + slot;
+    const v = vehicle(
+      "traffic-" + route.id + "-" + slot,
+      ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
+      ["Town Car", "Green Car", "Orange Car"][fleetIndex % 3],
+      p.x,
+      p.z,
+      p.yaw,
+      {
+        width: 1.8,
+        length: 4.2,
+        mass: 1000,
+        accel: 0,
+        maxSpeed: 10.5 + (fleetIndex % 4) * 0.75,
+        steerRate: 0,
+        ai: true,
+        route: "district",
+        routeDir: direction,
+        routeIndex,
+        routeS,
+        routeLane: lane,
+      },
+    );
+    trafficFleet.push(v);
+  }
 }
