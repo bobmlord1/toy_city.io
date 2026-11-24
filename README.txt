@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND — VERSION 0.11
+FREE ROAM CAR PLAYGROUND - VERSION 0.11
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -20,3 +20,9 @@ Version 0.11 changes:
 - Rebuilt streets from reusable box-based road, intersection, sidewalk and corner modules.
 - Street layout is data-driven; each placed pavement module registers its matching ground-support collider.
 - Road runs use discrete chunks and dedicated intersection boxes to avoid overlapping top surfaces.
+
+Version 0.11.2 changes:
+- Code refactor only, no gameplay changes. game.js is now split into files in src/ (load order is listed in index.html).
+- Added DESIGN.md, ARCHITECTURE.md, TASKS.md, AGENTS.md and agent_comments.md for the multi-agent workflow.
+- Added tools/smoke_test.js (run: npm install jsdom, then node tools/smoke_test.js).
+- To run locally: python3 -m http.server, then open http://localhost:8000
