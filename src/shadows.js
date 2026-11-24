@@ -30,6 +30,47 @@ function convexHull2D(points) {
   upper.pop();
   return lower.concat(upper);
 }
+// Shadows must sit just above whatever surface they fall on. Flat ground and roads use a tiny lift.
+// Ramp decks get a larger lift (the deck mesh is a few hundredths above driveSurfaceH), and the
+// upgrade pad area clears the gold pad and its stripes.
+const SHADOW_LIFT = 0.015,
+  SHADOW_RAMP_LIFT = 0.055,
+  SHADOW_MAX_EDGE = 0.9, // near ramps, split shadow triangles until no edge is longer than this
+  SHADOW_MAX_DEPTH = 4;
+function shadowSurfaceH(x, z) {
+  const ramp = rampProfile(x, z);
+  // The raised area extends one triangle-size past the pad so the step down happens off the pad.
+  if (
+    Math.abs(x - upgradeRamp.x) <= upgradePad.halfWidth + SHADOW_MAX_EDGE &&
+    z >= upgradePad.z0 - SHADOW_MAX_EDGE &&
+    z <= upgradePad.z1 + SHADOW_MAX_EDGE
+  )
+    return (
+      terrainH(x, z) + ramp + upgradePad.stripeLift + upgradePad.stripeHeight + SHADOW_RAMP_LIFT
+    );
+  return driveSurfaceH(x, z) + (ramp > 0 ? SHADOW_RAMP_LIFT : SHADOW_LIFT);
+}
+// A flat triangle stretched across a slope change (a ramp crest, say) cuts through the surface, so
+// near ramps each triangle is split into small pieces and every corner samples the true height.
+function pushShadowTriangle(out, a, b, c, alpha, depth) {
+  const longest = Math.max(
+    Math.hypot(a.x - b.x, a.z - b.z),
+    Math.hypot(b.x - c.x, b.z - c.z),
+    Math.hypot(c.x - a.x, c.z - a.z),
+  );
+  if (depth > 0 && longest > SHADOW_MAX_EDGE) {
+    const mid = (p, q) => ({ x: (p.x + q.x) / 2, z: (p.z + q.z) / 2 });
+    const ab = mid(a, b),
+      bc = mid(b, c),
+      ca = mid(c, a);
+    pushShadowTriangle(out, a, ab, ca, alpha, depth - 1);
+    pushShadowTriangle(out, ab, b, bc, alpha, depth - 1);
+    pushShadowTriangle(out, ca, bc, c, alpha, depth - 1);
+    pushShadowTriangle(out, ab, bc, ca, alpha, depth - 1);
+    return;
+  }
+  for (const p of [a, b, c]) out.push(p.x, shadowSurfaceH(p.x, p.z), p.z, alpha);
+}
 const staticShadowVertices = [];
 const shadowSun = normalize([-0.45, 0.82, 0.36]);
 function appendShadowCaster(out, caster) {
@@ -52,10 +93,12 @@ function appendShadowCaster(out, caster) {
   const hull = convexHull2D(corners);
   if (hull.length < 3) return;
   const first = hull[0];
-  for (let i = 1; i < hull.length - 1; i++) {
-    for (const p of [first, hull[i], hull[i + 1]])
-      out.push(p.x, driveSurfaceH(p.x, p.z) + 0.015, p.z, caster.alpha ?? 0.28);
-  }
+  const alpha = caster.alpha ?? 0.28;
+  // Only casters near a ramp pay for the extra triangles.
+  const reach = Math.hypot(caster.hw, caster.hl) + caster.height * 0.7 + 1;
+  const depth = isNearAnyRamp(caster.x, caster.z, reach) ? SHADOW_MAX_DEPTH : 0;
+  for (let i = 1; i < hull.length - 1; i++)
+    pushShadowTriangle(out, first, hull[i], hull[i + 1], alpha, depth);
 }
 for (const caster of staticShadowCasters) appendShadowCaster(staticShadowVertices, caster);
 const staticShadowBuffer = gl.createBuffer();

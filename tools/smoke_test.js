@@ -148,6 +148,73 @@ if (!offer || offer.phase !== "offer") {
   if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
 }
 
+// ---- Ramp geometry and ramp shadow checks ----
+const geometryProblems = get(`(() => {
+  const problems = [];
+  const d = worldB.data; // 12 floats per vertex, 3 vertices per triangle
+  const key = (y, z) => y.toFixed(3) + "," + z.toFixed(3);
+  for (const r of allRamps) {
+    const walls = {};
+    for (const [name, edge] of [["left", r.x - r.halfWidth], ["right", r.x + r.halfWidth]]) {
+      walls[name] = new Set();
+      for (let i = 0; i + 35 < d.length; i += 36) {
+        if (![0, 12, 24].every((o) => Math.abs(d[i + o] - edge) < 1e-4)) continue;
+        for (const o of [0, 12, 24]) {
+          const y = d[i + o + 1], z = d[i + o + 2];
+          if (z < r.startZ - 1e-3 || z > r.endZ + 1e-3) continue;
+          walls[name].add(key(y, z));
+          const zc = Math.min(Math.max(z, r.startZ + 0.001), r.endZ - 0.001);
+          if (y > profileForRamp(r, r.x, zc) + 0.1)
+            problems.push(r.id + " " + name + " wall rises above its deck at z=" + z.toFixed(2) + " (y=" + y.toFixed(2) + ")");
+        }
+      }
+    }
+    for (const k of walls.left) if (!walls.right.has(k)) problems.push(r.id + ": right wall is missing vertex " + k);
+    for (const k of walls.right) if (!walls.left.has(k)) problems.push(r.id + ": left wall is missing vertex " + k);
+  }
+  // Shadows on ramps must stay above the surface they fall on (deck, tuning pad and its stripes).
+  const surface = (x, z) => {
+    let y = driveSurfaceH(x, z) - 0.005;
+    if (Math.abs(x - upgradeRamp.x) <= 3.85 && z >= 31.2 && z <= 37.2)
+      y = terrainH(x, z) + rampProfile(x, z) + 0.215;
+    return y;
+  };
+  const spots = [[upgradeRamp.x, 34.2, 0], [upgradeRamp.x, 34.2, 0.7]];
+  for (const r of allRamps)
+    for (const z of [r.startZ + 1, r.crestZ, (r.crestZ + r.flatEndZ) / 2, r.flatEndZ, r.endZ - 1])
+      for (const dx of [0, r.halfWidth * 0.6])
+        for (const yaw of [0, 0.7]) spots.push([r.x + dx, z, yaw]);
+  let worst = 0, bad = 0, total = 0;
+  for (const [x, z, yaw] of spots) {
+    const out = [];
+    appendShadowCaster(out, { x, z, hw: 1.1, hl: 2.5, yaw, height: 2.25, alpha: 0.32, useDriveSurface: true });
+    for (let i = 0; i + 11 < out.length; i += 12) {
+      const P = [0, 1, 2].map((k) => ({ x: out[i + k * 4], y: out[i + k * 4 + 1], z: out[i + k * 4 + 2] }));
+      const w = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]];
+      for (const [a, b, c] of w) {
+        const px = P[0].x * a + P[1].x * b + P[2].x * c, pz = P[0].z * a + P[1].z * b + P[2].z * c;
+        const py = P[0].y * a + P[1].y * b + P[2].y * c;
+        // A shadow straddling a ramp's vertical side wall cannot be exact; skip that thin band.
+        if (
+          allRamps.some(
+            (r) =>
+              pz >= r.startZ - 1 &&
+              pz <= r.endZ + 1 &&
+              Math.abs(Math.abs(px - r.x) - r.halfWidth) < 1.0,
+          )
+        )
+          continue;
+        total++;
+        const gap = py - surface(px, pz);
+        if (gap < -0.01) { bad++; worst = Math.min(worst, gap); }
+      }
+    }
+  }
+  if (bad) problems.push("Ramp shadows dip below the surface at " + bad + " of " + total + " sample points (worst " + worst.toFixed(3) + ")");
+  return problems;
+})()`);
+for (const problem of geometryProblems) failures.push("Geometry: " + problem);
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

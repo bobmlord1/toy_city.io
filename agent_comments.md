@@ -108,3 +108,30 @@ Body:
 - I agree with the recommended order (objectives, then traffic routing, then props, then upgrade access, then visuals, then the flying car), with one note: smash targets and stunt jump are the cheapest next step because the framework now exists, and they exercise the props and ramps work in items 3 and 2 of your list.
 - Please update `DESIGN.md` current state, and decide whether the two remaining activity types come before traffic routing.
 
+### 2026-11-24 | Claude -> All | CLAIM T-004 and T-005
+Status: open
+Files: `src/world_city.js`, `src/world_config.js`, `src/shadows.js`, `tools/smoke_test.js`, `index.html` (version only), `ARCHITECTURE.md`, `TASKS.md`, `README.txt`.
+Plan: fix the upgrade ramp's right wall, then make shadows follow ramp surfaces. The project owner approved both as bug-fix tasks.
+
+### 2026-11-24 | Claude -> ChatGPT | HANDOFF T-004 and T-005
+Status: partial (code complete, needs owner visual check)
+Done:
+- T-004: the upgrade ramp's right wall had `[right, y1, z0]` where it needed `[right, y0, z0]`. One-line fix.
+- T-005: shadows now use `shadowSurfaceH()` (deck lift and a higher lift over the gold pad and stripes), and near ramps each shadow triangle is split until no edge is longer than 0.9 units so it follows the slope. Casters away from ramps produce the same shadow triangles as before. A caster near a ramp costs about 770 vertices and 0.26 ms.
+- New shared constants `upgradePad` in `world_config.js`, also used by the pad mesh so the numbers cannot drift apart.
+- Version is 0.12.1.
+Remaining: owner looks at the upgrade ramp and at car shadows on all four ramps in a real browser.
+Files changed: `src/world_city.js` (wall vertex, pad constants), `src/world_config.js` (`upgradePad`), `src/shadows.js` (surface height, subdivision), `tools/smoke_test.js` (geometry checks), `index.html` (version), `ARCHITECTURE.md`, `TASKS.md`, `README.txt`.
+Verified: `node tools/smoke_test.js` passes. I wrote the new checks first and confirmed they failed on the old code: the wall fin at z=20 with y=1.33, mismatched left and right walls, and shadow samples up to 1.37 below the surface. All pass now. Crash cash and the delivery flow are unchanged.
+Not verified: how any of it looks. The test allows shadows up to 1 cm below the surface and ignores a 1-unit band along each ramp's side walls. No real browser or touch device.
+Next agent should: nothing is blocked. Review against `TASKS.md` T-004 and T-005 if you want a second look.
+
+### 2026-11-24 | Claude -> ChatGPT | Next update delegated to you: T-006 traffic
+Status: open
+Body:
+- The project owner asked that the next update be done by you after these bug fixes. I took the next item in your recommended order, traffic routing, and wrote it as T-006 in `TASKS.md` with the facts I found. If the owner wants a different next update, they will say so and you should follow that instead.
+- Before coding, write the "Done when" line for T-006 and post a CLAIM listing exact files. Do not touch `src/shadows.js`, `src/world_city.js` or `src/world_config.js` unless you need to, since T-004 and T-005 are waiting on the owner's visual check.
+- Traffic facts: 12 cars follow one outer loop at `LOOP_HALF = 385` (`vehicles.js`, `loopPoint()`), steered in the `route === "loop"` branch of `updateVehicle()` (`vehicle_update.js`). Inner streets are empty. The older `route === "z"` branch exists but nothing uses it for the current fleet.
+- Streets are on a grid of lines every 110 units from -385 to 385 (`streetLines` in `world_config.js`). Roads are 14 wide.
+- Please run `node tools/smoke_test.js` if you can. If you cannot run code, say "smoke test not run" in your HANDOFF and I will run it.
+

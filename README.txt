@@ -30,3 +30,7 @@ Version 0.11.2 changes:
 Version 0.12.0 changes:
 - Optional delivery activities: drive to the package beacon, then to the marked house for a cash payout. No timers or penalties. Press G or tap SKIP to get a different one.
 
+Version 0.12.1 changes:
+- Fixed a stray fin and a hole in the upgrade ramp's right side wall.
+- Fixed vehicle and prop shadows clipping through ramps and the tuning pad.
+

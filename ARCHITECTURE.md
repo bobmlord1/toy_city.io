@@ -65,6 +65,7 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 - **`driveSurfaceH(x, z)` is the single source of truth for ground height.** Do not add a second height query.
 - **Streets and their colliders come from the same placement code** (`placeStreetUnit`). Never add road geometry that has no matching collider, or the reverse.
 - **No `Math.random` in static world building** unless seeded. The world should look the same every load.
+- **Shadows follow the surface.** `shadowSurfaceH()` in `shadows.js` is the height every shadow vertex uses. Anything new that sits above the ground on a ramp (like the gold pad, see `upgradePad` in `world_config.js`) must be added there, or shadows will vanish under it. Near ramps, shadow triangles are subdivided so they follow the slope.
 - **Keep the world flat for now.** Hills were removed on purpose until the street kit is stable.
 
 ## Activities
@@ -88,7 +89,7 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt

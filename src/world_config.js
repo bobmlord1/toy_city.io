@@ -21,6 +21,16 @@ const upgradeRamp = {
   rise: 1.25,
   flatY: 0,
 };
+// The gold tuning pad on the upgrade ramp deck. Pad and stripes sit above the deck surface, so
+// anything drawn on the ramp (like shadows) must clear stripeLift + stripeHeight.
+const upgradePad = {
+  halfWidth: 3.85,
+  z0: 31.2,
+  z1: 37.2,
+  deckLift: 0.16,
+  stripeLift: 0.19,
+  stripeHeight: 0.025,
+};
 // Extra stunt ramps are toy props with matching drive-surface profiles. Keep their
 // footprints clear of buildings and trees when adding new scenery.
 const stuntRamps = [

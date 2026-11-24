@@ -34,10 +34,36 @@ Notes:
 - Ramp launches do not currently identify a specific ramp; add a stable ramp identity if choosing stunt jump.
 - Centralize activity payouts through a small economy helper if practical; do not refactor the entire existing crash reward economy.
 
+### T-004 Fix upgrade ramp side wall geometry
+Assigned to: Claude (engineering).
+Status: implemented (v0.12.1). Waiting for an owner visual check in a real browser.
+Files: `src/world_city.js`.
+Why: The upgrade ramp's right side wall used a wrong vertex, leaving a fin above the up-slope and a gap along the down-slope.
+Done when: both side walls of every ramp match their decks (checked by `tools/smoke_test.js`), and the owner confirms the ramp looks right.
+
+### T-005 Fix shadows clipping through ramps
+Assigned to: Claude (engineering).
+Status: implemented (v0.12.1). Waiting for an owner visual check in a real browser.
+Files: `src/shadows.js`, `src/world_config.js` (new `upgradePad` constants), `src/world_city.js` (uses them), `tools/smoke_test.js`.
+Why: Shadows were flat triangles stretched across ramp slope changes and sat too close to the deck, so they cut through ramps and were buried under the tuning pad.
+Done when: shadows stay above ramp decks and the tuning pad (checked by `tools/smoke_test.js`), flat-ground shadows are unchanged, and the owner confirms they look right on ramps.
+Notes: Known limit: a shadow straddling a ramp's vertical side wall can still look slightly off in a thin band. Not worth fixing.
+
 ### T-003 Confirm the child's primary input device
 Assigned to: project owner.
 Why: Keyboard, touch or controller changes activity controls and HUD decisions.
 Done when: the primary input device is written into `DESIGN.md` under Audience.
+
+### T-006 Traffic routing improvements (first pass)
+Assigned to: ChatGPT (delegated by the project owner on 2026-11-24). Needs a written scope and a CLAIM before any coding.
+Files: ChatGPT to list in its CLAIM. Likely `src/vehicles.js` (traffic spawn) and `src/vehicle_update.js` (traffic steering), possibly a new `src/traffic.js`.
+Why: Improve how busy and varied traffic feels without raising rendering and physics cost.
+Done when: ChatGPT writes this line before claiming. It should be something a person can see in a minute of driving.
+Notes:
+- Today all 12 traffic cars follow one rounded-square loop around the outer edge of the city (`loopPoint()` and the `route === "loop"` branch of `updateVehicle()`). The inner streets are empty.
+- Design preference from the project owner's recommended order: smarter routing and better distribution before simply adding more cars.
+- Traffic cars are never spawned or despawned. Collisions push them off their lane and a soft spring guides them back. Keep that behavior.
+- Run `node tools/smoke_test.js` and keep crash cash, delivery activities and the rest of free roam working.
 
 ## Later: proposed order, not yet authorized as coding tasks
 

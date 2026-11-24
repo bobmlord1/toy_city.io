@@ -60,7 +60,7 @@ worldB.useMaterial(0.22, 0.025, 0);
     );
     worldB.quad(
       [right, bottom0, z0],
-      [right, y1, z0],
+      [right, y0, z0],
       [right, y1, z1],
       [right, bottom1, z1],
       [0.075, 0.27, 0.48],
@@ -77,11 +77,11 @@ worldB.useMaterial(0.22, 0.025, 0);
     }
   }
   // The gold tuning pad is centered on the flat middle section, not on either slope.
-  const px0 = r.x - 3.85,
-    px1 = r.x + 3.85,
-    pz0 = 31.2,
-    pz1 = 37.2;
-  const py = (x, z) => terrainH(x, z) + rampProfile(x, z) + 0.16;
+  const px0 = r.x - upgradePad.halfWidth,
+    px1 = r.x + upgradePad.halfWidth,
+    pz0 = upgradePad.z0,
+    pz1 = upgradePad.z1;
+  const py = (x, z) => terrainH(x, z) + rampProfile(x, z) + upgradePad.deckLift;
   worldB.quad(
     [px0, py(px0, pz0), pz0],
     [px0, py(px0, pz1), pz1],
@@ -92,8 +92,8 @@ worldB.useMaterial(0.22, 0.025, 0);
   );
   worldB.useMaterial(0.15, 0, 0);
   for (let z = 32.0; z < 36.8; z += 1.25) {
-    const y = terrainH(r.x, z) + rampProfile(r.x, z) + 0.19;
-    worldB.box(r.x - 3.25, y, z - 0.1, r.x + 3.25, y + 0.025, z + 0.1, [1.0, 0.94, 0.58]);
+    const y = terrainH(r.x, z) + rampProfile(r.x, z) + upgradePad.stripeLift;
+    worldB.box(r.x - 3.25, y, z - 0.1, r.x + 3.25, y + upgradePad.stripeHeight, z + 0.1, [1.0, 0.94, 0.58]);
   }
 }
 // Three smaller stunt ramps use contrasting glossy plastic colors. Their ramps sit
