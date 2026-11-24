@@ -485,10 +485,14 @@ for (let i = 0; i < 12; i++) {
     },
   );
   v.trafficStartEdgeKey = edge.x + "," + edge.z + "," + edge.heading;
+  v.trafficStartXIndex = nodeXIndex;
+  v.trafficStartZIndex = nodeZIndex;
+  v.trafficStartHeading = heading;
   v.trafficMinNodeX = v.trafficMaxNodeX = nodeXIndex;
   v.trafficMinNodeZ = v.trafficMaxNodeZ = nodeZIndex;
   v.trafficVisitedNodeCount = 1;
   v.trafficRegionMask = trafficRegionBit(nodeXIndex, nodeZIndex);
+  v.trafficStartRegionMask = v.trafficRegionMask;
   v.trafficExitOffset = 0;
   v.trafficLeg = trafficBuildLeg(v);
   v.trafficProgress = 12 + trafficRandom(v) * Math.min(48, v.trafficLeg.lineLength * 0.62);
@@ -496,6 +500,8 @@ for (let i = 0; i < 12; i++) {
   v.x = initial.x;
   v.z = initial.z;
   v.yaw = initial.yaw;
+  v.trafficStartX = v.x;
+  v.trafficStartZ = v.z;
   v.y = driveSurfaceH(v.x, v.z) + 0.04;
   v.previousSurfaceY = v.y;
   trafficFleet.push(v);
