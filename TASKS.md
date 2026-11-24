@@ -90,7 +90,7 @@ Notes:
 
 ### T-008 Add a dedicated pickup-truck traffic fleet
 Assigned to: ChatGPT.
-Status: implementation complete; PR #7 open and mergeable. Full smoke test and owner browser playtest remain pending.
+Status: merged to main as v0.15.0 (PR #7). Owner reports no major perceived slowdown on phone/laptop, but has no objective FPS measurement. Full smoke test and truck appearance/congestion checks remain pending.
 Files: `src/vehicles.js`, `tools/smoke_test.js`, `index.html`, `DESIGN.md`, `ARCHITECTURE.md`, `TASKS.md`, `README.txt`, `agent_comments.md`.
 Why: The owner reports that the city still feels empty and lacks vehicle variety after T-007; more traffic types should make free-roam feel busier without changing the route system.
 Done when:
