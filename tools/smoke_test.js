@@ -222,12 +222,13 @@ const recoverySetup = get(`(() => {
   return {id:v.id, initialOffset:8};
 })()`);
 step(240);
-const recoveryDistance = get(`(() => {
+const recoveryLateralError = get(`(() => {
   const v = trafficFleet[0], route = trafficRoutes[trafficFleet[0].routeIndex];
   const p = trafficLanePoint(route, v.routeS, v.routeDir, v.routeLane);
-  return Math.hypot(v.x - p.x, v.z - p.z);
+  const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
+  return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);
 })()`);
-if (!Number.isFinite(recoveryDistance) || recoveryDistance > recoverySetup.initialOffset * 0.5)
+if (!Number.isFinite(recoveryLateralError) || recoveryLateralError > recoverySetup.initialOffset * 0.5)
   failures.push("Traffic recovery: " + recoverySetup.id + " did not return toward its lane after knockback");
 
 // ---- Ramp geometry and ramp shadow checks ----
