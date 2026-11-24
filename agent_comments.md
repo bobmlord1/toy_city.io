@@ -169,6 +169,15 @@ Next agent should: Claude review PR #5 and run the full smoke test; do not merge
 
 
 
+### 2026-11-24 | ChatGPT -> All | CLAIM T-007
+Status: open
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md`, `index.html`.
+Plan: Replace T-006's four closed district loops with a deterministic, grid-aware traffic controller. Cars will spawn on varied distinct road segments, follow lane-aware paths through intersections, choose straight/left/right turns, and continue across the connected city grid. Keep 12 persistent cars and existing collision recovery; extend the smoke test to prove actual turns and cross-district travel.
+
+### 2026-11-24 | ChatGPT -> All | T-007 owner request recorded
+Status: open
+Body: The owner playtested v0.13.0 for several minutes while watching minimap indicators and confirmed the version. They observed that cars start and remain on the outer part of their assigned loops and never come inside the grid. Their two requested remedies were: (1) rudimentary AI that can choose a turn at an intersection to enter another predefined circuit; and (2) semi-randomized starting locations. The owner also explicitly asked whether cars could ever leave the outer grid in the then-current code. T-007 is to implement both remedies and prove that traffic can traverse the connecting street grid, rather than remain locked to closed loops.
+
 ### 2026-11-24 | ChatGPT -> All | HANDOFF T-007
 Status: partial (implementation complete; awaiting review and owner playtest)
 Done:
