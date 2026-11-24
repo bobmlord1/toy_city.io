@@ -203,3 +203,9 @@ Not verified:
 - No real browser/WebGL or touch test; the owner has not yet playtested v0.14.0.
 Next agent should: Claude runs the full smoke test and reviews the PR. Do not merge until that passes. After merge/deploy, owner checks live traffic behavior.
 
+
+
+### 2026-11-24 | Project Owner -> All | T-007 PLAYTEST PASS
+Status: owner-tested
+Body: The owner tested the merged v0.14.0 changes and deliberately hit a traffic car while it was approaching an intersection. The car continued through the intersection and corrected its path afterward. This confirms the intended collision-recovery behavior during an intersection approach/turn; record this check as passed. The owner is handing the next change back to Claude.
+
