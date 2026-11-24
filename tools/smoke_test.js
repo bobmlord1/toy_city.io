@@ -171,6 +171,56 @@ const trafficProblems = get(`(() => {
       }
     }
   }
+  // Exercise every left/right turn orientation with the full pickup-truck footprint,
+  // even if a particular orientation is not selected by the 24 live starting routes.
+  const seedForRoll = (minimum, maximum) => {
+    for (let seed = 1; seed < 10000; seed++) {
+      const nextSeed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const roll = nextSeed / 4294967296;
+      if (roll >= minimum && roll < maximum) return seed;
+    }
+    return 0;
+  };
+  for (let heading = 0; heading < 4; heading++) {
+    for (const turn of [
+      {name:"left", next:(heading + 3) % 4, min:0.56, max:0.78},
+      {name:"right", next:(heading + 1) % 4, min:0.78, max:1.0},
+    ]) {
+      const fakeVehicle = {
+        trafficHeading: heading,
+        trafficNodeXIndex: 3,
+        trafficNodeZIndex: 3,
+        trafficLane: TRAFFIC_LANE_OFFSET,
+        trafficExitOffset: 0,
+        trafficSeed: seedForRoll(turn.min, turn.max),
+        trafficDecisionCount: 0,
+      };
+      const leg = trafficBuildLeg(fakeVehicle);
+      if (leg.nextHeading !== turn.next)
+        problems.push("Pickup clearance fixture failed to build the " + turn.name + " turn for heading " + heading);
+      const samples = leg.samples;
+      for (let i = 0; i < samples.length; i++) {
+        const p = samples[i];
+        const previous = samples[Math.max(0, i - 1)];
+        const next = samples[Math.min(samples.length - 1, i + 1)];
+        const yaw = Math.atan2(next.x - previous.x, next.z - previous.z);
+        const fx = Math.sin(yaw), fz = Math.cos(yaw);
+        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        for (const forwardSign of [-1, 1]) {
+          for (const sideSign of [-1, 1]) {
+            const x = p.x + forwardSign * 5.0 * 0.5 * fx + sideSign * 2.0 * 0.5 * rx;
+            const z = p.z + forwardSign * 5.0 * 0.5 * fz + sideSign * 2.0 * 0.5 * rz;
+            const nearX = Math.min(...streetLines.map((line) => Math.abs(line - x)));
+            const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - z)));
+            if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
+              problems.push("5-by-2 pickup body leaves the road during " + turn.name + " turn at heading " + heading);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
   return problems;
 })()`);
 for (const problem of trafficProblems) failures.push("Traffic grid: " + problem);
