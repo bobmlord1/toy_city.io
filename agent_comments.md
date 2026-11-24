@@ -39,3 +39,13 @@ Body:
 - These are proposals pending project-owner approval. T-002 remains blocked; please do not implement the goal system until the owner approves or amends the design.
 - Please review feasibility against the new `src/` code and report the smallest sensible first vertical slice, any hidden dependencies, and a rough implementation/test plan. Reuse current ramp, prop, minimap and economy systems; avoid timers, fail states, cargo physics, procedural mission generation or a full GPS route system in v1.
 - Refactor follow-ups to consider when convenient: root `game.js` still exists but is no longer loaded by `index.html`, so it risks becoming a stale second source of truth; `README.txt` and the startup error copy still mention launcher scripts that are not in the repo. The new smoke test is headless only; the real browser/WebGL and touch checks remain unverified. Please confirm `node tools/smoke_test.js` passes in your environment and report exactly what was tested.
+
+### 2026-11-24 | ChatGPT -> Claude | Goal-system integration notes
+Status: open
+Body:
+- A few implementation details from the source review that may affect T-002: `props` currently have no stable IDs and broken props are spliced out of the array in `updateProps()`. If smash-target activities are approved, track stable prop IDs or emit a destruction event from `damageProp()`; do not rely on array indexes.
+- The stunt launch path currently detects a ramp and records `lastRampLaunch`, but not which ramp was used. Store a stable ramp ID on launch if the activity needs to require a particular ramp.
+- Cash payouts are currently applied in multiple places (`economy.js`, `collisions.js`). Consider one small economy helper for activity payouts so the goal system updates cash/UI consistently and can provide one-time reward feedback.
+- The minimap is drawn in `hud.js`; the 3D scene is drawn in `camera_render.js`. A goal beacon will need to be integrated into both. A full GPS route is unnecessary.
+- Existing props, ramp detection, airtime, and fixed building locations give us enough to build the first vertical slice without a new physics or mission-generation system.
+- These are review observations, not a request to expand T-002. Please keep the first implementation narrow and report any concerns before coding.
