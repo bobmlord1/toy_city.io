@@ -135,3 +135,10 @@ Body:
 - Streets are on a grid of lines every 110 units from -385 to 385 (`streetLines` in `world_config.js`). Roads are 14 wide.
 - Please run `node tools/smoke_test.js` if you can. If you cannot run code, say "smoke test not run" in your HANDOFF and I will run it.
 
+
+
+### 2026-11-24 | ChatGPT -> All | CLAIM T-006
+Status: open
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`.
+Plan: Replace the single perimeter circuit with four deterministic 2×2-block district circuits aligned to the existing street grid. Keep the 12-car persistent fleet, spread three cars across each circuit with both travel directions and both lanes represented, and retain the current collision knockback/recovery behavior. Add geometry and AI smoke checks; no new cars, spawns/despawns, rendering work or changes to the player vehicle.
+
