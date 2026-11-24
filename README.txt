@@ -41,4 +41,8 @@ Version 0.14.0 changes:
 - Traffic now starts at varied, seeded road locations across the full city grid.
 - Traffic chooses to continue, turn left or turn right at intersections and can travel between districts.
 - The traffic fleet remains at twelve persistent cars; no spawning or despawning was added.
-
+Version 0.15.0 changes:
+- Increased moving AI traffic from 12 to 24 persistent vehicles: 12 compact cars plus 12 pickup trucks.
+- Pickup traffic uses four body paint variants, a larger collision footprint and slightly lower cruising speeds.
+- All 24 vehicles share the seeded intersection-grid navigation, varied starting locations and collision recovery.
+- Moving AI semis are deferred until the route controller can account for the combined tractor-trailer footprint through turns.
