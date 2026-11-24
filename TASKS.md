@@ -13,38 +13,45 @@ Notes: constraints, links to DESIGN.md decisions.
 
 ## Now
 
-### T-001 Decide the first goal types and the reward model
-Owner: design agent (ChatGPT), final say with the project owner.
-Why: Engineering cannot build goals until the first 2 or 3 goal types and how they reward the player are chosen.
-Done when: `DESIGN.md` answers open questions 1 to 4, and a decision log line is added.
+### T-001 Approve the first activity types and reward model
+Owner: project owner, informed by the design proposal in `DESIGN.md`.
+Why: Engineering needs a stable gameplay decision before building objectives.
+Done when: the project owner approves or amends the three proposed activities and the reward direction in `DESIGN.md`.
+Status: design proposal is written; awaiting owner approval. Claude may review feasibility but must not implement the goal system until approval.
 
 ## Next
 
 ### T-002 Goals system v1
-Owner: engineering (Claude). Blocked by T-001.
-Why: The game has no goals yet. A child needs something simple to do.
-Done when: a new `src/goals.js` runs one data-driven goal type end to end (marker in the world, minimap marker, completion feedback, next goal starts), and adding a second goal of the same type needs data only.
+Owner: engineering (Claude). Blocked by T-001 approval.
+Why: Add optional direction and predictable payouts without compromising free-roam play.
+Done when:
+- One activity can be active at a time and can be ignored or left without penalty.
+- The first approved activity type works end to end with a visible 3D target, minimap marker, progress/completion feedback and one-time cash payout.
+- The activity can be completed and another offered without reloading the game.
+- Existing driving, traffic, vehicle switching, ramps, upgrades and crash/airtime rewards still work.
+Notes: Follow the approved decisions in `DESIGN.md`. Keep v1 data-driven and use fixed locations/existing systems. No timers, fail states, cargo physics, procedural mission generation or full GPS routing.
 
-### T-003 Goal guidance marker
-Owner: engineering. Blocked by T-001.
-Why: A child must be able to see where to go without reading.
-Done when: the active goal shows a visible beacon or arrow in the 3D world and a marker on the minimap.
-
-### T-004 Confirm how the child plays
+### T-003 Confirm the child's primary input device
 Owner: project owner.
-Why: Keyboard, touch, or controller changes control and UI decisions.
-Done when: the input device is written into `DESIGN.md` under Audience.
+Why: Keyboard, touch or controller changes activity controls and HUD decisions.
+Done when: the primary input device is written into `DESIGN.md` under Audience.
 
-## Later
+## Later — proposed order, not yet authorized
 
+- Add the other two approved activity types after T-002 proves the activity framework.
+- Improve traffic variety and route selection; assess density before simply increasing the car count.
+- Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
+- Distribute upgrade access around the city only if playtesting shows the single tuning pad is inconvenient.
+- Reapply the accepted toy-playset visual direction after the refactor, using the existing WebGL renderer and procedural geometry/material system. See the prior visual-development brief in the project conversation; do not introduce Blender or a new rendering engine.
+- Consider cosmetic rewards (vehicle colors, stickers, city decorations) after the cash/activity loop is balanced.
+- Treat the flying/hover car as a late-game capstone, not part of the first objective milestone.
 - Kid-friendly HUD: fewer words, bigger icons, hide the tuning panel unless needed.
 - Sound: engine hum, crash pops, goal jingle. Keep volume low by default.
-- Simpler driving assist (optional): gentle auto-steer, easy un-stick button.
-- Cosmetic rewards: vehicle colors, stickers, city decorations.
-- Revisit the crash-for-cash economy once goals exist.
-- Replace `README.txt` run instructions (mentions scripts that are not in the repo).
-- Optional: convert `src/` to ES modules if the shared global scope becomes a problem.
+- Optional driving assist and an easy un-stick action.
+- Replace stale README launch instructions (mentions scripts that are not in the repo).
+- Remove or clearly archive the unused root `game.js` after confirming it is no longer a supported entry point; avoid two apparent sources of truth.
+- Optional: convert `src/` to ES modules only if the shared global scope becomes a real problem.
 
 ## Done
 
-- 2026-11-23 Refactor: split the single 2,971-line `game.js` into 18 files in `src/`, formatted the code, added `tools/smoke_test.js`, and added the project docs. Gameplay is unchanged. Verified by running the old and new code through identical 400-frame simulations with identical results. Version bumped to 0.11.2.
+- 2026-11-23 Refactor: split the single 2,971-line `game.js` into 18 files in `src/`, formatted the code, added `tools/smoke_test.js`, and added the project docs. Gameplay is unchanged. Claude reports identical old/new 400-frame headless simulations; browser/touch playtesting remains outstanding.
