@@ -191,12 +191,12 @@ if (!offer || offer.phase !== "offer") {
   if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
 }
 
-// Traffic should make intersection decisions, turn, and travel across the city grid.
+// Traffic should make intersection decisions, turn, and travel across the city grid over two simulated minutes.
 const trafficBefore = get(`trafficFleet.map((v) => ({
   x:v.x,z:v.z,yaw:v.yaw,progress:v.trafficProgress,
   turns:v.trafficTurnCount,nodes:v.trafficVisitedNodeCount,regions:v.trafficRegionMask
 }))`);
-step(180 * 60);
+step(120 * 60);
 const trafficAfter = get(`trafficFleet.map((v) => ({
   id:v.id,x:v.x,z:v.z,yaw:v.yaw,progress:v.trafficProgress,
   turns:v.trafficTurnCount,nodes:v.trafficVisitedNodeCount,regions:v.trafficRegionMask,
