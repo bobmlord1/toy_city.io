@@ -106,7 +106,7 @@ Notes:
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Add the other two approved activity types after T-002 proves the activity framework.
-- Reassess traffic density after T-007 playtesting; increase the vehicle count only if the city still feels empty.
+- After the owner playtests T-008, reassess whether 24 mixed traffic vehicles feel busy enough and whether desktop/mobile performance remains comfortable; do not add more traffic until that check.
 - Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
 - Distribute upgrade access around the city only if playtesting shows the single tuning pad is inconvenient.
 - Reapply the accepted toy-playset visual direction after the refactor, using the existing WebGL renderer and procedural geometry/material system. See the prior visual-development brief in the project conversation; do not introduce Blender or a new rendering engine.
