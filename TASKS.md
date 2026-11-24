@@ -55,12 +55,12 @@ Why: Keyboard, touch or controller changes activity controls and HUD decisions.
 Done when: the primary input device is written into `DESIGN.md` under Audience.
 
 ### T-006 Traffic routing improvements (first pass)
-Assigned to: ChatGPT (delegated by the project owner on 2026-11-24). Needs a written scope and a CLAIM before any coding.
+Assigned to: ChatGPT (delegated by the project owner on 2026-11-24).
 Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `DESIGN.md`, `index.html`.
 Why: Improve how busy and varied traffic feels without raising rendering and physics cost.
 Done when: The same 12 persistent traffic cars are redistributed across four fixed 2×2-block district circuits on existing inner street centerlines; each circuit has traffic moving in both directions, with cars spread across both lanes. No traffic cars are added or despawned. The route samples stay within the existing road/intersection footprint, and collisions still knock cars off-line with the existing soft recovery. The smoke test checks the 12-car fleet, four circuits, direction/lane distribution, inner-grid coverage and a sustained finite AI update. In a minute of free driving, a player should see traffic using inner streets instead of only the outer perimeter.
 Notes:
-- Today all 12 traffic cars follow one rounded-square loop around the outer edge of the city (`loopPoint()` and the `route === "loop"` branch of `updateVehicle()`). The inner streets are empty.
+- Baseline before T-006: all 12 traffic cars followed one rounded-square loop around the outer edge of the city (`loopPoint()` and the `route === "loop"` branch of `updateVehicle()`). The inner streets were empty.
 - Design preference from the project owner's recommended order: smarter routing and better distribution before simply adding more cars.
 - Traffic cars are never spawned or despawned. Collisions push them off their lane and a soft spring guides them back. Keep that behavior.
 - Run `node tools/smoke_test.js` and keep crash cash, delivery activities and the rest of free roam working.
