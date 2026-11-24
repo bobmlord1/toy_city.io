@@ -56,9 +56,9 @@ Done when: the primary input device is written into `DESIGN.md` under Audience.
 
 ### T-006 Traffic routing improvements (first pass)
 Assigned to: ChatGPT (delegated by the project owner on 2026-11-24). Needs a written scope and a CLAIM before any coding.
-Files: ChatGPT to list in its CLAIM. Likely `src/vehicles.js` (traffic spawn) and `src/vehicle_update.js` (traffic steering), possibly a new `src/traffic.js`.
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`.
 Why: Improve how busy and varied traffic feels without raising rendering and physics cost.
-Done when: ChatGPT writes this line before claiming. It should be something a person can see in a minute of driving.
+Done when: The same 12 persistent traffic cars are redistributed across four fixed 2×2-block district circuits on existing inner street centerlines; each circuit has traffic moving in both directions, with cars spread across both lanes. No traffic cars are added or despawned. The route samples stay within the existing road/intersection footprint, and collisions still knock cars off-line with the existing soft recovery. The smoke test checks the 12-car fleet, four circuits, direction/lane distribution, inner-grid coverage and a sustained finite AI update. In a minute of free driving, a player should see traffic using inner streets instead of only the outer perimeter.
 Notes:
 - Today all 12 traffic cars follow one rounded-square loop around the outer edge of the city (`loopPoint()` and the `route === "loop"` branch of `updateVehicle()`). The inner streets are empty.
 - Design preference from the project owner's recommended order: smarter routing and better distribution before simply adding more cars.
