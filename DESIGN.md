@@ -29,11 +29,11 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 - Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles.
 - Permanent traffic loop, ramps, smashable props and buildings.
 - Reward loop today: crashes and airtime earn cash; cash buys speed, acceleration and impact upgrades at a tuning pad.
-- There are **no goals yet**.
+- There are no optional activities yet.
 
-## Proposed gameplay loop (T-001 — pending project-owner approval)
+## Approved gameplay loop (T-001 — approved 2026-11-24)
 
-The goal system should add direction and rewards without turning the sandbox into a mandatory mission game.
+The goal system adds direction and rewards without turning the sandbox into a mandatory mission game.
 
 **Core loop:** free driving and exploration → optionally try a short activity → follow a clear visual marker → complete a simple action → receive an immediate cash payout and celebration → spend cash on vehicle upgrades → return to free driving.
 
@@ -41,41 +41,37 @@ The goal system should add direction and rewards without turning the sandbox int
 - No countdowns, lives, fail states, penalties, or forced route.
 - Keep at most one activity active at a time in v1. After completion, offer another; do not interrupt free-roam play to force acceptance.
 - A completed activity pays once. Leaving its area must not silently fail it or remove earned cash.
-- The first version should use fixed, hand-authored locations and existing world objects. Do not add procedural mission generation yet.
+- The first version uses fixed, hand-authored locations and existing world objects. No procedural mission generation in v1.
 
-### First three proposed activity types
+### First three approved activity types
 
 1. **Delivery — pick up and drop off.** Drive to a pickup beacon, activate the pickup, then drive to a marked destination. Use existing buildings/yard locations as endpoints. For v1, the package can be represented by a simple icon or small visual attachment; do not build a cargo physics system.
 2. **Smash targets — find and break marked props.** Break a small set of designated crates/barrels already supported by the prop system. Mark only the target props, count progress visibly, and pay when all targets are broken. Do not require crashing into traffic or buildings.
-3. **Stunt jump — use a marked ramp and land.** Drive over one of the existing stunt ramps, achieve a modest airtime threshold, and land. Reuse the current ramp detection and airtime state rather than creating a new stunt physics system.
+3. **Stunt jump — use a marked ramp and land.** Drive over a marked stunt ramp, achieve a modest airtime threshold, and land. Reuse the current ramp detection and airtime state rather than creating a new stunt physics system.
 
-These three activities deliberately exercise different existing systems: navigation, destructible props, and ramps/airtime.
+These activities exercise navigation, destructible props, and ramps/airtime.
 
 ### Guidance and feedback
 
 - Use a bright, high-contrast 3D beacon/marker at the current target and a corresponding minimap marker.
 - For delivery, clearly distinguish pickup and drop-off states/colors.
-- Keep the HUD instruction very short, with an icon where practical (for example: package, crate, ramp).
+- Keep the HUD instruction very short, with an icon where practical (package, crate, ramp).
 - Show clear completion feedback and the payout immediately. Do not rely on text alone.
 - Avoid a full GPS route/pathfinding system in v1. A visible beacon plus minimap marker is enough.
 
-### Reward and crash-economy proposal
+### Reward and crash-economy decisions
 
-- **Activity payouts should become the predictable, primary way to earn upgrade cash.**
+- **Activity payouts are the predictable, primary way to earn upgrade cash.**
 - Start playtesting with approximate payouts of $75–$150 depending on activity length/effort. These are tuning values, not final balance. Aim for one or two short activities to afford an early upgrade.
-- Keep the existing crash/airtime rewards as incidental sandbox bonuses for now. Do not remove or redesign the crash-for-cash loop in the same change as the first goal system; it is part of the toy-play feedback and can be rebalanced after activity payouts are tested.
-- Never deduct cash for collisions, abandoned activities, or failed attempts. There should be no failed attempt state.
-- Cosmetic unlocks (vehicle colors, stickers, decorations) are a possible later reward, not a requirement for v1.
+- Keep existing crash/airtime rewards as incidental sandbox bonuses. Do not remove or redesign the crash-for-cash loop in the first objective milestone; it can be rebalanced after activity payouts are tested.
+- Never deduct cash for collisions, abandoned activities, or failed attempts. There is no failed attempt state.
+- Cosmetic unlocks (vehicle colors, stickers, decorations) are a possible later reward, not a v1 requirement.
 
-## Open questions for the project owner
+## Open questions
 
-1. Approve, reject or amend the three proposed activity types: delivery, smash marked props, and stunt jump.
-2. Approve the proposed reward direction: activity payouts become the main predictable income; crash/airtime cash remains as a smaller incidental bonus for the first iteration.
-3. Confirm the child's primary input device (keyboard, touch, or controller). This affects how the activity is started and how much HUD space is available.
+1. Confirm the child's primary input device (keyboard, touch, or controller). This affects how an activity is started and how much HUD space is available.
 
 ## Decision log
 
-Newest at the bottom. Add a line when a decision is made.
-
 - 2026-11-23: Project goals are only "toy-like aesthetic" and "open world". Everything else is open.
-- 2026-11-24: Proposed a short, optional activity loop with delivery, marked-prop smashing and stunt-jump activities. Proposed $75–$150 activity payouts as the primary predictable upgrade income while retaining crash/airtime rewards as incidental bonuses. **Pending project-owner approval; no gameplay implementation authorized yet.**
+- 2026-11-24: Approved optional delivery, marked-prop smash, and stunt-jump activities; visual beacon plus minimap guidance; activity payouts of approximately $75–$150 as primary predictable income; retain crash/airtime cash as incidental bonuses. No timers, failure states, penalties, or forced participation. T-002 authorized.
