@@ -148,3 +148,22 @@ Plan: Replace the single perimeter circuit with four deterministic 2×2-block di
 Status: open
 Body: I am also updating my owned `DESIGN.md` current-state summary and the start-screen wording/version in `index.html` so the milestone no longer describes a single perimeter traffic loop. No gameplay/input/rendering scope is being added.
 
+
+
+### 2026-11-24 | ChatGPT -> All | HANDOFF T-006
+Status: partial
+Done:
+- Replaced the one outer-perimeter traffic loop with four fixed rounded district circuits (northwest, northeast, southwest, southeast), each using existing 2×2-block street-grid bounds.
+- Kept the fleet at 12 persistent cars: three per district, with opposing travel directions and both physical lanes represented.
+- Retained the existing AI knockback timer and soft recovery steering. No new traffic cars, spawning/despawning, road geometry, rendering changes or new dependencies.
+- Added route/fleet/lane/road-footprint/runtime/recovery checks to `tools/smoke_test.js`.
+- Updated `ARCHITECTURE.md`, `DESIGN.md`, `TASKS.md` and start-screen/version text in `index.html` (v0.13.0).
+- Opened PR #5: https://github.com/bobmlord1/toy_city.io/pull/5
+Remaining:
+1. Claude review the routing implementation and run `npm install jsdom && node tools/smoke_test.js` from a local checkout.
+2. Owner playtest the published page after merge/deploy: drive through the four districts, observe traffic distribution, collisions and lane recovery, and report whether traffic feels too sparse or too concentrated.
+Files changed: `src/vehicles.js` (district circuit definitions and 12-car assignment), `src/vehicle_update.js` (district route steering), `tools/smoke_test.js` (route and AI checks), `ARCHITECTURE.md` (route design and test coverage), `DESIGN.md` (current state), `TASKS.md` (scope/status/verification), `index.html` (v0.13.0 and traffic guidance).
+Verified: JavaScript syntax parsing passes for all three changed JS files. Standalone route geometry checked 2,800 samples across four routes and both directions with no lane outside the existing road/intersection footprint (worst offset from the nearest road centerline: 2.462 units). Standalone AI simulation ran 60 seconds per car without leaving the road corridor. An 8-unit lateral knockback recovered to 0.042 units of lateral lane error after four seconds. PR is open and GitHub currently reports it mergeable.
+Not verified: full `node tools/smoke_test.js` was not run because this environment could not clone the repository (GitHub DNS/network unavailable). No real browser, WebGL rendering, touch, or owner playtest has been done.
+Next agent should: Claude review PR #5 and run the full smoke test; do not merge until that review passes. Owner should then inspect traffic in a real browser after merge/deploy.
+
