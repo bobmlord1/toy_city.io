@@ -79,6 +79,21 @@ const models = {
     wheels: compactAsset.wheels,
   },
 };
+// Pickup traffic reuses the existing CC0 pickup geometry and wheel buffers. Only the
+// painted body vertices differ, so the four paint variants add very little runtime cost.
+function createTrafficPickupVisual(tint) {
+  return {
+    body: createIndexedVehicleMesh(VEHICLE_ASSET_DATA.meta.pickup.body, tint),
+    wheels: pickupAsset.wheels,
+  };
+}
+const trafficPickupModels = [
+  createTrafficPickupVisual([1.16, 0.78, 0.72]), // warm red
+  createTrafficPickupVisual([0.76, 0.91, 1.16]), // blue
+  createTrafficPickupVisual([1.16, 1.08, 0.7]), // yellow
+  createTrafficPickupVisual([0.8, 1.12, 0.82]), // green
+];
+const trafficPickupNames = ["Red Pickup", "Blue Pickup", "Yellow Pickup", "Green Pickup"];
 const trailerModel = trailerAsset;
 const crateModel = (() => {
   const b = new MeshBuilder();
@@ -141,7 +156,7 @@ function vehicle(id, type, name, x, z, yaw, opts = {}) {
     vy: 0,
     grounded: true,
     surfaceSlope: 0,
-    model: models[type],
+    model: opts.model || models[type],
     width: opts.width || 1.9,
     length: opts.length || 4.3,
     mass: opts.mass || 1200,
@@ -446,7 +461,9 @@ for (let i = trafficStartEdges.length - 1; i > 0; i--) {
   [trafficStartEdges[i], trafficStartEdges[j]] = [trafficStartEdges[j], trafficStartEdges[i]];
 }
 
-for (let i = 0; i < 12; i++) {
+const TRAFFIC_COMPACT_COUNT = 12;
+const TRAFFIC_PICKUP_COUNT = 12;
+for (let i = 0; i < TRAFFIC_COMPACT_COUNT + TRAFFIC_PICKUP_COUNT; i++) {
   const edge = trafficStartEdges[i];
   let nodeXIndex = edge.x;
   let nodeZIndex = edge.z;
@@ -457,26 +474,33 @@ for (let i = 0; i < 12; i++) {
     nodeZIndex += edgeDirection.dz;
     heading = (heading + 2) % 4;
   }
+  const isPickup = i >= TRAFFIC_COMPACT_COUNT;
+  const pickupIndex = i - TRAFFIC_COMPACT_COUNT;
   const lane = TRAFFIC_LANE_OFFSET;
   const seed = (0x51f15e5d ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0;
   const p = trafficGridPosition(nodeXIndex, nodeZIndex, heading, lane);
   const fleetIndex = i;
   const v = vehicle(
     "traffic-grid-" + String(i + 1).padStart(2, "0"),
-    ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
-    ["Town Car", "Green Car", "Orange Car"][fleetIndex % 3],
+    isPickup ? "pickup" : ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
+    isPickup
+      ? trafficPickupNames[pickupIndex % trafficPickupNames.length]
+      : ["Town Car", "Green Car", "Orange Car"][fleetIndex % 3],
     p.x,
     p.z,
     TRAFFIC_HEADINGS[heading].yaw,
     {
-      width: 1.8,
-      length: 4.2,
-      mass: 1000,
+      width: isPickup ? 2.0 : 1.8,
+      length: isPickup ? 5.0 : 4.2,
+      mass: isPickup ? 1750 : 1000,
       accel: 0,
-      maxSpeed: 10.5 + (fleetIndex % 4) * 0.75,
+      maxSpeed: isPickup
+        ? 8.8 + (pickupIndex % 4) * 0.5
+        : 10.5 + (fleetIndex % 4) * 0.75,
       steerRate: 0,
       ai: true,
       route: "grid",
+      model: isPickup ? trafficPickupModels[pickupIndex % trafficPickupModels.length] : null,
       trafficNodeXIndex: nodeXIndex,
       trafficNodeZIndex: nodeZIndex,
       trafficHeading: heading,
