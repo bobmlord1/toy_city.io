@@ -15,14 +15,13 @@ function updateVehicle(v, dt) {
     const recovery = v.aiKnockTime > 0 ? 0.22 : 1.0;
     v.aiKnockTime = Math.max(0, v.aiKnockTime - dt);
     const targetSpeed = v.maxSpeed * (v.routeDir || 1);
-    if (v.route === "loop") {
-      v.loopS = (v.loopS + v.maxSpeed * dt) % LOOP_LENGTH;
-      const here = loopPoint(v.loopS),
-        look = loopPoint(v.loopS + Math.max(8, v.maxSpeed * 1.25));
-      const routeRight = [Math.cos(look.yaw), -Math.sin(look.yaw)];
-      const targetX = look.x + routeRight[0] * v.loopLane;
-      const targetZ = look.z + routeRight[1] * v.loopLane;
-      const desiredYaw = Math.atan2(targetX - v.x, targetZ - v.z);
+    if (v.route === "district") {
+      const route = trafficRoutes[v.routeIndex];
+      if (!route) throw new Error("Traffic vehicle has an invalid district route index: " + v.routeIndex);
+      v.routeS = (v.routeS + v.maxSpeed * dt) % route.length;
+      const lookAhead = Math.max(7, v.maxSpeed * 0.92);
+      const target = trafficLanePoint(route, v.routeS + lookAhead, v.routeDir, v.routeLane);
+      const desiredYaw = Math.atan2(target.x - v.x, target.z - v.z);
       let yawError = ((desiredYaw - v.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       const steeringLimit = clamp(yawError, -1.55 * dt, 1.55 * dt);
       v.yaw += steeringLimit;
@@ -30,14 +29,13 @@ function updateVehicle(v, dt) {
       v.aiWheelSteer = clamp(yawError * 0.42, -0.48, 0.48);
       const f = vehicleForward(v),
         right = [Math.cos(v.yaw), -Math.sin(v.yaw)];
-      const desiredForward = v.maxSpeed;
       const currentForward = v.vx * f[0] + v.vz * f[1],
         currentSide = v.vx * right[0] + v.vz * right[1];
-      const laneErrorX = targetX - v.x,
-        laneErrorZ = targetZ - v.z;
+      const laneErrorX = target.x - v.x,
+        laneErrorZ = target.z - v.z;
       const sideCorrection =
         clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.8, -4.5, 4.5) * recovery;
-      const nextForward = lerp(currentForward, desiredForward, 1 - Math.exp(-dt * 1.8));
+      const nextForward = lerp(currentForward, v.maxSpeed, 1 - Math.exp(-dt * 1.8));
       const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 2.0));
       v.vx = f[0] * nextForward + right[0] * nextSide;
       v.vz = f[1] * nextForward + right[1] * nextSide;
