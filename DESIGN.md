@@ -24,11 +24,11 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 7. **Short loops.** A simple activity should usually take about 30–90 seconds, but there is no time limit.
 8. **Safe.** No ads, tracking, external links, chat or real-money features.
 
-## Current state (v0.14.0)
+## Current state (v0.15.0)
 
-- Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles.
-- Twelve persistent traffic cars start on varied road segments and navigate the connected street grid. At intersections they choose to continue, turn left or turn right, allowing them to cross between all four city quadrants instead of staying on closed district loops.
-- Traffic start placement and route choices use seeded randomness: varied but repeatable between runs. Cars retain soft recovery after collisions knock them off their lanes.
+- Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles. The AI traffic fleet uses compact cars and pickups; semis remain player-driven for now.
+- Twenty-four persistent AI traffic vehicles start on varied road segments: 12 compact cars and 12 pickup trucks. They share the connected-grid controller and choose to continue, turn left or turn right, travelling between all four city quadrants.
+- Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants, larger collision footprints and slightly lower cruising speeds; all traffic retains soft recovery after collisions knock it off its lane.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
 - The upgrade-ramp side-wall and ramp-shadow fixes are implemented; the owner still needs to confirm their appearance in a real browser.
@@ -78,3 +78,4 @@ These activities exercise navigation, destructible props, and ramps/airtime.
 - 2026-11-23: Project goals are only "toy-like aesthetic" and "open world". Everything else is open.
 - 2026-11-24: Approved optional delivery, marked-prop smash, and stunt-jump activities; visual beacon plus minimap guidance; activity payouts of approximately $75–$150 as primary predictable income; retain crash/airtime cash as incidental bonuses. No timers, failure states, penalties, or forced participation. T-002 authorized.
 - 2026-11-24: Owner playtest of v0.13.0 found that fixed district loops did not produce visible traffic moving through the wider street grid. T-007 replaces closed loops with simple intersection decisions and seeded, varied starting road segments.
+- 2026-11-24: The owner reported that the city still felt empty after T-007 and requested 12 additional trucks plus six semis. T-008 adds 12 AI pickups using the same seeded grid controller (24 traffic vehicles total); moving AI semis are deferred until the route planner handles tractor-trailer swept clearance.

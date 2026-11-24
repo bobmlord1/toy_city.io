@@ -104,16 +104,28 @@ const teleport = (p) =>
 
 const trafficProblems = get(`(() => {
   const problems = [];
-  if (trafficFleet.length !== 12) problems.push("Expected 12 persistent traffic cars, got " + trafficFleet.length);
-  if (vehicles.filter((v) => v.ai).length !== 12) problems.push("Traffic fleet changed the total AI vehicle count");
-  if (trafficFleet.some((v) => !vehicles.includes(v))) problems.push("A traffic car is not part of the persistent vehicle list");
+  if (trafficFleet.length !== 24) problems.push("Expected 24 persistent traffic vehicles, got " + trafficFleet.length);
+  if (vehicles.filter((v) => v.ai).length !== 24) problems.push("Traffic fleet changed the total AI vehicle count");
+  if (trafficFleet.filter((v) => v.type !== "pickup").length !== 12)
+    problems.push("Expected 12 compact-car traffic vehicles");
+  if (trafficFleet.filter((v) => v.type === "pickup").length !== 12)
+    problems.push("Expected 12 pickup-truck traffic vehicles");
+  if (trafficFleet.some((v) => !vehicles.includes(v))) problems.push("A traffic vehicle is not part of the persistent vehicle list");
   if (trafficFleet.some((v) => v.route !== "grid" || !v.trafficLeg))
-    problems.push("A traffic car is not using the intersection grid controller");
+    problems.push("A traffic vehicle is not using the intersection grid controller");
   const startEdges = new Set(trafficFleet.map((v) => v.trafficStartEdgeKey));
-  if (startEdges.size !== 12) problems.push("Starting road segments are not unique");
+  if (startEdges.size !== 24) problems.push("Starting road segments are not unique");
   let startRegions = 0;
   for (const v of trafficFleet) startRegions |= v.trafficStartRegionMask;
   if (startRegions !== 15) problems.push("Seeded starting positions do not cover all four city quadrants");
+  const pickupTraffic = trafficFleet.filter((v) => v.type === "pickup");
+  const compactTraffic = trafficFleet.filter((v) => v.type !== "pickup");
+  if (new Set(pickupTraffic.map((v) => v.name)).size < 4 ||
+      new Set(pickupTraffic.map((v) => v.model)).size < 4)
+    problems.push("Pickup traffic does not use all four paint/model variants");
+  if (Math.max(...pickupTraffic.map((v) => v.maxSpeed)) >=
+      Math.min(...compactTraffic.map((v) => v.maxSpeed)))
+    problems.push("Pickup traffic is not slower than compact-car traffic");
   const validIndex = (i) => Number.isInteger(i) && i >= 0 && i < streetLines.length;
   for (const v of trafficFleet) {
     if (!validIndex(v.trafficStartXIndex) || !validIndex(v.trafficStartZIndex))
@@ -122,6 +134,8 @@ const trafficProblems = get(`(() => {
       problems.push(v.id + ": missing deterministic traffic seed");
     if (!Number.isFinite(v.trafficLeg.length) || v.trafficLeg.length <= 0)
       problems.push(v.id + ": invalid traffic leg length");
+    if (v.type === "pickup" && (v.width < 2 || v.length < 5))
+      problems.push(v.id + ": pickup traffic is missing its larger vehicle footprint");
     const h = TRAFFIC_HEADINGS[v.trafficHeading];
     const delta = (v.trafficLeg.nextHeading - v.trafficHeading + 4) % 4;
     if (delta === 2) problems.push(v.id + ": traffic attempted an immediate U-turn");
@@ -132,12 +146,78 @@ const trafficProblems = get(`(() => {
       !validIndex(v.trafficLeg.nextZIndex)
     )
       problems.push(v.id + ": planned leg does not lead to an adjacent legal intersection");
-    for (const p of v.trafficLeg.samples) {
-      const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
-      const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
-      if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
-        problems.push(v.id + ": planned line/turn path leaves the road and intersection footprint");
-        break;
+
+    // Check the complete oriented vehicle rectangle at every route sample. This catches
+    // pickups whose body could leave the road even when the route centerline stays on it.
+    const samples = v.trafficLeg.samples;
+    for (let i = 0; i < samples.length; i++) {
+      const p = samples[i];
+      const previous = samples[Math.max(0, i - 1)];
+      const next = samples[Math.min(samples.length - 1, i + 1)];
+      const yaw = Math.atan2(next.x - previous.x, next.z - previous.z);
+      const fx = Math.sin(yaw), fz = Math.cos(yaw);
+      const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+      for (const forwardSign of [-1, 1]) {
+        for (const sideSign of [-1, 1]) {
+          const x = p.x + forwardSign * v.length * 0.5 * fx + sideSign * v.width * 0.5 * rx;
+          const z = p.z + forwardSign * v.length * 0.5 * fz + sideSign * v.width * 0.5 * rz;
+          const nearX = Math.min(...streetLines.map((line) => Math.abs(line - x)));
+          const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - z)));
+          if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
+            problems.push(v.id + ": vehicle body leaves the road/intersection footprint");
+            break;
+          }
+        }
+      }
+    }
+  }
+  // Exercise every left/right turn orientation with the full pickup-truck footprint,
+  // even if a particular orientation is not selected by the 24 live starting routes.
+  const seedForRoll = (minimum, maximum) => {
+    for (let seed = 1; seed < 10000; seed++) {
+      const nextSeed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const roll = nextSeed / 4294967296;
+      if (roll >= minimum && roll < maximum) return seed;
+    }
+    return 0;
+  };
+  for (let heading = 0; heading < 4; heading++) {
+    for (const turn of [
+      {name:"left", next:(heading + 3) % 4, min:0.56, max:0.78},
+      {name:"right", next:(heading + 1) % 4, min:0.78, max:1.0},
+    ]) {
+      const fakeVehicle = {
+        trafficHeading: heading,
+        trafficNodeXIndex: 3,
+        trafficNodeZIndex: 3,
+        trafficLane: TRAFFIC_LANE_OFFSET,
+        trafficExitOffset: 0,
+        trafficSeed: seedForRoll(turn.min, turn.max),
+        trafficDecisionCount: 0,
+      };
+      const leg = trafficBuildLeg(fakeVehicle);
+      if (leg.nextHeading !== turn.next)
+        problems.push("Pickup clearance fixture failed to build the " + turn.name + " turn for heading " + heading);
+      const samples = leg.samples;
+      for (let i = 0; i < samples.length; i++) {
+        const p = samples[i];
+        const previous = samples[Math.max(0, i - 1)];
+        const next = samples[Math.min(samples.length - 1, i + 1)];
+        const yaw = Math.atan2(next.x - previous.x, next.z - previous.z);
+        const fx = Math.sin(yaw), fz = Math.cos(yaw);
+        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        for (const forwardSign of [-1, 1]) {
+          for (const sideSign of [-1, 1]) {
+            const x = p.x + forwardSign * 5.0 * 0.5 * fx + sideSign * 2.0 * 0.5 * rx;
+            const z = p.z + forwardSign * 5.0 * 0.5 * fz + sideSign * 2.0 * 0.5 * rz;
+            const nearX = Math.min(...streetLines.map((line) => Math.abs(line - x)));
+            const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - z)));
+            if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
+              problems.push("5-by-2 pickup body leaves the road during " + turn.name + " turn at heading " + heading);
+              break;
+            }
+          }
+        }
       }
     }
   }
@@ -220,32 +300,36 @@ for (let i = 0; i < trafficAfter.length; i++) {
   if (!Number.isFinite(car.maxRoadOffset) || car.maxRoadOffset > get("ROAD_WIDTH") / 2 + 0.1)
     failures.push("Traffic runtime: " + car.id + " planned a path outside the road footprint");
 }
-if (regionalCrossers < 8)
-  failures.push("Traffic runtime: only " + regionalCrossers + " cars crossed into another city quadrant");
-if (totalTrafficTurns < 24)
+if (regionalCrossers < 16)
+  failures.push("Traffic runtime: only " + regionalCrossers + " vehicles crossed into another city quadrant");
+if (totalTrafficTurns < 48)
   failures.push("Traffic runtime: too few intersection turns were made (" + totalTrafficTurns + ")");
 
-// Simulate a collision knockback and verify that the existing soft recovery still works.
+// Simulate a collision knockback for both classes and verify the shared soft recovery.
 const recoverySetup = get(`(() => {
-  const v = trafficFleet[0];
-  const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
-  const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
-  v.x = p.x + rightX * 8;
-  v.z = p.z + rightZ * 8;
-  v.vx = 0;
-  v.vz = 0;
-  v.aiKnockTime = 2;
-  return {id:v.id, initialOffset:8};
+  const targets = [trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")];
+  return targets.map((v) => {
+    const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
+    const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
+    v.x = p.x + rightX * 8;
+    v.z = p.z + rightZ * 8;
+    v.vx = 0;
+    v.vz = 0;
+    v.aiKnockTime = 2;
+    return {id:v.id, initialOffset:8};
+  });
 })()`);
 step(240);
-const recoveryLateralError = get(`(() => {
-  const v = trafficFleet[0];
+const recoveryLateralErrors = get(`[trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")].map((v) => {
   const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);
-})()`);
-if (!Number.isFinite(recoveryLateralError) || recoveryLateralError > recoverySetup.initialOffset * 0.5)
-  failures.push("Traffic recovery: " + recoverySetup.id + " did not return toward its lane after knockback");
+})`);
+for (let i = 0; i < recoverySetup.length; i++) {
+  if (!Number.isFinite(recoveryLateralErrors[i]) ||
+      recoveryLateralErrors[i] > recoverySetup[i].initialOffset * 0.5)
+    failures.push("Traffic recovery: " + recoverySetup[i].id + " did not return toward its lane after knockback");
+}
 
 // ---- Ramp geometry and ramp shadow checks ----
 const geometryProblems = get(`(() => {

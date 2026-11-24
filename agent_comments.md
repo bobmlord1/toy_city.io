@@ -209,3 +209,38 @@ Next agent should: Claude runs the full smoke test and reviews the PR. Do not me
 Status: owner-tested
 Body: The owner tested the merged v0.14.0 changes and deliberately hit a traffic car while it was approaching an intersection. The car continued through the intersection and corrected its path afterward. This confirms the intended collision-recovery behavior during an intersection approach/turn; record this check as passed. The owner is handing the next change back to Claude.
 
+### 2026-11-24 | ChatGPT -> All | CLAIM T-008
+Status: open
+Files: `src/vehicles.js`, `tools/smoke_test.js`, `index.html`, `DESIGN.md`, `ARCHITECTURE.md`, `TASKS.md`, `README.txt`, `agent_comments.md`.
+Plan: Add 12 AI pickup trucks with tinted variants of the existing pickup mesh, seeded starts and the existing intersection-grid controller, for 24 persistent AI vehicles total. Extend tests to validate both vehicle classes and the full pickup footprint through turns. Defer six moving semis because their trailer swept path needs dedicated route-clearance and speed handling; leave the existing player semi untouched.
+### 2026-11-24 | ChatGPT -> All | HANDOFF T-008
+Status: partial (implementation complete; PR #7 open; smoke test and owner playtest pending)
+Done:
+- Added 12 AI pickup trucks to the existing 12 compact-car traffic vehicles. The 24-vehicle fleet uses the same seeded intersection-grid navigation and collision-recovery code.
+- Reused the existing pickup mesh with four body paint variants and shared wheel buffers. Pickup traffic uses a 5-by-2-unit footprint, increased mass and lower cruising speeds.
+- Kept all 24 traffic vehicles persistent with unique seeded starting road segments across all four quadrants. No spawning/despawning, new assets, route engine or road geometry.
+- Expanded smoke-test coverage for the mixed fleet, four model variants, lower truck speeds, unique starts, full-body road clearance, all eight left/right turn orientations, two-minute cross-district movement and recovery for both vehicle classes.
+- Updated v0.15.0 start-screen text and project documentation. Existing player pickup and semi/trailer are unchanged.
+- Opened PR #7: https://github.com/bobmlord1/toy_city.io/pull/7 (GitHub reports mergeable).
+Remaining:
+1. Run npm install jsdom && node tools/smoke_test.js from a local checkout.
+2. Review the code and test output before merging.
+3. Owner browser playtest: judge traffic density/congestion, pickup paint variety, truck corner clearance and frame rate on the intended device.
+Files changed:
+- src/vehicles.js — four tinted pickup visuals and 12 additional AI traffic instances.
+- tools/smoke_test.js — mixed-fleet, speed, paint, road-footprint, turn-orientation and recovery checks.
+- index.html — v0.15.0 and traffic introduction copy.
+- DESIGN.md — v0.15.0 current state and semis deferral.
+- ARCHITECTURE.md — 24-vehicle grid traffic and truck footprint notes.
+- TASKS.md — T-008 scope/status and density follow-up.
+- README.txt — v0.15.0 release notes.
+- agent_comments.md — claim and handoff.
+Verified:
+- node --check passed for extracted changed vehicle-spawn and smoke-test snippets. This is not a full-file syntax/load-order test.
+- Independent deterministic 120-second simulation following the current grid-controller logic: 24 unique seeded road starts across all four quadrants; 21/24 vehicles crossed into another quadrant; 124 turns total; every vehicle visited at least 9 intersections.
+- Geometry simulation checked all eight pickup left/right turn orientations. All four 5-by-2-unit body corners stayed within the current 14-unit road/intersection footprint; worst distance from a road centerline was 3.24 units against a 7-unit half-width.
+Not verified:
+- Full node tools/smoke_test.js was not run. A local git clone failed because this environment could not resolve github.com; jsdom and the complete checkout were therefore unavailable.
+- No real-browser/WebGL, mobile performance or owner playtest.
+- No AI semis were added. Trailer articulation itself already updates in a separate physics pass; future AI semis need trailer-aware turn path clearance and speed control.
+Next agent should: review PR #7 and run the full smoke test. After merge/deploy, the owner should check the live traffic behavior and performance.

@@ -36,7 +36,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `world_streets.js` | Data-driven street kit and its colliders. |
 | `world_city.js` | Yard, ramp meshes, buildings, trees, lamps. Ends by building `worldMesh`. |
 | `shadows.js` | Projected shadows. |
-| `vehicles.js` | Vehicle assets, `vehicle()` factory, player car, semi and trailer, fixed district traffic routes. |
+| `vehicles.js` | Vehicle assets, `vehicle()` factory, player vehicles, semi and trailer, persistent mixed traffic fleet. |
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
 | `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
@@ -70,9 +70,9 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 
 ## Traffic navigation
 
-The 12 persistent traffic cars use the full street grid, not closed loops. `streetLines` supplies the eight north-south/east-west road centerlines. `trafficBuildLeg()` plans one road segment to the next intersection and chooses a legal straight, left or right exit (weighted 56% / 22% / 22%, renormalized at city edges). Cars follow a sampled lane-center path; turns use a short cubic curve within the intersection. The next leg is planned when the current one completes, so routes can continue across all four city quadrants without a pathfinding engine.
+The 24 persistent AI traffic vehicles use the full street grid, not closed loops: 12 compact cars and 12 pickup trucks. `streetLines` supplies the eight north-south/east-west road centerlines. `trafficBuildLeg()` plans one road segment to the next intersection and chooses a legal straight, left or right exit (weighted 56% / 22% / 22%, renormalized at city edges). Both types follow the same sampled lane-center path; turns use a short cubic curve within the intersection. Pickup traffic reuses the existing pickup mesh in four paint variants, with a 5-by-2-unit collision footprint and slightly lower cruising speeds. The intersection curve and road width accommodate that footprint; the smoke test checks all four oriented body corners at every sampled point rather than testing only the route centerline.
 
-Starting road edges are shuffled with a fixed layout seed, so the 12 vehicles begin on distinct, varied street segments across the full grid while remaining reproducible. Each vehicle has its own deterministic decision seed. The AI stores its current grid node, heading, leg progress and visited-region mask for validation. Traffic remains persistent, and `aiKnockTime` still reduces the lane-recovery spring after collisions.
+Starting road edges are shuffled with a fixed layout seed, so all 24 vehicles begin on distinct, varied street segments across the full grid while remaining reproducible. Each vehicle has its own deterministic decision seed. The AI stores its current grid node, heading, leg progress and visited-region mask for validation. Traffic remains persistent, and `aiKnockTime` still reduces the lane-recovery spring after collisions knock vehicles off their lanes. The player semi and trailer continue using the separate articulation and collision simulation; moving AI semis are deferred until route planning accounts for the combined tractor-trailer swept footprint at turns.
 
 ## Activities
 
@@ -95,7 +95,7 @@ Starting road edges are shuffled with a fixed layout seed, so the 12 vehicles be
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 12-car persistent grid fleet, unique seeded starts across the four quadrants, legal intersection decisions, sampled turn geometry, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt
