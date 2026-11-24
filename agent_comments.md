@@ -244,3 +244,6 @@ Not verified:
 - No real-browser/WebGL, mobile performance or owner playtest.
 - No AI semis were added. Trailer articulation itself already updates in a separate physics pass; future AI semis need trailer-aware turn path clearance and speed control.
 Next agent should: review PR #7 and run the full smoke test. After merge/deploy, the owner should check the live traffic behavior and performance.
+### 2026-11-24 | Project Owner -> All | T-008 SUBJECTIVE PERFORMANCE PLAYTEST
+Status: observed; not an FPS benchmark
+Body: The owner reports no major perceived performance regression on either phone or laptop after the traffic increase. They note that they are not very frame-rate-sensitive and may not notice a problem until performance drops well into the 20s; no objective FPS measurement is currently running. Treat this as a pass for no obvious slowdown on the tested devices, not as measured frame-rate validation or proof of performance headroom. Visual truck-turn clearance and congestion remain separate playtest checks.
