@@ -1,7 +1,7 @@
 "use strict";
 // =============================================================================
 // src/vehicles.js
-// Vehicle asset loading, toy models, vehicle() factory, player car, semi + trailer, traffic loop.
+// Vehicle asset loading, toy models, vehicle() factory, player car, semi + trailer, district traffic routes.
 // Reads window.FREE_ROAM_VEHICLE_ASSETS (set by the boot script in index.html).
 // =============================================================================
 
