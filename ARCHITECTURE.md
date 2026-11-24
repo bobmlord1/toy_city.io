@@ -36,7 +36,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `world_streets.js` | Data-driven street kit and its colliders. |
 | `world_city.js` | Yard, ramp meshes, buildings, trees, lamps. Ends by building `worldMesh`. |
 | `shadows.js` | Projected shadows. |
-| `vehicles.js` | Vehicle assets, `vehicle()` factory, player car, semi and trailer, fixed district traffic routes. |
+| `vehicles.js` | Vehicle assets, `vehicle()` factory, player vehicles, semi and trailer, persistent mixed traffic fleet. |
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
 | `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
@@ -95,7 +95,7 @@ Starting road edges are shuffled with a fixed layout seed, so the 12 vehicles be
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 12-car persistent grid fleet, unique seeded starts across the four quadrants, legal intersection decisions, sampled turn geometry, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt
