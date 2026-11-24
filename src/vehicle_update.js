@@ -34,7 +34,7 @@ function updateVehicle(v, dt) {
         v.trafficRegionMask |= trafficRegionBit(v.trafficNodeXIndex, v.trafficNodeZIndex);
         v.trafficLeg = trafficBuildLeg(v);
       }
-      const lookAhead = Math.max(5.5, v.maxSpeed * 0.58);
+      const lookAhead = Math.max(5.5, v.maxSpeed * 0.62);
       const target = trafficLegPoint(
         v.trafficLeg,
         Math.min(v.trafficProgress + lookAhead, v.trafficLeg.length),
@@ -52,9 +52,9 @@ function updateVehicle(v, dt) {
       const laneErrorX = target.x - v.x,
         laneErrorZ = target.z - v.z;
       const sideCorrection =
-        clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.8, -4.5, 4.5) * recovery;
+        clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.55, -3.0, 3.0) * recovery;
       const nextForward = lerp(currentForward, v.maxSpeed, 1 - Math.exp(-dt * 1.8));
-      const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 2.0));
+      const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 3.5));
       v.vx = f[0] * nextForward + right[0] * nextSide;
       v.vz = f[1] * nextForward + right[1] * nextSide;
       v.x += v.vx * dt;
