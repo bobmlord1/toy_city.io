@@ -200,7 +200,10 @@ step(180 * 60);
 const trafficAfter = get(`trafficFleet.map((v) => ({
   id:v.id,x:v.x,z:v.z,yaw:v.yaw,progress:v.trafficProgress,
   turns:v.trafficTurnCount,nodes:v.trafficVisitedNodeCount,regions:v.trafficRegionMask,
-  legSamples:v.trafficLeg.samples
+  maxRoadOffset:Math.max(...v.trafficLeg.samples.map(p => Math.min(
+    ...streetLines.map(line => Math.abs(line-p.x)),
+    ...streetLines.map(line => Math.abs(line-p.z))
+  )))
 }))`);
 let regionalCrossers = 0;
 let totalTrafficTurns = 0;
@@ -214,14 +217,8 @@ for (let i = 0; i < trafficAfter.length; i++) {
     failures.push("Traffic runtime: " + car.id + " never turned at an intersection");
   if ((car.regions & (car.regions - 1)) !== 0) regionalCrossers++;
   totalTrafficTurns += car.turns - trafficBefore[i].turns;
-  for (const p of car.legSamples) {
-    const nearX = get("Math.min(...streetLines.map(line => Math.abs(line-" + p.x + ")))");
-    const nearZ = get("Math.min(...streetLines.map(line => Math.abs(line-" + p.z + ")))");
-    if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
-      failures.push("Traffic runtime: " + car.id + " planned a path outside the road footprint");
-      break;
-    }
-  }
+  if (!Number.isFinite(car.maxRoadOffset) || car.maxRoadOffset > get("ROAD_WIDTH") / 2 + 0.1)
+    failures.push("Traffic runtime: " + car.id + " planned a path outside the road footprint");
 }
 if (regionalCrossers < 8)
   failures.push("Traffic runtime: only " + regionalCrossers + " cars crossed into another city quadrant");
