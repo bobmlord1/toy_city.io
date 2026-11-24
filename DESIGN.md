@@ -24,12 +24,13 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 7. **Short loops.** A simple activity should usually take about 30–90 seconds, but there is no time limit.
 8. **Safe.** No ads, tracking, external links, chat or real-money features.
 
-## Current state (v0.11.2)
+## Current state (v0.13.0)
 
 - Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles.
-- Permanent traffic loop, ramps, smashable props and buildings.
-- Reward loop today: crashes and airtime earn cash; cash buys speed, acceleration and impact upgrades at a tuning pad.
-- There are no optional activities yet.
+- Twelve persistent traffic cars circulate through four fixed 2×2-block district circuits on the inner street grid. Each district has traffic in both directions; cars remain persistent and gradually recover after collisions push them off their lanes.
+- One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
+- Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
+- The upgrade-ramp side-wall and ramp-shadow fixes are implemented; the owner still needs to confirm their appearance in a real browser.
 
 ## Approved gameplay loop (T-001 — approved 2026-11-24)
 
