@@ -105,47 +105,45 @@ const teleport = (p) =>
 const trafficProblems = get(`(() => {
   const problems = [];
   if (trafficFleet.length !== 12) problems.push("Expected 12 persistent traffic cars, got " + trafficFleet.length);
-  if (trafficRoutes.length !== 4) problems.push("Expected 4 district circuits, got " + trafficRoutes.length);
-  const ids = new Set(trafficFleet.map((v) => v.id));
-  if (ids.size !== 12) problems.push("Traffic vehicle IDs are not unique");
-  const aligned = (value) => streetLines.some((line) => Math.abs(line - value) < 0.01);
-  for (let routeIndex = 0; routeIndex < trafficRoutes.length; routeIndex++) {
-    const route = trafficRoutes[routeIndex];
-    const cars = trafficFleet.filter((v) => v.routeIndex === routeIndex);
-    if (cars.length !== 3) problems.push(route.id + ": expected 3 cars, got " + cars.length);
-    if (!aligned(route.minX) || !aligned(route.maxX) || !aligned(route.minZ) || !aligned(route.maxZ))
-      problems.push(route.id + ": circuit bounds do not align with the street grid");
-    if (route.maxX - route.minX !== 220 || route.maxZ - route.minZ !== 220)
-      problems.push(route.id + ": circuit is not a 2x2-block loop");
-    if (Math.max(Math.abs(route.minX), Math.abs(route.maxX), Math.abs(route.minZ), Math.abs(route.maxZ)) >= WORLD_HALF - ROAD_WIDTH * 2)
-      problems.push(route.id + ": circuit is too close to the city perimeter");
-    if (!cars.some((v) => v.routeDir === 1) || !cars.some((v) => v.routeDir === -1))
-      problems.push(route.id + ": traffic is not travelling in both directions");
-    const laneSides = new Set(cars.map((v) => Math.sign(v.routeLane * v.routeDir)));
-    if (!laneSides.has(1) || !laneSides.has(-1))
-      problems.push(route.id + ": both physical traffic lanes are not represented");
-    for (const car of cars) {
-      const expected = trafficLanePoint(route, car.routeS, car.routeDir, car.routeLane);
-      if (Math.hypot(expected.x - car.x, expected.z - car.z) > 0.01)
-        problems.push(car.id + ": spawn position does not match its assigned route and lane");
-    }
-    for (const direction of [1, -1]) {
-      for (let distance = 0; distance < route.length; distance += 2.5) {
-        const p = trafficLanePoint(route, distance, direction, -1.8);
-        const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
-        const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
-        if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.05) {
-          problems.push(route.id + ": a traffic lane leaves the existing road/intersection footprint");
-          break;
-        }
+  if (vehicles.filter((v) => v.ai).length !== 12) problems.push("Traffic fleet changed the total AI vehicle count");
+  if (trafficFleet.some((v) => !vehicles.includes(v))) problems.push("A traffic car is not part of the persistent vehicle list");
+  if (trafficFleet.some((v) => v.route !== "grid" || !v.trafficLeg))
+    problems.push("A traffic car is not using the intersection grid controller");
+  const startEdges = new Set(trafficFleet.map((v) => v.trafficStartEdgeKey));
+  if (startEdges.size !== 12) problems.push("Starting road segments are not unique");
+  let startRegions = 0;
+  for (const v of trafficFleet) startRegions |= v.trafficStartRegionMask;
+  if (startRegions !== 15) problems.push("Seeded starting positions do not cover all four city quadrants");
+  const validIndex = (i) => Number.isInteger(i) && i >= 0 && i < streetLines.length;
+  for (const v of trafficFleet) {
+    if (!validIndex(v.trafficStartXIndex) || !validIndex(v.trafficStartZIndex))
+      problems.push(v.id + ": starting node is outside the street grid");
+    if (!Number.isInteger(v.trafficSeed) || v.trafficSeed === 0)
+      problems.push(v.id + ": missing deterministic traffic seed");
+    if (!Number.isFinite(v.trafficLeg.length) || v.trafficLeg.length <= 0)
+      problems.push(v.id + ": invalid traffic leg length");
+    const h = TRAFFIC_HEADINGS[v.trafficHeading];
+    const delta = (v.trafficLeg.nextHeading - v.trafficHeading + 4) % 4;
+    if (delta === 2) problems.push(v.id + ": traffic attempted an immediate U-turn");
+    if (
+      v.trafficLeg.nextXIndex !== v.trafficNodeXIndex + h.dx ||
+      v.trafficLeg.nextZIndex !== v.trafficNodeZIndex + h.dz ||
+      !validIndex(v.trafficLeg.nextXIndex) ||
+      !validIndex(v.trafficLeg.nextZIndex)
+    )
+      problems.push(v.id + ": planned leg does not lead to an adjacent legal intersection");
+    for (const p of v.trafficLeg.samples) {
+      const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
+      const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
+      if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
+        problems.push(v.id + ": planned line/turn path leaves the road and intersection footprint");
+        break;
       }
     }
   }
-  if (trafficFleet.some((v) => !v.ai || v.route !== "district" || !Number.isInteger(v.routeIndex)))
-    problems.push("A traffic car is not assigned to a district AI route");
   return problems;
 })()`);
-for (const problem of trafficProblems) failures.push("Traffic routing: " + problem);
+for (const problem of trafficProblems) failures.push("Traffic grid: " + problem);
 key("keyup", "w", "KeyW");
 for (const problem of get("validateActivityDefs()")) failures.push("Activity data: " + problem);
 step(300);
@@ -193,26 +191,47 @@ if (!offer || offer.phase !== "offer") {
   if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
 }
 
-// Traffic should keep moving for a sustained simulation without invalid state.
-const trafficProgressBefore = get("trafficFleet.map((v) => v.routeS)");
-step(600);
-const trafficRuntime = get("trafficFleet.map((v) => ({id:v.id,x:v.x,z:v.z,yaw:v.yaw,routeS:v.routeS}))");
-const trafficProgressAfter = get("trafficFleet.map((v) => v.routeS)");
-let trafficMoved = 0;
-for (let i = 0; i < trafficRuntime.length; i++) {
-  const car = trafficRuntime[i];
-  if (![car.x, car.z, car.yaw, car.routeS].every(Number.isFinite))
+// Traffic should make intersection decisions, turn, and travel across the city grid.
+const trafficBefore = get(`trafficFleet.map((v) => ({
+  x:v.x,z:v.z,yaw:v.yaw,progress:v.trafficProgress,
+  turns:v.trafficTurnCount,nodes:v.trafficVisitedNodeCount,regions:v.trafficRegionMask
+}))`);
+step(180 * 60);
+const trafficAfter = get(`trafficFleet.map((v) => ({
+  id:v.id,x:v.x,z:v.z,yaw:v.yaw,progress:v.trafficProgress,
+  turns:v.trafficTurnCount,nodes:v.trafficVisitedNodeCount,regions:v.trafficRegionMask,
+  legSamples:v.trafficLeg.samples
+}))`);
+let regionalCrossers = 0;
+let totalTrafficTurns = 0;
+for (let i = 0; i < trafficAfter.length; i++) {
+  const car = trafficAfter[i];
+  if (![car.x, car.z, car.yaw, car.progress].every(Number.isFinite))
     failures.push("Traffic runtime: " + car.id + " has non-finite state");
-  const routeLength = get("trafficRoutes[trafficFleet[" + i + "].routeIndex].length");
-  const progress = (trafficProgressAfter[i] - trafficProgressBefore[i] + routeLength) % routeLength;
-  if (progress > 1) trafficMoved++;
+  if (car.nodes - trafficBefore[i].nodes < 6)
+    failures.push("Traffic runtime: " + car.id + " did not travel through enough intersections");
+  if (car.turns <= trafficBefore[i].turns)
+    failures.push("Traffic runtime: " + car.id + " never turned at an intersection");
+  if ((car.regions & (car.regions - 1)) !== 0) regionalCrossers++;
+  totalTrafficTurns += car.turns - trafficBefore[i].turns;
+  for (const p of car.legSamples) {
+    const nearX = get("Math.min(...streetLines.map(line => Math.abs(line-" + p.x + ")))");
+    const nearZ = get("Math.min(...streetLines.map(line => Math.abs(line-" + p.z + ")))");
+    if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.1) {
+      failures.push("Traffic runtime: " + car.id + " planned a path outside the road footprint");
+      break;
+    }
+  }
 }
-if (trafficMoved !== 12) failures.push("Traffic runtime: expected all 12 cars to advance, got " + trafficMoved);
+if (regionalCrossers < 8)
+  failures.push("Traffic runtime: only " + regionalCrossers + " cars crossed into another city quadrant");
+if (totalTrafficTurns < 24)
+  failures.push("Traffic runtime: too few intersection turns were made (" + totalTrafficTurns + ")");
 
-// Simulate the same off-lane displacement and knockback timer set by vehicle collisions.
+// Simulate a collision knockback and verify that the existing soft recovery still works.
 const recoverySetup = get(`(() => {
-  const v = trafficFleet[0], route = trafficRoutes[trafficFleet[0].routeIndex];
-  const p = trafficLanePoint(route, v.routeS, v.routeDir, v.routeLane);
+  const v = trafficFleet[0];
+  const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   v.x = p.x + rightX * 8;
   v.z = p.z + rightZ * 8;
@@ -223,8 +242,8 @@ const recoverySetup = get(`(() => {
 })()`);
 step(240);
 const recoveryLateralError = get(`(() => {
-  const v = trafficFleet[0], route = trafficRoutes[trafficFleet[0].routeIndex];
-  const p = trafficLanePoint(route, v.routeS, v.routeDir, v.routeLane);
+  const v = trafficFleet[0];
+  const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);
 })()`);
