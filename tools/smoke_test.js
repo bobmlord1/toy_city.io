@@ -118,8 +118,14 @@ const trafficProblems = get(`(() => {
   let startRegions = 0;
   for (const v of trafficFleet) startRegions |= v.trafficStartRegionMask;
   if (startRegions !== 15) problems.push("Seeded starting positions do not cover all four city quadrants");
-  if (new Set(trafficFleet.filter((v) => v.type === "pickup").map((v) => v.name)).size < 4)
-    problems.push("Pickup traffic does not use all four paint/name variants");
+  const pickupTraffic = trafficFleet.filter((v) => v.type === "pickup");
+  const compactTraffic = trafficFleet.filter((v) => v.type !== "pickup");
+  if (new Set(pickupTraffic.map((v) => v.name)).size < 4 ||
+      new Set(pickupTraffic.map((v) => v.model)).size < 4)
+    problems.push("Pickup traffic does not use all four paint/model variants");
+  if (Math.max(...pickupTraffic.map((v) => v.maxSpeed)) >=
+      Math.min(...compactTraffic.map((v) => v.maxSpeed)))
+    problems.push("Pickup traffic is not slower than compact-car traffic");
   const validIndex = (i) => Number.isInteger(i) && i >= 0 && i < streetLines.length;
   for (const v of trafficFleet) {
     if (!validIndex(v.trafficStartXIndex) || !validIndex(v.trafficStartZIndex))
@@ -249,27 +255,31 @@ if (regionalCrossers < 16)
 if (totalTrafficTurns < 48)
   failures.push("Traffic runtime: too few intersection turns were made (" + totalTrafficTurns + ")");
 
-// Simulate a collision knockback and verify that the existing soft recovery still works.
+// Simulate a collision knockback for both classes and verify the shared soft recovery.
 const recoverySetup = get(`(() => {
-  const v = trafficFleet[0];
-  const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
-  const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
-  v.x = p.x + rightX * 8;
-  v.z = p.z + rightZ * 8;
-  v.vx = 0;
-  v.vz = 0;
-  v.aiKnockTime = 2;
-  return {id:v.id, initialOffset:8};
+  const targets = [trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")];
+  return targets.map((v) => {
+    const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
+    const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
+    v.x = p.x + rightX * 8;
+    v.z = p.z + rightZ * 8;
+    v.vx = 0;
+    v.vz = 0;
+    v.aiKnockTime = 2;
+    return {id:v.id, initialOffset:8};
+  });
 })()`);
 step(240);
-const recoveryLateralError = get(`(() => {
-  const v = trafficFleet[0];
+const recoveryLateralErrors = get(`[trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")].map((v) => {
   const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);
-})()`);
-if (!Number.isFinite(recoveryLateralError) || recoveryLateralError > recoverySetup.initialOffset * 0.5)
-  failures.push("Traffic recovery: " + recoverySetup.id + " did not return toward its lane after knockback");
+})`);
+for (let i = 0; i < recoverySetup.length; i++) {
+  if (!Number.isFinite(recoveryLateralErrors[i]) ||
+      recoveryLateralErrors[i] > recoverySetup[i].initialOffset * 0.5)
+    failures.push("Traffic recovery: " + recoverySetup[i].id + " did not return toward its lane after knockback");
+}
 
 // ---- Ramp geometry and ramp shadow checks ----
 const geometryProblems = get(`(() => {
