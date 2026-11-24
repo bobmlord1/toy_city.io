@@ -452,10 +452,10 @@ for (let i = 0; i < 12; i++) {
   let nodeZIndex = edge.z;
   let heading = edge.heading;
   if (trafficLayoutRandom() < 0.5) {
+    const edgeDirection = TRAFFIC_HEADINGS[heading];
+    nodeXIndex += edgeDirection.dx;
+    nodeZIndex += edgeDirection.dz;
     heading = (heading + 2) % 4;
-    const h = TRAFFIC_HEADINGS[heading];
-    nodeXIndex += h.dx;
-    nodeZIndex += h.dz;
   }
   const lane = TRAFFIC_LANE_OFFSET;
   const seed = (0x51f15e5d ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0;
