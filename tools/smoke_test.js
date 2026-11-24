@@ -209,6 +209,27 @@ for (let i = 0; i < trafficRuntime.length; i++) {
 }
 if (trafficMoved !== 12) failures.push("Traffic runtime: expected all 12 cars to advance, got " + trafficMoved);
 
+// Simulate the same off-lane displacement and knockback timer set by vehicle collisions.
+const recoverySetup = get(`(() => {
+  const v = trafficFleet[0], route = trafficRoutes[trafficFleet[0].routeIndex];
+  const p = trafficLanePoint(route, v.routeS, v.routeDir, v.routeLane);
+  const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
+  v.x = p.x + rightX * 8;
+  v.z = p.z + rightZ * 8;
+  v.vx = 0;
+  v.vz = 0;
+  v.aiKnockTime = 2;
+  return {id:v.id, initialOffset:8};
+})()`);
+step(240);
+const recoveryDistance = get(`(() => {
+  const v = trafficFleet[0], route = trafficRoutes[trafficFleet[0].routeIndex];
+  const p = trafficLanePoint(route, v.routeS, v.routeDir, v.routeLane);
+  return Math.hypot(v.x - p.x, v.z - p.z);
+})()`);
+if (!Number.isFinite(recoveryDistance) || recoveryDistance > recoverySetup.initialOffset * 0.5)
+  failures.push("Traffic recovery: " + recoverySetup.id + " did not return toward its lane after knockback");
+
 // ---- Ramp geometry and ramp shadow checks ----
 const geometryProblems = get(`(() => {
   const problems = [];
