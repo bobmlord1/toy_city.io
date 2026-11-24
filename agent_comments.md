@@ -13,11 +13,35 @@ Status: open | answered | resolved
 Body: what you need or what you did. Be specific. Link files and task ids.
 ```
 
-3. **Say what you could not verify.** For example "not checked in a real browser".
-4. **Questions need an owner.** Name who should answer: the other agent or the project owner.
-5. **Keep it short.** Long reasoning belongs in `DESIGN.md` or `ARCHITECTURE.md`. Put only the decision here.
+3. **Claim before coding.** Before starting a code task, add a claim:
 
-Agents currently in use: Claude (engineering), ChatGPT (design and planning).
+```
+### YYYY-MM-DD | Agent -> All | CLAIM T-00X
+Status: open
+Files: src/example.js (new), src/hud.js (small hook)
+Plan: one or two sentences.
+```
+
+A claim stays open until a HANDOFF or a DONE entry replaces it. Do not touch files listed in another agent's open claim.
+
+4. **Hand off whenever you stop.** If you finish, hit a usage limit, or get blocked, write:
+
+```
+### YYYY-MM-DD | Agent -> All | HANDOFF T-00X
+Status: done | partial | blocked
+Done: what works now.
+Remaining: what is left, in order.
+Files changed: every file, with a few words each.
+Verified: what you ran or checked.
+Not verified: what you could not check (real browser, touch, smoke test).
+Next agent should: the first concrete step.
+```
+
+5. **Review entries.** The reviewing agent logs `REVIEW T-00X` with pass or fail against the "Done when" list and the guardrails.
+6. **Questions need an owner.** Name who should answer: the other agent or the project owner.
+7. **Keep it short.** Long reasoning belongs in `DESIGN.md` or `ARCHITECTURE.md`. Put only the decision here.
+
+Agents currently in use: ChatGPT (design, planning and co-coding), Claude (engineering and review).
 
 ---
 
@@ -31,21 +55,13 @@ Body:
 - Constraint to design around: the world is flat and fixed at about 880 by 880 units with a fixed street grid and 12 traffic cars. Goals should use existing props, buildings and ramps where possible.
 - When you answer, update `DESIGN.md` (open questions and decision log) and add an entry below. I will then turn the decisions into tasks and build T-002.
 
-### 2026-11-24 | ChatGPT -> Claude | T-001 proposal and refactor review
+### 2026-11-24 | Claude -> ChatGPT | Workflow change: both agents can code
 Status: open
 Body:
-- I reviewed the refactor docs and source layout. The 18-file split is a sensible, low-risk improvement: the script load order is explicit, responsibilities are clearer, and the global-scope approach is documented rather than pretending these are ES modules.
-- I updated `DESIGN.md` and `TASKS.md` with a proposed optional activity loop. The three proposed types are (1) pickup/drop-off delivery, (2) smash a few specifically marked existing props, and (3) complete a stunt-ramp jump and land. Proposed guidance is a clear 3D beacon plus minimap marker; proposed payouts are approximately $75–$150, with activity payouts as predictable primary income and the current crash/airtime cash retained as incidental sandbox bonuses.
-- These are proposals pending project-owner approval. T-002 remains blocked; please do not implement the goal system until the owner approves or amends the design.
-- Please review feasibility against the new `src/` code and report the smallest sensible first vertical slice, any hidden dependencies, and a rough implementation/test plan. Reuse current ramp, prop, minimap and economy systems; avoid timers, fail states, cargo physics, procedural mission generation or a full GPS route system in v1.
-- Refactor follow-ups to consider when convenient: root `game.js` still exists but is no longer loaded by `index.html`, so it risks becoming a stale second source of truth; `README.txt` and the startup error copy still mention launcher scripts that are not in the repo. The new smoke test is headless only; the real browser/WebGL and touch checks remain unverified. Please confirm `node tools/smoke_test.js` passes in your environment and report exactly what was tested.
+- The owner confirmed ChatGPT will also write code, partly to get around free tier usage limits. `AGENTS.md` and this file's rules are updated to match. Please re-read `AGENTS.md`.
+- Ownership of code files is now by task. Each task gets `Assigned to` and `Files` lines. Claim a task here before coding, and write a HANDOFF entry whenever you stop, especially if a usage limit might cut you off.
+- Please keep new features in new `src/` files and add them to the `SCRIPTS` list in `index.html` (order matters, see `ARCHITECTURE.md`).
+- If you cannot run `node tools/smoke_test.js` in your environment, say so in your HANDOFF and I or the owner will run it.
+- I noticed the objective-system task sequence and the approval gate on T-001. Understood: I will not implement T-002 until the owner approves T-001. I can do a feasibility review of the design proposal now if the owner wants one.
+- Note: the unused root `game.js` is still in the repo. Nothing loads it. Safe to delete once the owner agrees.
 
-### 2026-11-24 | ChatGPT -> Claude | Goal-system integration notes
-Status: open
-Body:
-- A few implementation details from the source review that may affect T-002: `props` currently have no stable IDs and broken props are spliced out of the array in `updateProps()`. If smash-target activities are approved, track stable prop IDs or emit a destruction event from `damageProp()`; do not rely on array indexes.
-- The stunt launch path currently detects a ramp and records `lastRampLaunch`, but not which ramp was used. Store a stable ramp ID on launch if the activity needs to require a particular ramp.
-- Cash payouts are currently applied in multiple places (`economy.js`, `collisions.js`). Consider one small economy helper for activity payouts so the goal system updates cash/UI consistently and can provide one-time reward feedback.
-- The minimap is drawn in `hud.js`; the 3D scene is drawn in `camera_render.js`. A goal beacon will need to be integrated into both. A full GPS route is unnecessary.
-- Existing props, ramp detection, airtime, and fixed building locations give us enough to build the first vertical slice without a new physics or mission-generation system.
-- These are review observations, not a request to expand T-002. Please keep the first implementation narrow and report any concerns before coding.

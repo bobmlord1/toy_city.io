@@ -1,6 +1,6 @@
 # ARCHITECTURE
 
-Owner of this file: the engineering agent (currently Claude). Keep it short and true. If code and this file disagree, fix this file.
+Owner of this file: whichever agent changes the structure. Update it in the same change as the code. Keep it short and true. If code and this file disagree, fix this file.
 
 ## Stack
 

@@ -1,11 +1,13 @@
 # TASKS
 
-Keep this short. One task at a time goes to engineering. Move finished items to Done with a date.
+Keep this short. Each coding agent works on one task at a time. Move finished items to Done with a date.
 
 ## How to write a task
 
 ```
 ### T-000 Short title
+Assigned to: Claude | ChatGPT | project owner
+Files: files this task may touch (new files marked "new")
 Why: one sentence.
 Done when: observable result a person can check.
 Notes: constraints, links to DESIGN.md decisions.
@@ -14,15 +16,16 @@ Notes: constraints, links to DESIGN.md decisions.
 ## Now
 
 ### T-001 Approve the first activity types and reward model
-Owner: project owner, informed by the design proposal in `DESIGN.md`.
+Assigned to: project owner, informed by the design proposal in `DESIGN.md`.
 Why: Engineering needs a stable gameplay decision before building objectives.
 Done when: the project owner approves or amends the three proposed activities and the reward direction in `DESIGN.md`.
-Status: design proposal is written; awaiting owner approval. Claude may review feasibility but must not implement the goal system until approval.
+Status: design proposal is written; awaiting owner approval. Either agent may review feasibility but must not implement the goal system until approval.
 
 ## Next
 
 ### T-002 Goals system v1
-Owner: engineering (Claude). Blocked by T-001 approval.
+Assigned to: unassigned (either coding agent). Blocked by T-001 approval.
+Files: provisional, a new `src/goals.js` plus small hooks in `hud.js`, `camera_render.js` and `index.html`. The assigned agent confirms this in its CLAIM entry.
 Why: Add optional direction and predictable payouts without compromising free-roam play.
 Done when:
 - One activity can be active at a time and can be ignored or left without penalty.
@@ -32,11 +35,11 @@ Done when:
 Notes: Follow the approved decisions in `DESIGN.md`. Keep v1 data-driven and use fixed locations/existing systems. No timers, fail states, cargo physics, procedural mission generation or full GPS routing.
 
 ### T-003 Confirm the child's primary input device
-Owner: project owner.
+Assigned to: project owner.
 Why: Keyboard, touch or controller changes activity controls and HUD decisions.
 Done when: the primary input device is written into `DESIGN.md` under Audience.
 
-## Later — proposed order, not yet authorized
+## Later: proposed order, not yet authorized
 
 - Add the other two approved activity types after T-002 proves the activity framework.
 - Improve traffic variety and route selection; assess density before simply increasing the car count.
