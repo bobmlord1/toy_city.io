@@ -88,6 +88,21 @@ Notes:
 - Implementation (2026-11-24): PR #6 replaces T-006 closed circuits with an 8×8 grid controller. Standalone simulation confirms repeated turns and cross-quadrant travel.
 - Owner browser playtest (2026-11-24): deliberately hit a traffic car as it approached an intersection. It continued through the intersection and corrected its path afterward. Record this as a pass for collision recovery during intersection navigation.
 
+### T-008 Add a dedicated pickup-truck traffic fleet
+Assigned to: ChatGPT.
+Status: in progress on branch `chatgpt/t-008-traffic-pickups`.
+Files: `src/vehicles.js`, `tools/smoke_test.js`, `index.html`, `DESIGN.md`, `ARCHITECTURE.md`, `TASKS.md`, `README.txt`, `agent_comments.md`.
+Why: The owner reports that the city still feels empty and lacks vehicle variety after T-007; more traffic types should make free-roam feel busier without changing the route system.
+Done when:
+- Keep the existing 12 compact-car traffic vehicles and add 12 AI pickup trucks using the existing pickup asset, for 24 persistent AI traffic vehicles total.
+- All 24 use the same seeded intersection-grid navigation, legal turns, and collision knockback/recovery behavior.
+- Pickup traffic uses several distinct paint variants and slightly lower cruising speeds than compact traffic.
+- Give all 24 unique seeded starting road segments across the city grid; verify road-path clearance for the larger pickup footprint, not just its centerline.
+- Update smoke tests and v0.15.0 documentation/start-screen version. Keep the player pickup and player semi unchanged.
+Notes:
+- The owner also asked for six semis. Defer moving AI semis in this task: the trailer articulation simulation already runs for AI vehicles, but the existing compact-car turn path does not account for a tractor-trailer swept footprint. Do not add six semis as untested moving traffic; a later task should add trailer-aware path planning, turn clearance and speed control.
+- No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
+ 
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Add the other two approved activity types after T-002 proves the activity framework.
