@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.11.2</title>
+<title>Free Roam Car Playground · v0.12.0</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -37,6 +37,11 @@
   #speed small { font-size:10px; font-weight:600; opacity:.7; }
   #message { position:fixed; left:50%; top:16px; transform:translateX(-50%); background:rgba(11,29,38,.82); color:white; border:1px solid rgba(255,255,255,.24); border-radius:22px; padding:8px 16px; font-size:13px; font-weight:650; text-align:center; max-width:min(90vw,520px); pointer-events:none; opacity:0; transition:opacity .18s; }
   #message.show { opacity:1; }
+  #activity { position:fixed; left:14px; top:92px; display:none; align-items:center; gap:10px; max-width:min(380px,calc(100vw - 190px)); padding:9px 10px 9px 13px; z-index:3; font-size:14px; font-weight:800; }
+  #activity.show { display:flex; }
+  #activityIcon { font-size:24px; line-height:1; }
+  #activityText { flex:1; }
+  #activitySkip { pointer-events:auto; padding:6px 9px; border-radius:10px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:10px; letter-spacing:.06em; cursor:pointer; }
   #mapbox { position:fixed; right:14px; top:14px; padding:7px; pointer-events:none; }
   #map { display:block; width:132px; height:132px; border-radius:8px; }
   #hint { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); padding:9px 15px; font-size:13px; text-align:center; pointer-events:none; max-width:90vw; white-space:normal; }
@@ -75,6 +80,8 @@
     #speed { font-size:19px; }
     #message { top:auto; bottom:100px; font-size:12px; }
     #hint { bottom:94px; font-size:11px; }
+    #activity { top:68px; font-size:12px; max-width:calc(100vw - 130px); }
+    #activityIcon { font-size:20px; }
     #interact { display:block; bottom:92px; }
   }
 </style>
@@ -83,13 +90,14 @@
 <canvas id="game" aria-label="3D free-roam car game"></canvas>
 <div id="vignette"></div>
 <div id="topbar">
-  <div id="brand" class="panel"><strong>FREE ROAM</strong><span>CAR PLAYGROUND · v0.11.2</span></div>
+  <div id="brand" class="panel"><strong>FREE ROAM</strong><span>CAR PLAYGROUND · v0.12.0</span></div>
   <div id="status" class="panel"><div id="vehicleName">Compact Car</div><div id="speed">0 <small>MPH</small></div></div>
   <div id="cash" class="panel">CASH&nbsp; $0</div>
   <div id="boostStatus" class="panel" style="padding:9px 12px;font-size:11px;font-weight:850;letter-spacing:.04em;color:#a8efff">BOOST READY · SHIFT</div>
   <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED PBR: ON</button>
 </div>
 <div id="mapbox" class="panel"><canvas id="map" width="264" height="264"></canvas></div>
+<div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with connected streets, permanent traffic, ramps and upgrades.</div>
 <div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
@@ -139,7 +147,7 @@
   window.FREE_ROAM_VEHICLE_ASSETS={meta,buffer};
   // Game code is split into plain scripts that share one global scope, so ORDER MATTERS.
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
-  const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
+  const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
    await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;

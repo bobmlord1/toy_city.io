@@ -33,6 +33,11 @@ function nextUpgradeCost(v, tier = "speed") {
 function updateCashUI() {
   $("cash").textContent = "CASH  $" + cash.toLocaleString("en-US");
 }
+// Single entry point for cash that does not come from crashes (activities use this).
+function awardCash(amount) {
+  cash += amount;
+  updateCashUI();
+}
 function registerCrashReward(key, impact) {
   if (!currentCrashContacts) return;
   currentCrashContacts.add(key);

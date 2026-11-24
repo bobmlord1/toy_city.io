@@ -83,6 +83,8 @@ function drawWorld(dt) {
       ]);
     }
   }
+  // Activity beacons, pads and the carried parcel (src/activities.js).
+  drawActivityMarkers(vp);
   // Small on-foot character, built from primitive boxes.
   if (onFoot) {
     draw(personModel, modelMatrix(player.x, player.y, player.z, player.yaw), vp, [

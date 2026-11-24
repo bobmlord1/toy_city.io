@@ -26,3 +26,7 @@ Version 0.11.2 changes:
 - Added DESIGN.md, ARCHITECTURE.md, TASKS.md, AGENTS.md and agent_comments.md for the multi-agent workflow.
 - Added tools/smoke_test.js (run: npm install jsdom, then node tools/smoke_test.js).
 - To run locally: python3 -m http.server, then open http://localhost:8000
+
+Version 0.12.0 changes:
+- Optional delivery activities: drive to the package beacon, then to the marked house for a cash payout. No timers or penalties. Press G or tap SKIP to get a different one.
+

@@ -14,6 +14,7 @@ function frame(t) {
     const dt = Math.min(0.04, (t - (lastTime || t)) / 1000 || 0.016);
     lastTime = t;
     updatePhysics(dt);
+    updateActivities(dt);
     drawWorld(dt);
     updateUI();
     drawMap();

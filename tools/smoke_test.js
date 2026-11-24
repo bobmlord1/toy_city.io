@@ -21,7 +21,9 @@ const listMatch = html.match(/const SCRIPTS=(\[[^\]]*\])/);
 if (!listMatch) throw new Error("Could not find the SCRIPTS list in index.html");
 const SCRIPTS = JSON.parse(listMatch[1]);
 
-const dom = new JSDOM(html.replace(/<script>[\s\S]*<\/script>/, ""), { runScripts: "outside-only" });
+const dom = new JSDOM(html.replace(/<script>[\s\S]*<\/script>/, ""), {
+  runScripts: "outside-only",
+});
 const w = dom.window;
 const ctx = dom.getInternalVMContext();
 
@@ -32,7 +34,8 @@ const stub = () =>
       if (p === "canvas") return null;
       if (/^[A-Z_0-9]+$/.test(p)) return 1;
       if (/Location$/.test(p)) return () => 0;
-      if (p === "createLinearGradient" || p === "createRadialGradient") return () => ({ addColorStop() {} });
+      if (p === "createLinearGradient" || p === "createRadialGradient")
+        return () => ({ addColorStop() {} });
       if (p === "measureText") return () => ({ width: 10 });
       if (p === "getShaderParameter" || p === "getProgramParameter") return () => true;
       return () => ({});
@@ -76,7 +79,10 @@ for (let i = 0; i < 400; i++) {
   queue.splice(0).forEach((cb) => cb(t));
 }
 const end = JSON.parse(
-  run("JSON.stringify({x:controlled.x,z:controlled.z,yaw:controlled.yaw,cash:cash,vehicles:vehicles.length})", "q"),
+  run(
+    "JSON.stringify({x:controlled.x,z:controlled.z,yaw:controlled.yaw,cash:cash,vehicles:vehicles.length})",
+    "q",
+  ),
 );
 
 const failures = [];
@@ -84,6 +90,63 @@ if (uncaught) failures.push("Uncaught error: " + uncaught);
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
+
+// ---- Activity checks (src/activities.js) ----
+const get = (expr) => JSON.parse(run("JSON.stringify(" + expr + ")", "q"));
+const step = (n) => {
+  for (let i = 0; i < n; i++) {
+    t += 16.7;
+    queue.splice(0).forEach((cb) => cb(t));
+  }
+};
+const teleport = (p) =>
+  run(`controlled.x=${p.x};controlled.z=${p.z};controlled.vx=0;controlled.vz=0;`, "tp");
+key("keyup", "w", "KeyW");
+for (const problem of get("validateActivityDefs()")) failures.push("Activity data: " + problem);
+step(300);
+const offer = get("currentActivity && {id:currentActivity.def.id, phase:currentActivity.phase}");
+if (!offer || offer.phase !== "offer") {
+  failures.push("No delivery offer is available");
+} else {
+  const def = get(`activityDefs.find(d=>d.id==="${offer.id}")`);
+  const cash0 = get("cash");
+  step(60);
+  if (get("cash") !== cash0 || get("currentActivity && currentActivity.phase") !== "offer")
+    failures.push("An ignored offer changed the game state");
+  // On foot does not pick up a parcel.
+  run("onFoot=true;player.x=" + def.pickup.x + ";player.z=" + def.pickup.z, "foot");
+  step(5);
+  if (get("currentActivity && currentActivity.phase") !== "offer")
+    failures.push("On-foot player triggered the pickup");
+  run("onFoot=false", "foot");
+  // Pickup, then leave the area: no penalty and still carrying.
+  teleport(def.pickup);
+  step(3);
+  if (get("currentActivity && currentActivity.phase") !== "carrying")
+    failures.push("Pickup did not start the delivery");
+  teleport({ x: 0, z: 0 });
+  step(30);
+  if (get("currentActivity && currentActivity.phase") !== "carrying" || get("cash") !== cash0)
+    failures.push("Leaving the pickup area changed the delivery or cash");
+  // Drop-off pays exactly once.
+  teleport(def.dropoff);
+  step(3);
+  if (get("cash") !== cash0 + def.payout)
+    failures.push("Payout wrong: expected " + (cash0 + def.payout) + ", got " + get("cash"));
+  if (get("currentActivity") !== null) failures.push("Activity still active after completion");
+  step(10);
+  if (get("cash") !== cash0 + def.payout) failures.push("Payout was paid more than once");
+  // Another offer appears without reloading, and it can be skipped with no penalty.
+  step(200);
+  const next = get("currentActivity && {id:currentActivity.def.id, phase:currentActivity.phase}");
+  if (!next || next.phase !== "offer" || next.id === offer.id)
+    failures.push("A new, different offer did not appear after completion");
+  run("skipActivity()", "skip");
+  if (get("currentActivity") !== null) failures.push("Skip did not clear the activity");
+  step(60);
+  if (get("currentActivity === null")) failures.push("No offer appeared after skipping");
+  if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
+}
 
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));

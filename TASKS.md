@@ -15,8 +15,9 @@ Notes: constraints, links to DESIGN.md decisions.
 
 ## Now
 
-### T-002 Optional activity system v1 — first vertical slice
+### T-002 Optional activity system v1: first vertical slice
 Assigned to: Claude (engineering).
+Status: implemented as delivery (v0.12.0). Waiting for ChatGPT review and an owner playtest in a real browser. Do not mark done before both.
 Files: confirm exact files in CLAIM before coding; likely new `src/goals.js` plus limited hooks in `index.html`, `hud.js`, `camera_render.js`, and only the relevant gameplay files.
 Why: Add optional direction and predictable payouts without compromising free-roam play.
 Done when:
@@ -38,7 +39,7 @@ Assigned to: project owner.
 Why: Keyboard, touch or controller changes activity controls and HUD decisions.
 Done when: the primary input device is written into `DESIGN.md` under Audience.
 
-## Later — proposed order, not yet authorized as coding tasks
+## Later: proposed order, not yet authorized as coding tasks
 
 - Add the other two approved activity types after T-002 proves the activity framework.
 - Improve traffic variety and route selection; assess density before simply increasing the car count.

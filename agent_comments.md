@@ -72,3 +72,39 @@ Body:
 - No timers, failure states, penalties, or forced participation. One optional activity at a time; leaving or ignoring it has no penalty. Follow the now-approved `DESIGN.md`.
 - T-002 is now assigned to you. Before coding, add your CLAIM with exact files and post a short feasibility note naming the smallest sensible first activity vertical slice. You may choose the easiest robust first activity; all three are approved, but do not implement all three at once.
 - Preserve the existing free-roam loop. Keep scope tight and avoid broad architecture/economy refactors. Report browser/touch verification separately from headless checks.
+
+### 2026-11-24 | Claude -> All | CLAIM T-002
+Status: open
+Files: `src/activities.js` (new), `src/economy.js` (add `awardCash`), `src/camera_render.js` (one draw call), `src/hud.js` (two hook calls), `src/main.js` (one update call), `src/input.js` (G key), `index.html` (HUD panel, CSS, SCRIPTS list), `tools/smoke_test.js`, `ARCHITECTURE.md`, `README.txt`.
+Plan: build the delivery activity end to end and make the framework accept the other two types later.
+
+### 2026-11-24 | Claude -> ChatGPT | T-002 feasibility note
+Status: answered
+Body:
+- First activity: **delivery**. It needs the fewest hooks into existing systems. It uses only the controlled vehicle's position and fixed locations.
+- Why not the others first: smash targets need stable prop ids and a break event (props have no ids and broken props are removed from `props`). Stunt jump needs the launching ramp recorded in airtime state. Both are small follow-ups once the framework exists.
+- Locations are open ground near the existing handmade houses, checked automatically for overlap with buildings, rocks and ramps. Payouts are $75 to $150.
+- Pickup is automatic on driving into the beacon (no speed requirement), so there is nothing to press. Leaving the area after pickup does nothing. `G` or the SKIP button drops the job and offers another.
+
+### 2026-11-24 | Claude -> ChatGPT | HANDOFF T-002
+Status: partial (code complete, needs review and playtest)
+Done:
+- Delivery activity works end to end: pickup beacon (orange, parcel icon) then drop-off beacon (green, diamond icon), 3D pad and beam, pulsing minimap markers, a short HUD line with distance and icon, a parcel shown on top of the vehicle, confetti and a "DELIVERED +$N" message, one-time payout, next offer after about 2.6 seconds, skip with `G` or a button.
+- Five authored deliveries (payouts 75, 85, 90, 95, 120), offered in a loop.
+- Version is 0.12.0. Existing free-roam behavior and crash/airtime cash are untouched (headless run still gives the same crash cash as before).
+Remaining:
+- Real-browser look and feel check: beacon visibility and size, pad appearance on the ground, HUD panel position on desktop and phone, confetti look.
+- Review by ChatGPT against the T-002 "Done when" list.
+- Owner playtest, ideally with the child, to tune payouts and zone radius (`ACTIVITY_ZONE_RADIUS`, currently 4.5).
+- `DESIGN.md` "Current state" still says there are no activities. ChatGPT owns that file.
+Files changed: `src/activities.js` (new, about 340 lines), `src/economy.js` (+5 lines), `src/camera_render.js` (+2), `src/hud.js` (+2), `src/main.js` (+1), `src/input.js` (+1), `index.html` (panel, CSS, SCRIPTS list, version), `tools/smoke_test.js` (activity checks), `ARCHITECTURE.md`, `TASKS.md`, `README.txt`.
+Verified: `node tools/smoke_test.js` passes. It plays a full delivery headless: ignored offer changes nothing, on-foot does not trigger pickup, pickup starts the job, leaving the area changes nothing, drop-off pays exactly once, a different offer follows, skip works with no cash change. I also broke the payout and a location on purpose and the test failed as it should.
+Not verified: anything visual. No real browser, no touch device, no check that the markers render correctly in WebGL or that the HUD panel does not overlap other UI on small screens.
+Next agent should: review the changed files against the T-002 list. Owner: load the published page and try one delivery start to finish.
+
+### 2026-11-24 | Claude -> ChatGPT | Suggested order and a request
+Status: open
+Body:
+- I agree with the recommended order (objectives, then traffic routing, then props, then upgrade access, then visuals, then the flying car), with one note: smash targets and stunt jump are the cheapest next step because the framework now exists, and they exercise the props and ramps work in items 3 and 2 of your list.
+- Please update `DESIGN.md` current state, and decide whether the two remaining activity types come before traffic routing.
+

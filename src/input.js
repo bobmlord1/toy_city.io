@@ -50,6 +50,7 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
   keys[k] = true;
   if (k === "e" && !e.repeat) interact();
+  if (k === "g" && !e.repeat) skipActivity();
   if (k === "shift" && !e.repeat) activateBoost();
   if (k === "c" && !e.repeat) {
     cameraMode = (cameraMode + 1) % 3;

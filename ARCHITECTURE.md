@@ -39,7 +39,8 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `vehicles.js` | Vehicle assets, `vehicle()` factory, player car, semi and trailer, traffic. |
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
-| `economy.js` | Cash, crash rewards, tuning pad, upgrades. |
+| `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
+| `activities.js` | Optional activities: offers, beacons, minimap markers, payouts. Ships the `delivery` type. |
 | `interaction.js` | `say()`, enter/exit vehicle, small vehicle helpers. |
 | `input.js` | Keyboard and touch, steering convention, boost. |
 | `collisions.js` | Collision resolution, trailer physics, suspension, airtime. |
@@ -66,17 +67,28 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 - **No `Math.random` in static world building** unless seeded. The world should look the same every load.
 - **Keep the world flat for now.** Hills were removed on purpose until the street kit is stable.
 
+## Activities
+
+`src/activities.js` is the optional-activity framework. It is deliberately small.
+
+- **One offer at a time.** `currentActivity` is `{ def, phase, t }` or `null`. An "offer" is just a visible pickup beacon. Ignoring it costs nothing. The next offer appears about 2.6 seconds after a completion or a skip.
+- **Data plus type.** `activityDefs` holds hand-authored locations and payouts. `activityTypes[type]` holds behaviour: `markers(act)` returns what to draw, `hud(act)` returns an icon and short text, `update(act)` returns `"complete"` when the reward is due.
+- **Hooks into other files** (the only places other code touches it): `updateActivities(dt)` in `main.js`, `drawActivityMarkers(vp)` in `camera_render.js`, `drawActivityMapMarkers()` and `updateActivityHud()` in `hud.js`, the `G` key in `input.js`, and `awardCash()` in `economy.js`. The HUD panel markup is in `index.html`.
+- **Payout safety.** `completeActivity()` clears `currentActivity` before paying, so an activity can pay only once. There is no timer, no failure state and no cash deduction anywhere.
+- **Not built yet:** smash-target and stunt-jump types. Smash targets need stable prop identity and a break event: props have no ids and broken props are spliced out of `props` (see `damageProp()` in `collisions.js` and `updateProps()` in `physics.js`). Stunt jump needs the ramp that launched the vehicle to be identifiable (ramps have ids, but airtime state does not record which one was used).
+
 ## Recipes
 
 - **New building:** call `addBuilding(...)` in `world_city.js`. Keep it inside a street block, off the road grid.
 - **New prop:** today there are two types, `crate` and `barrel`. Their meshes are built in `vehicles.js` (`crateModel`, `barrelModel`), their stats are in `addProp()` in `props.js`, and they are drawn in `camera_render.js`. A new type touches all three. Place props with `addProp(type, x, z)`.
 - **New street piece:** add an entry to `streetModules` in `world_streets.js` and place it through `placeStreetUnit`.
 - **New vehicle:** add its mesh to `assets/`, create it with `createVehicleVisual`, and spawn it with `vehicle(...)` in `vehicles.js`.
-- **Goals (planned, not built):** a new `src/goals.js`, loaded after `economy.js`. Each goal is a plain data object, for example `{ type: "deliver", pickup: [x, z], dropoff: [x, z], prompt: "Take the pizza to the school" }`. Build each goal TYPE once in code. New goals should then be data only. Shape will be finalized when design picks the first goal types.
+- **New delivery:** add an entry to `activityDefs` in `activities.js` with fixed `pickup` and `dropoff` coordinates and a payout between $75 and $150. Run `node tools/smoke_test.js`, which rejects zones that overlap buildings, rocks or ramps.
+- **New activity type (smash targets, stunt jump):** add an entry to `activityTypes` with `markers(act)`, `hud(act)` and `update(act)`, then add defs that use it. See "Activities" below.
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt

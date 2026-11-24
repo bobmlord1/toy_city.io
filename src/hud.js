@@ -43,6 +43,7 @@ function updateUI() {
     hintEl.textContent = hint;
     lastHint = hint;
   }
+  updateActivityHud();
   refreshUpgradePanel();
   if (performance.now() > messageUntil) messageEl.classList.remove("show");
 }
@@ -99,6 +100,7 @@ function drawMap() {
     ctx.fillStyle = rampMapColors[i % rampMapColors.length];
     ctx.fillRect(px(r.x) - 5, py((r.startZ + r.endZ) / 2) - 5, 10, 10);
   }
+  drawActivityMapMarkers(ctx, px, py);
   for (const v of vehicles) {
     ctx.beginPath();
     ctx.arc(px(v.x), py(v.z), v.ai ? 4.5 : 6.2, 0, Math.PI * 2);
