@@ -36,7 +36,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `world_streets.js` | Data-driven street kit and its colliders. |
 | `world_city.js` | Yard, ramp meshes, buildings, trees, lamps. Ends by building `worldMesh`. |
 | `shadows.js` | Projected shadows. |
-| `vehicles.js` | Vehicle assets, `vehicle()` factory, player car, semi and trailer, traffic. |
+| `vehicles.js` | Vehicle assets, `vehicle()` factory, player car, semi and trailer, fixed district traffic routes. |
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
 | `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
@@ -68,6 +68,10 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 - **Shadows follow the surface.** `shadowSurfaceH()` in `shadows.js` is the height every shadow vertex uses. Anything new that sits above the ground on a ramp (like the gold pad, see `upgradePad` in `world_config.js`) must be added there, or shadows will vanish under it. Near ramps, shadow triangles are subdivided so they follow the slope.
 - **Keep the world flat for now.** Hills were removed on purpose until the street kit is stable.
 
+## Traffic routes
+
+The 12 persistent traffic cars are split evenly across four fixed 2×2-block district circuits. Circuit bounds use existing interior street centerlines (no new road geometry or colliders). Each circuit is a rounded rectangle with a 4.2-unit corner radius, three cars, and traffic travelling in both directions on opposing lanes. The route sampler is `trafficRoutePoint()`; `trafficLanePoint()` applies each car's lane offset. `updateVehicle()` advances the route progress and uses a short look-ahead target plus the existing soft spring recovery after impacts. Cars are never spawned or despawned.
+
 ## Activities
 
 `src/activities.js` is the optional-activity framework. It is deliberately small.
@@ -89,7 +93,7 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 12-car traffic fleet and four district circuits (street alignment, route/lane distribution and sustained finite movement), plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt
