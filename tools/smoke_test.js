@@ -101,6 +101,49 @@ const step = (n) => {
 };
 const teleport = (p) =>
   run(`controlled.x=${p.x};controlled.z=${p.z};controlled.vx=0;controlled.vz=0;`, "tp");
+
+const trafficProblems = get(`(() => {
+  const problems = [];
+  if (trafficFleet.length !== 12) problems.push("Expected 12 persistent traffic cars, got " + trafficFleet.length);
+  if (trafficRoutes.length !== 4) problems.push("Expected 4 district circuits, got " + trafficRoutes.length);
+  const ids = new Set(trafficFleet.map((v) => v.id));
+  if (ids.size !== 12) problems.push("Traffic vehicle IDs are not unique");
+  const aligned = (value) => streetLines.some((line) => Math.abs(line - value) < 0.01);
+  for (let routeIndex = 0; routeIndex < trafficRoutes.length; routeIndex++) {
+    const route = trafficRoutes[routeIndex];
+    const cars = trafficFleet.filter((v) => v.routeIndex === routeIndex);
+    if (cars.length !== 3) problems.push(route.id + ": expected 3 cars, got " + cars.length);
+    if (!aligned(route.minX) || !aligned(route.maxX) || !aligned(route.minZ) || !aligned(route.maxZ))
+      problems.push(route.id + ": circuit bounds do not align with the street grid");
+    if (route.maxX - route.minX !== 220 || route.maxZ - route.minZ !== 220)
+      problems.push(route.id + ": circuit is not a 2x2-block loop");
+    if (Math.max(Math.abs(route.minX), Math.abs(route.maxX), Math.abs(route.minZ), Math.abs(route.maxZ)) >= WORLD_HALF - ROAD_WIDTH * 2)
+      problems.push(route.id + ": circuit is too close to the city perimeter");
+    if (!cars.some((v) => v.routeDir === 1) || !cars.some((v) => v.routeDir === -1))
+      problems.push(route.id + ": traffic is not travelling in both directions");
+    const laneSides = new Set(cars.map((v) => Math.sign(v.routeLane * v.routeDir)));
+    if (!laneSides.has(1) || !laneSides.has(-1))
+      problems.push(route.id + ": both physical traffic lanes are not represented");
+    for (const car of cars) {
+      const expected = trafficLanePoint(route, car.routeS, car.routeDir, car.routeLane);
+      if (Math.hypot(expected.x - car.x, expected.z - car.z) > 0.01)
+        problems.push(car.id + ": spawn position does not match its assigned route and lane");
+    }
+    for (let distance = 0; distance < route.length; distance += 2.5) {
+      const p = trafficRoutePoint(route, distance, 1);
+      const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
+      const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
+      if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.05) {
+        problems.push(route.id + ": route leaves the existing road/intersection footprint");
+        break;
+      }
+    }
+  }
+  if (trafficFleet.some((v) => !v.ai || v.route !== "district" || !Number.isInteger(v.routeIndex)))
+    problems.push("A traffic car is not assigned to a district AI route");
+  return problems;
+})()`);
+for (const problem of trafficProblems) failures.push("Traffic routing: " + problem);
 key("keyup", "w", "KeyW");
 for (const problem of get("validateActivityDefs()")) failures.push("Activity data: " + problem);
 step(300);
@@ -147,6 +190,22 @@ if (!offer || offer.phase !== "offer") {
   if (get("currentActivity === null")) failures.push("No offer appeared after skipping");
   if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
 }
+
+// Traffic should keep moving for a sustained simulation without invalid state.
+const trafficProgressBefore = get("trafficFleet.map((v) => v.routeS)");
+step(600);
+const trafficRuntime = get("trafficFleet.map((v) => ({id:v.id,x:v.x,z:v.z,yaw:v.yaw,routeS:v.routeS}))");
+const trafficProgressAfter = get("trafficFleet.map((v) => v.routeS)");
+let trafficMoved = 0;
+for (let i = 0; i < trafficRuntime.length; i++) {
+  const car = trafficRuntime[i];
+  if (![car.x, car.z, car.yaw, car.routeS].every(Number.isFinite))
+    failures.push("Traffic runtime: " + car.id + " has non-finite state");
+  const routeLength = get("trafficRoutes[trafficFleet[" + i + "].routeIndex].length");
+  const progress = (trafficProgressAfter[i] - trafficProgressBefore[i] + routeLength) % routeLength;
+  if (progress > 1) trafficMoved++;
+}
+if (trafficMoved !== 12) failures.push("Traffic runtime: expected all 12 cars to advance, got " + trafficMoved);
 
 // ---- Ramp geometry and ramp shadow checks ----
 const geometryProblems = get(`(() => {
