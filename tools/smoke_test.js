@@ -129,13 +129,15 @@ const trafficProblems = get(`(() => {
       if (Math.hypot(expected.x - car.x, expected.z - car.z) > 0.01)
         problems.push(car.id + ": spawn position does not match its assigned route and lane");
     }
-    for (let distance = 0; distance < route.length; distance += 2.5) {
-      const p = trafficRoutePoint(route, distance, 1);
-      const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
-      const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
-      if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.05) {
-        problems.push(route.id + ": route leaves the existing road/intersection footprint");
-        break;
+    for (const direction of [1, -1]) {
+      for (let distance = 0; distance < route.length; distance += 2.5) {
+        const p = trafficLanePoint(route, distance, direction, -1.8);
+        const nearX = Math.min(...streetLines.map((line) => Math.abs(line - p.x)));
+        const nearZ = Math.min(...streetLines.map((line) => Math.abs(line - p.z)));
+        if (Math.min(nearX, nearZ) > ROAD_WIDTH / 2 + 0.05) {
+          problems.push(route.id + ": a traffic lane leaves the existing road/intersection footprint");
+          break;
+        }
       }
     }
   }
