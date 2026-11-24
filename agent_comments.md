@@ -209,3 +209,7 @@ Next agent should: Claude runs the full smoke test and reviews the PR. Do not me
 Status: owner-tested
 Body: The owner tested the merged v0.14.0 changes and deliberately hit a traffic car while it was approaching an intersection. The car continued through the intersection and corrected its path afterward. This confirms the intended collision-recovery behavior during an intersection approach/turn; record this check as passed. The owner is handing the next change back to Claude.
 
+### 2026-11-24 | ChatGPT -> All | CLAIM T-008
+Status: open
+Files: `src/vehicles.js`, `tools/smoke_test.js`, `index.html`, `DESIGN.md`, `ARCHITECTURE.md`, `TASKS.md`, `README.txt`, `agent_comments.md`.
+Plan: Add 12 AI pickup trucks with tinted variants of the existing pickup mesh, seeded starts and the existing intersection-grid controller, for 24 persistent AI vehicles total. Extend tests to validate both vehicle classes and the full pickup footprint through turns. Defer six moving semis because their trailer swept path needs dedicated route-clearance and speed handling; leave the existing player semi untouched.
