@@ -64,6 +64,7 @@ Notes:
 - Design preference from the project owner's recommended order: smarter routing and better distribution before simply adding more cars.
 - Traffic cars are never spawned or despawned. Collisions push them off their lane and a soft spring guides them back. Keep that behavior.
 - Run `node tools/smoke_test.js` and keep crash cash, delivery activities and the rest of free roam working.
+- Implementation notes (2026-11-24): four 2×2-block circuits are aligned to inner street lines; three of the existing 12 cars are assigned to each route. The new route/lane checks are in `tools/smoke_test.js`. The full smoke test has not yet been run in the implementation environment; syntax and standalone route/AI simulations passed.
 
 ## Later: proposed order, not yet authorized as coding tasks
 
