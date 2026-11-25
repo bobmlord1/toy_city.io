@@ -101,6 +101,97 @@ Done when: City Under Attack places a blocky stationary creature in one of three
 Notes (owner decisions 2026-11-25): Reward Ring upgrades are permanent. Tuning Ray is opt-in (drive through it) but must be hard to miss.
 Status: code complete in v0.18.0 (headless), waiting on owner playtest.
 
+### T-025 Gameplay regression and integration sweep
+Assigned to: Claude; project owner playtests.
+Files: relevant gameplay files, `tools/smoke_test.js`, `TASKS.md` (only as needed to document findings/fixes).
+Why: With all activity types and Toybox Events arriving, ensure the core systems coexist without reward exploits, stuck states, crashes or conflicting objectives.
+Done when: smoke tests cover critical activity/event transitions and regressions; owner can test free roam, all activities, events, vehicle collisions, reset/recovery and rewards without encountering a critical issue; remaining known issues are documented rather than hidden.
+Notes: Fix only scoped, reproducible defects; avoid broad architecture changes.
+
+### T-026 Backyard equirectangular skybox
+Assigned to: Claude; project owner supplies and playtests the texture.
+Files: rendering/environment files as required, startup/settings UI only if needed, asset(s) (new), `tools/smoke_test.js` where applicable, `TASKS.md`.
+Why: Establish the toy-world setting with a backyard panorama featuring grass, sandbox, distant fence and house, without expanding the playable terrain.
+Done when: a skybox test/integration renders a panoramic backyard around the existing world; horizontal wrap seam and horizon placement are acceptable in play; camera orientation behaves correctly; no new collision/world geometry is required; performance remains acceptable on target devices.
+Notes: Prefer a self-contained test or reversible integration. Avoid redesigning the renderer or introducing an asset pipeline.
+
+### T-027 Gameplay feedback and reward clarity
+Assigned to: Claude; project owner playtests.
+Files: gameplay feedback/HUD files as required, `tools/smoke_test.js`, `TASKS.md`.
+Why: Make the existing activities, smashing, deliveries, jumps, upgrades, cash and event outcomes immediately understandable and satisfying.
+Done when: critical gameplay actions provide consistent, legible feedback (visual/audio only where existing systems support it), rewards are clearly communicated, and feedback does not obscure driving or stack confusingly across activities/events.
+Notes: Polish existing feedback; do not add new progression or gameplay systems.
+
+### T-028 Traffic behavior polish
+Assigned to: Claude; project owner playtests.
+Files: `src/vehicle_update.js`, `src/collisions.js`, related traffic files and tests as required, `TASKS.md`.
+Why: Address visible traffic routing, spacing, intersection incidents, post-collision recovery and traffic interaction with buildings.
+Done when: traffic recovers reliably from bumps and route deviations, does not routinely drive through buildings or remain wedged, and intersections/spacing feel credible in owner playtesting; regression checks cover fixes.
+Notes: Avoid adding traffic vehicles or complex right-of-way simulation without a demonstrated need. Resolve the known post-knock building traversal if reproducible.
+
+### T-029 Toy-playset material and lighting consistency
+Assigned to: Claude; project owner reviews visually.
+Files: rendering/material files and affected assets as required, `TASKS.md`.
+Why: Reinforce the molded-plastic toy aesthetic across the existing cars, roads, buildings, props, ramps and upgrade pads.
+Done when: a focused visual audit identifies and improves inconsistent materials/lighting using the existing renderer and procedural asset approach; the world reads as a cohesive toy playset; performance and legibility remain acceptable.
+Notes: No new rendering engine, external asset pipeline, or broad visual rebuild. Make a few targeted improvements and review them in-game.
+
+### T-030 Free-roam discovery and world layout review
+Assigned to: project owner / ChatGPT design; Claude only for approved placement changes.
+Files: world/prop/activity placement files and `TASKS.md` if implementation is authorized.
+Why: Ensure free driving is rewarding through discoverable ramps, pads, props and activity locations without constant objective prompts.
+Done when: owner reviews a representative drive through all districts and identifies concrete placement/readability issues; only approved, specific adjustments are implemented and playtested.
+Notes: Design/review task first; do not expand the map or add new systems by default.
+
+### T-031 Existing vehicle handling differentiation pass
+Assigned to: Claude; project owner playtests.
+Files: vehicle handling/configuration files and tests as required, `TASKS.md`.
+Why: Make current vehicles feel distinct through their existing handling, weight, acceleration, traction, braking and impact behavior.
+Done when: owner can identify meaningful handling differences between current vehicles in play; tuning is regression-tested and remains fun/controllable on keyboard and touch.
+Notes: Tune existing vehicles only; no new vehicle fleet in this task.
+
+### T-032 Dr. BadDude event presentation
+Assigned to: ChatGPT (design/assets); Claude (integration), with owner approval.
+Files: portrait asset(s) (new), event/HUD files as required, `TASKS.md`.
+Why: Give Toybox Events a recognizable character presentation using the approved Dr. BadDude design.
+Done when: the portrait is presented consistently in appropriate event announcements or results, with legible dialogue and layout on desktop and mobile; no cutscene or character animation system is introduced.
+Notes: Static portrait is the baseline; animated portrait/GIF is optional and must not block the task.
+
+### T-033 Camera comfort and recovery polish
+Assigned to: Claude; project owner playtests.
+Files: camera and vehicle/recovery files as required, `tools/smoke_test.js` if applicable, `TASKS.md`.
+Why: Improve camera comfort and robustness during driving, collisions, jumps, vehicle switching and recovery.
+Done when: camera smoothing and positioning are comfortable, avoid persistent clipping or disorienting transitions, and recovery returns the player to a usable state; owner playtests representative situations.
+Notes: Keep the current camera design; avoid a camera-system rewrite.
+
+### T-034 Lightweight sound-effects pass
+Assigned to: project owner / ChatGPT (asset/design); Claude (integration).
+Files: sound assets (new), audio/gameplay/UI files as required, `TASKS.md`.
+Why: Add restrained audio feedback to reinforce driving, collisions, prop destruction, rewards, activities, upgrades and Toybox Events.
+Done when: a small cohesive set of sounds is integrated at appropriate moments, volume is conservative, audio can be muted/adjusted, and audio does not interfere with play or performance.
+Notes: Prefer free/licensable or original assets with clear provenance. Do not make sound production a blocker for other polish.
+
+### T-035 HUD motion and transition polish
+Assigned to: Claude; project owner reviews.
+Files: HUD/UI files as required, `TASKS.md`.
+Why: Add restrained motion to existing notifications, activity/event transitions, rewards and minimap indicators to improve clarity and presentation.
+Done when: existing UI feedback has consistent, brief transitions where useful; animation remains readable, does not distract from driving, and behaves correctly at mobile and desktop layouts.
+Notes: Only animate existing UI; no HUD redesign or motion-heavy effects.
+
+### T-036 Optional backyard perimeter billboard accents
+Assigned to: Claude; project owner approves placement and visuals.
+Files: environment/skybox files and asset(s) (new) as required, `TASKS.md`.
+Why: If the skybox alone feels flat, add a small set of inexpensive billboard details such as oversized grass, flowers or garden objects to reinforce backyard scale.
+Done when: owner confirms the backdrop needs more depth; a restrained set of billboards improves the visual composition without distracting from driving, intersecting the playable area or harming performance.
+Notes: Optional follow-on to T-026; do not implement unless playtesting demonstrates a need.
+
+### T-037 Input, accessibility and device usability audit
+Assigned to: project owner playtests; Claude for approved fixes.
+Files: input/HUD files as required, `tools/smoke_test.js`, `TASKS.md`.
+Why: Review control clarity, mobile touch conflicts, UI scale/readability, audio controls and recovery usability across supported devices.
+Done when: owner checks keyboard and touch play; critical usability problems are documented and fixed with targeted changes; controls and essential information remain usable at tested screen sizes.
+Notes: Audit first and fix demonstrated issues; no new input modes by default.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
