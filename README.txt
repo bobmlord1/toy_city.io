@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.17.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.18.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -90,3 +90,10 @@ Version 0.17.0 (T-016 to T-019 activities):
 - New stunt jump activity: drive off the marked ramp fast enough for a good jump.
 - Deliveries now cover the whole city: 17 routes, paying more for longer trips.
 - Fixed the headless smoke test, which had stopped running after the prop changes.
+
+Version 0.18.0 (T-020 to T-022 Toybox Events):
+- Dr. BadDude's Toybox Events: every so often something surprising may appear in the city. A message slides in from the side and the event gets its own symbol on the map. Events are optional and simply vanish when their time is up.
+- City Under Attack: smash a giant toy creature (three sizes) for a big payout. It is very light, so even small bumps push it around.
+- Tuning Ray: drive through the ray gate for 25 seconds of Soap Tires, Super Springs, Turbo Overload or Tank Treads.
+- Reward Ring: drive through the golden ring for a free permanent upgrade.
+- Traffic cars knocked onto the grass no longer drive through buildings.

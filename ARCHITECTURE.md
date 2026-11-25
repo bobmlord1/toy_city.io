@@ -41,6 +41,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
 | `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
 | `activities.js` | Optional activities: start pads, objective markers, minimap markers, payouts. Ships `delivery`, `smash` and `stunt`. |
+| `events.js` | Toybox Events: pool timer, comms slide-out, event map symbols, City Under Attack, Tuning Ray, Reward Ring. |
 | `interaction.js` | `say()`, enter/exit vehicle, small vehicle helpers. |
 | `input.js` | Keyboard and touch, steering convention, boost. |
 | `collisions.js` | Collision resolution, trailer physics, suspension, airtime. |
@@ -80,6 +81,10 @@ Starting road edges are shuffled with a fixed layout seed, so all 24 vehicles be
 
 A traffic car slows to the speed of the nearest traffic car ahead of it in the same lane, heading roughly the same way, and keeps a gap of about 2.5 units plus 0.7 seconds of that car's speed (`trafficFollowLimit()` in `vehicles.js`, constants `TRAFFIC_*`). `updateVehicle()` turns that limit into a smoothed `trafficCruise` speed: it brakes at up to 9 units per second squared and recovers at 3.5. The route progresses at the cruise speed, so a slowed car stays on its path. With a clear road ahead there is no limit, so free-flowing traffic is unchanged. Only other traffic counts as a leader, so the player can still catch up with and crash into traffic. It does not handle right of way at intersections, so crossing and oncoming contacts can still happen.
 
+### Buildings (T-020)
+
+Traffic normally never touches buildings, because buildings and rocks only stand outside the street corridors. A car knocked onto a lawn, though, steers back toward its lane in a wide arc. `trafficOffStreet(v)` in `vehicle_update.js` is true once the car has left the corridor far enough to touch something, and only then does the traffic branch run `resolveVehicleBuilding()` against `buildingColliders` (the same check the player gets). On-road traffic skips it, so normal traffic costs nothing extra. Measured headless: cars aimed at buildings from the lawn previously ended up to 8.7 units inside; now 0. A car that bounces off a wall can take a little longer to get back to its lane than one that passed through: over six 6-minute `traffic_report.js` seeds, three were identical and three had 1 to 6 more lawn excursions.
+
 ### Speed variation and routing while held back
 
 Each traffic car's `maxSpeed` is its type's base speed (`trafficBaseSpeed`) plus a random offset of up to 5 mph either way (`TRAFFIC_SPEED_VARIATION_MPH` in `vehicles.js`), chosen once at startup with `Math.random`, so it differs on every page load. Routes stay seeded and repeatable, and the test tools seed `Math.random`, so their runs repeat. Pickups are still slower than compacts on average, but individual cars can overlap.
@@ -101,6 +106,19 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 - **Hooks into other files** (the only places other code touches it): `updateActivities(dt)` in `main.js`, `drawActivityMarkers(vp)` in `camera_render.js`, `activeMarkers()`, `ACTIVITY_MAP_COLORS` and `updateActivityHud()` in `hud.js`, the `G` key in `input.js`, `awardCash()` in `economy.js`, `addProp()`/`propSpotAllowed()` in `props.js` and `v.lastRampId` in `vehicle_update.js`. The HUD panel markup is in `index.html`.
 - **Payout safety.** `completeActivity()` clears `currentActivity` before paying, so an activity can pay only once per run. There is no timer, no failure state and no cash deduction anywhere.
 
+## Toybox Events
+
+`src/events.js` holds the occasional Dr. BadDude events (T-015). It runs beside the activity board and never touches `currentActivity`.
+
+- **Pool timer.** `updateEvents(dt)` (from `main.js`) draws one option from `EVENT_POOL` every `EVENT_ROLL_INTERVAL` seconds while no event runs (first draw after `EVENT_FIRST_ROLL`). The pool lists every event plus `null` for "no event", and every option has equal weight. At most one event runs (`currentEvent`).
+- **Lifetime.** `startEvent(id)` places the event (`eventSpawners`) and slides out the comms panel (`#comms` in `index.html`) with the event name and Dr. BadDude's line for `EVENT_COMMS_SECONDS`. Each frame `eventUpdaters[id]` returns `"done"` on success. When `eventTypes[id].duration` runs out, `endEvent()` removes what was placed with no message, no cash change and no fail state.
+- **Placement.** Built once at load from the world, deterministically: `eventLawnSites` (one open lawn spot per block, clear of buildings, rocks, ramps, props and activity pads) and `eventRoadSpots` (street centerlines away from intersections, ramps and pads). `pickEventSite()` prefers 60 to 200 units from the player, and for the ray and ring, ahead of the player.
+- **Map and world.** `eventMarkers()` returns one pinned marker with a `shape` (burst, diamond, ring) that `hud.js` draws with `drawMapEventSymbol()`, so events never look like the round activity markers. `drawEvents(vp)` in `camera_render.js` draws gates, the ring, beacons and health pips.
+- **City Under Attack.** A creature prop (`type: "monster"`) is pushed into `props`, so the normal prop collision, damage latching, debris and shadows all apply. Extra prop fields it uses: `model` (drawn instead of crate/barrel), `height` (airborne cars pass over only above it), `kickScale` (2.5, so gentle bumps shove it hard) and `smashCash: 0` (no ordinary $18; the event pays the tier payout). Tiers: small/medium/large, $200/$300/$450.
+- **Tuning Ray.** A gate across a road. Crossing its line inside the road width (checked against the previous frame's side, so speed cannot skip it) gives the vehicle `v.rayEffect` for `RAY_EFFECT_SECONDS`. Effects are multipliers read where they are used in `vehicle_update.js` (`rayMul(v, "accel" | "steer" | "grip")` and `rayTopSpeed(v)`), so upgrades are never overwritten and nothing needs restoring. Turbo Overload stops at `RAY_TOP_SPEED_CAP`. Super Springs makes small hops from `updateRayEffects()`; they stay under the airtime-bonus threshold, clear `v.lastRampId` (so a hop never counts as a stunt jump) and suppress the "Nice landing!" message.
+- **Reward Ring.** A golden ring standing on a road. Crossing it inside the ring gives one random permanent upgrade through `applyUpgrade(v, tier)` in `economy.js` (the same function the tuning pad uses).
+- **Not built yet:** Rival and Treasure (T-015).
+
 ## Recipes
 
 - **New building:** call `addBuilding(...)` in `world_city.js`. Keep it inside a street block, off the road grid.
@@ -111,9 +129,11 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 - **New smash site or stunt jump:** add a def with `type: "smash"` (a `start` pad and `targets`) or `type: "stunt"` (a `start` pad on a ramp run-up and its `rampId`). The smoke test checks target spots and that a stunt pad lines up with its ramp.
 - **New activity type:** add an entry to `activityTypes` with the functions listed under "Activities", then add defs that use it.
 
+- **New Toybox Event:** add an entry to `eventTypes`, a spawner in `eventSpawners`, an updater in `eventUpdaters`, drawing in `drawEvents()`, and its id to `EVENT_POOL` (equal weight is the rule). `validateEventData()` fails if an event is missing from the pool.
+
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, checks the activity board (nothing starts on its own, pads start only on entry, on foot does nothing, one activity at a time), plays a delivery, a smash run (including skip cleanup and a traffic-broken target) and a real full-throttle stunt jump (plus a slow roll and a wrong ramp that must not count), checks single payouts, checks activity locations against buildings, ramps and each other, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, checks the activity board (nothing starts on its own, pads start only on entry, on foot does nothing, one activity at a time), plays a delivery, a smash run (including skip cleanup and a traffic-broken target) and a real full-throttle stunt jump (plus a slow roll and a wrong ramp that must not count), checks single payouts, checks activity locations against buildings, ramps and each other, checks that knocked traffic stays out of buildings, checks the Toybox Events (equal-weight pool with "no event", timer draws, one at a time, comms, map symbol, quiet timeouts, activities unaffected, creature shove and single payout, all three tiers, ray gate opt-in by crossing, effects that undo without losing upgrades, Turbo cap, Super Springs hops, ring upgrade exactly once), checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - `node tools/traffic_report.js [minutes]` simulates the AI traffic with no player and reports collision incidents (grouped, not per frame), their kinds, and how often and how long cars leave the road. Run it before and after changing traffic code. It is a measurement, not a pass/fail test.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 

@@ -68,6 +68,9 @@ run("Math.random=(()=>{let s=1;return()=>(s=(s*16807)%2147483647)/2147483647})()
 for (const name of SCRIPTS) run(read(`src/${name}.js`), `src/${name}.js`);
 
 w.document.getElementById("startbtn").click();
+// Toybox Events are held off until their own checks near the end, so a random event cannot
+// disturb the earlier activity and traffic checks. Those checks start events on purpose.
+run("eventNextRollAt = Infinity;", "events-off");
 const key = (type, k, code) => w.dispatchEvent(new w.KeyboardEvent(type, { key: k, code }));
 const start = JSON.parse(run("JSON.stringify({x:controlled.x,z:controlled.z})", "q"));
 key("keydown", "w", "KeyW");
@@ -788,6 +791,208 @@ if (!near(weightResult.elsewhere.share, 0.56, 0.03) || weightResult.elsewhere.st
 if (weightResult.leaderTurns < 0.56 + 0.05) failures.push("Route weights: straight should become MORE likely when the leader turns (" + weightResult.leaderTurns + ")");
 if (weightResult.resetStreak !== 0) failures.push("Route weights: the streak did not reset when no car was in front");
 if (weightResult.countedStreak !== 5) failures.push("Route weights: the streak did not count up behind a slower car");
+
+// ---- T-020: knocked traffic must not drive through buildings ----
+const wallCars = get(`(() => {
+  const big = buildingColliders.filter(b => b.kind === "building" && b.hw > 6 && b.hl > 6).slice(0, 8);
+  big.forEach((b, i) => {
+    const v = trafficFleet[i];
+    v.x = b.x - b.hw - 6; v.z = b.z; v.yaw = Math.PI / 2; v.vx = 9; v.vz = 0; v.aiKnockTime = 2;
+    v.__wallTarget = b;
+  });
+  return big.length;
+})()`);
+let wallDepth = 0;
+for (let i = 0; i < 600; i++) {
+  step(1);
+  if (i % 3) continue;
+  wallDepth = Math.max(wallDepth, ...get(`trafficFleet.slice(0, ${wallCars}).map(v => { const b = v.__wallTarget;
+    return Math.max(0, Math.min(b.hw - Math.abs(v.x - b.x), b.hl - Math.abs(v.z - b.z))); })`));
+}
+if (wallCars < 6 || wallDepth > 0.6)
+  failures.push("Traffic: a knocked car drove " + wallDepth.toFixed(1) + " units into a building");
+
+// ---- T-021: Toybox Events framework ----
+for (const problem of get("validateEventData()")) failures.push("Event data: " + problem);
+run("onFoot=false; controlled=playerCar; controlled.x=-12; controlled.z=-45; controlled.vx=0; controlled.vz=0; controlled.yaw=0;", "ev-setup");
+step(5);
+if (get("currentEvent") !== null) failures.push("Events: an event started while events were held off");
+// The pool: every event plus "no event", equal weight, one draw per interval.
+const poolCounts = get(`(() => {
+  const counts = {};
+  for (let i = 0; i < 800; i++) {
+    const pick = rollEvent();
+    counts[pick || "none"] = (counts[pick || "none"] || 0) + 1;
+    if (currentEvent) endEvent();
+  }
+  return counts;
+})()`);
+for (const id of ["cityAttack", "tuningRay", "rewardRing", "none"])
+  if (!(poolCounts[id] > 800 * 0.18 && poolCounts[id] < 800 * 0.32))
+    failures.push("Events: pool weights are not equal (" + JSON.stringify(poolCounts) + ")");
+run("eventNextRollAt = eventClock + 1;", "ev-roll");
+step(70);
+if (get("eventNextRollAt - eventClock") < get("EVENT_ROLL_INTERVAL") - 3)
+  failures.push("Events: the timer did not draw from the pool when it came due");
+run("if (currentEvent) endEvent(); eventNextRollAt = Infinity;", "ev-reset");
+// One at a time, comms, map symbol.
+if (get(`startEvent("rewardRing")`) !== true) failures.push("Events: could not start the Reward Ring");
+if (get(`startEvent("tuningRay")`) !== false) failures.push("Events: a second event started while one was running");
+const comms = w.document.getElementById("comms");
+if (!comms.classList.contains("show") || !/Reward Ring/.test(comms.textContent) || !/test dummy/.test(comms.textContent))
+  failures.push("Events: the comms panel did not show the event name and line");
+const evMarkers = get("eventMarkers()");
+if (evMarkers.length !== 1 || !evMarkers[0].pin || evMarkers[0].shape !== "ring")
+  failures.push("Events: expected one pinned ring symbol on the map");
+step(8 * 60);
+if (comms.classList.contains("show")) failures.push("Events: the comms panel did not slide away");
+// Timer: the event vanishes cleanly with no cash change.
+let cashBefore = get("cash");
+step(80 * 60);
+if (get("currentEvent") !== null) failures.push("Events: the Reward Ring did not disappear when its timer ran out");
+if (get("cash") !== cashBefore) failures.push("Events: a timed-out event changed cash");
+if (get("eventMarkers().length") !== 0) failures.push("Events: a map symbol was left behind");
+
+// Events never block or cancel activities.
+const evDelivery = get(`(() => { const d = activityDefs.find(q => q.id === "south-to-pink-house"); return {pickup: d.pickup, dropoff: d.dropoff, payout: d.payout}; })()`);
+run("eventNextRollAt = Infinity;", "q");
+step(200);
+teleport(evDelivery.pickup);
+step(3);
+const evActivityId = get("currentActivity && currentActivity.def.id");
+run(`startEvent("cityAttack")`, "q");
+step(30);
+if (get("currentActivity && currentActivity.def.id") !== evActivityId || evActivityId === null)
+  failures.push("Events: starting an event changed the running activity");
+cashBefore = get("cash");
+teleport(evDelivery.dropoff);
+step(3);
+if (get("cash") !== cashBefore + evDelivery.payout || get("currentEvent && currentEvent.type") !== "cityAttack")
+  failures.push("Events: a delivery could not be finished while an event was running");
+
+// ---- T-022: City Under Attack ----
+const monsterProps = get("props.filter(p => p.type === 'monster').length");
+if (monsterProps !== 1) failures.push("City Under Attack: expected one creature prop, found " + monsterProps);
+// A gentle bump visibly shoves it without damaging it.
+const shove = get(`(() => {
+  const m = currentEvent.monster, v = controlled;
+  const x0 = m.x, z0 = m.z, hp0 = m.hp;
+  v.x = m.x - m.radius - 3.2; v.z = m.z; v.yaw = Math.PI / 2; v.vx = 2.2; v.vz = 0; v.yawRate = 0; v.grounded = true;
+  return {x0, z0, hp0};
+})()`);
+step(90);
+const afterShove = get("({x: currentEvent.monster.x, z: currentEvent.monster.z, hp: currentEvent.monster.hp})");
+// A normal-weight prop moves about 1.4 units from this bump; the creature must clearly move more.
+if (Math.hypot(afterShove.x - shove.x0, afterShove.z - shove.z0) < 2.5 || afterShove.hp !== shove.hp0)
+  failures.push("City Under Attack: a gentle bump should shove the creature without hurting it");
+// Smashing it pays the tier payout once, and no ordinary prop cash.
+cashBefore = get("cash");
+const monsterPayout = get("currentEvent.tier.payout");
+run("for (let i = 0; i < 40 && !currentEvent.monster.broken; i++) { const m = currentEvent.monster; m._damageContactCooldowns = new Map(); damageProp(m, 30, controlled); }", "smash-monster");
+step(3);
+if (get("cash") !== cashBefore + monsterPayout) failures.push("City Under Attack: payout wrong, expected +" + monsterPayout + ", got +" + (get("cash") - cashBefore));
+if (get("currentEvent") !== null) failures.push("City Under Attack: the event did not end after the creature broke");
+step(10);
+if (get("cash") !== cashBefore + monsterPayout) failures.push("City Under Attack: paid more than once");
+// All three tiers can appear, and a timed-out creature is removed from the world.
+const tiersSeen = get(`(() => { const seen = new Set(); for (let i = 0; i < 40; i++) { startEvent("cityAttack"); seen.add(currentEvent.tier.id); endEvent(); } return [...seen]; })()`);
+if (tiersSeen.length !== 3) failures.push("City Under Attack: not every tier appeared (" + tiersSeen + ")");
+run(`startEvent("cityAttack")`, "q");
+step(121 * 60);
+if (get("currentEvent") !== null || get("props.filter(p => p.type === 'monster').length") !== 0)
+  failures.push("City Under Attack: the creature was not removed when the timer ran out");
+
+// ---- T-022: Tuning Ray and Reward Ring (drive through the gate) ----
+const driveThrough = (offset) => {
+  if (get("currentEvent === null")) { failures.push("Events: no event to drive through (it ended early)"); return; }
+  run(`(() => { const ev = currentEvent, v = controlled; onFoot = false;
+    const dir = ev.axis === "z" ? [0, 1] : [1, 0];
+    v.x = ev.x - dir[0] * 9 + (ev.axis === "z" ? ${offset} : 0);
+    v.z = ev.z - dir[1] * 9 + (ev.axis === "x" ? ${offset} : 0);
+    v.yaw = ev.axis === "z" ? 0 : Math.PI / 2; v.yawRate = 0; v.vx = dir[0] * 8; v.vz = dir[1] * 8; v.grounded = true; ev.prevSide = undefined;
+  })()`, "drive-through");
+  step(150);
+};
+run("controlled.x=-12; controlled.z=-45; controlled.yaw=0; controlled.vx=0; controlled.vz=0;", "q");
+step(2);
+run(`startEvent("tuningRay")`, "q");
+const gate = get("({x: currentEvent.x, z: currentEvent.z})");
+const gateDist = Math.hypot(gate.x + 12, gate.z + 45);
+if (gateDist < 55 || gateDist > 205) failures.push("Tuning Ray: the gate should appear 60 to 200 units away, got " + gateDist.toFixed(0));
+driveThrough(14); // beside the road: must not count
+if (get("currentEvent && currentEvent.type") !== "tuningRay" || get("playerCar.rayEffect || null") !== null)
+  failures.push("Tuning Ray: driving past the gate (not through it) applied the effect");
+driveThrough(1.5);
+const rayId = get("playerCar.rayEffect && playerCar.rayEffect.id");
+if (!rayId) failures.push("Tuning Ray: driving through the gate did not apply an effect");
+if (get("currentEvent") !== null) failures.push("Tuning Ray: the gate did not disappear after use");
+// Effects change handling while active, undo cleanly, and keep upgrades won meanwhile.
+const rayChecks = get(`(() => {
+  const v = playerCar, out = {};
+  const base = {speed: v.maxSpeed, accel: v.accel, grip: v.lateralGrip, steer: v.steerRate};
+  for (const id of RAY_EFFECT_IDS) {
+    v.rayEffect = {id, until: eventClock + 100, nextHop: 0};
+    out[id] = {grip: rayMul(v, "grip"), steer: rayMul(v, "steer"), accel: rayMul(v, "accel"), top: rayTopSpeed(v)};
+  }
+  const savedSpeed = v.maxSpeed;
+  v.rayEffect = {id: "turboOverload", until: eventClock + 100, nextHop: 0};
+  v.maxSpeed = 20; // an upgraded car: Turbo Overload must stop at the cap
+  out.cappedTop = rayTopSpeed(v);
+  v.maxSpeed = savedSpeed;
+  v.rayEffect = {id: "turboOverload", until: eventClock + 0.5, nextHop: 0};
+  applyUpgrade(v, "speed");
+  out.baseSpeed = base.speed; out.upgradedSpeed = v.maxSpeed; out.baseAccel = base.accel; out.baseGrip = base.grip;
+  return out;
+})()`);
+step(60);
+const afterRay = get("({effect: playerCar.rayEffect || null, speed: playerCar.maxSpeed, accel: playerCar.accel, grip: playerCar.lateralGrip, top: rayTopSpeed(playerCar)})");
+if (!(rayChecks.soapTires.grip < 0.5 && rayChecks.tankTreads.steer < 1 && rayChecks.tankTreads.grip > 1 && rayChecks.turboOverload.accel > 1.5))
+  failures.push("Tuning Ray: effect multipliers are not applied (" + JSON.stringify(rayChecks) + ")");
+if (Math.abs(rayChecks.cappedTop - get("RAY_TOP_SPEED_CAP")) > 1e-6)
+  failures.push("Tuning Ray: Turbo Overload is not capped");
+if (afterRay.effect !== null) failures.push("Tuning Ray: an effect did not wear off");
+if (Math.abs(afterRay.speed - rayChecks.upgradedSpeed) > 1e-9 || Math.abs(afterRay.top - rayChecks.upgradedSpeed) > 1e-9 ||
+    afterRay.accel !== rayChecks.baseAccel || afterRay.grip !== rayChecks.baseGrip)
+  failures.push("Tuning Ray: ending an effect changed the car's own handling or lost an upgrade");
+// Super Springs hops while driving, without airtime cash and without counting as a stunt jump.
+run(`playerCar.rayEffect = {id: "superSprings", until: eventClock + 6, nextHop: 0}; playerCar.lastRampId = "west-stunt";
+  playerCar.x = -12; playerCar.z = -45; playerCar.yaw = Math.PI / 2; playerCar.grounded = true;`, "springs");
+cashBefore = get("cash");
+key("keydown", "w", "KeyW");
+let hops = 0, wasAir = false;
+for (let i = 0; i < 240; i++) {
+  step(1);
+  const air = get("playerCar.grounded === false");
+  if (air && !wasAir) hops++;
+  wasAir = air;
+}
+key("keyup", "w", "KeyW");
+if (hops < 3) failures.push("Tuning Ray: Super Springs made " + hops + " hops in 4 seconds");
+if (get("cash") !== cashBefore) failures.push("Tuning Ray: Super Springs hops paid airtime cash");
+if (get("playerCar.lastRampId") !== null) failures.push("Tuning Ray: a Super Springs hop kept the last stunt ramp id");
+run("playerCar.rayEffect = null;", "q");
+step(60);
+
+// Reward Ring: drive through for one permanent upgrade, no cash.
+run("controlled.x=-12; controlled.z=-45; controlled.yaw=0; controlled.vx=0; controlled.vz=0;", "q");
+step(2);
+run(`startEvent("rewardRing")`, "q");
+const levelsBefore = get("playerCar.topSpeedLevel + playerCar.accelerationLevel + playerCar.impactLevel");
+cashBefore = get("cash");
+driveThrough(6);
+if (get("playerCar.topSpeedLevel + playerCar.accelerationLevel + playerCar.impactLevel") !== levelsBefore)
+  failures.push("Reward Ring: driving beside the ring gave an upgrade");
+driveThrough(0.5);
+if (get("playerCar.topSpeedLevel + playerCar.accelerationLevel + playerCar.impactLevel") !== levelsBefore + 1)
+  failures.push("Reward Ring: driving through did not give exactly one upgrade level");
+if (get("cash") !== cashBefore) failures.push("Reward Ring: changed cash");
+if (get("currentEvent") !== null) failures.push("Reward Ring: the ring did not disappear after use");
+const ringTiers = get(`(() => { const seen = new Set(); for (let i = 0; i < 30; i++) { startEvent("rewardRing"); const before = [playerCar.topSpeedLevel, playerCar.accelerationLevel, playerCar.impactLevel];
+  controlled = playerCar; onFoot = false; currentEvent.prevSide = -1;
+  playerCar.x = currentEvent.x + (currentEvent.axis === "x" ? 0.5 : 0.2); playerCar.z = currentEvent.z + (currentEvent.axis === "z" ? 0.5 : 0.2);
+  updateEvents(0.016); const after = [playerCar.topSpeedLevel, playerCar.accelerationLevel, playerCar.impactLevel];
+  after.forEach((a, k) => { if (a > before[k]) seen.add(k); }); if (currentEvent) endEvent(); } return [...seen]; })()`);
+if (ringTiers.length !== 3) failures.push("Reward Ring: not every upgrade type was given (" + ringTiers + ")");
 
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));

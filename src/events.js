@@ -1,0 +1,491 @@
+"use strict";
+// =============================================================================
+// src/events.js
+// Toybox Events (T-015, T-021, T-022): occasional optional surprises from Dr. BadDude.
+// - Every EVENT_ROLL_INTERVAL seconds with no event running, one option is drawn from
+//   EVENT_POOL. Every event and "no event" (null) has equal weight.
+// - At most one event at a time. It never cancels or blocks a normal activity.
+// - A comms panel slides out with the event name and Dr. BadDude's line, and the event gets
+//   its own minimap symbol. When its timer runs out it simply disappears: no fail state,
+//   no message, no penalty.
+// Types: "cityAttack" (smash a giant toy creature), "tuningRay" (drive through a ray gate for
+// a temporary handling effect), "rewardRing" (drive through a golden ring for a free upgrade).
+// =============================================================================
+
+const EVENT_FIRST_ROLL = 45; // seconds of play before the first draw
+const EVENT_ROLL_INTERVAL = 75; // seconds between draws while no event runs
+const EVENT_POOL = ["cityAttack", "tuningRay", "rewardRing", null]; // null = no event this time
+const EVENT_COMMS_SECONDS = 7;
+const EVENT_SPAWN_MIN = 60; // events appear this far from the player...
+const EVENT_SPAWN_MAX = 200; // ...but not farther, when a site allows it
+const RAY_EFFECT_SECONDS = 25;
+const RAY_TOP_SPEED_CAP = 22; // m/s (about 50 mph): keeps Turbo Overload well short of tunnelling
+
+// Dr. BadDude's approved one-liners (TASKS.md T-015). Keep the wording unless the owner revises it.
+const eventTypes = {
+  cityAttack: {
+    name: "City Under Attack!",
+    line: "Technically, the containment system worked. The City is the containment system!",
+    duration: 120,
+    mapShape: "burst",
+    mapColor: "#F28F73",
+  },
+  tuningRay: {
+    name: "Tuning Ray",
+    line: "Your car is 37% better. I just need to measure what!",
+    duration: 75,
+    mapShape: "diamond",
+    mapColor: "#72D2DC",
+  },
+  rewardRing: {
+    name: "Reward Ring",
+    line: "It's perfectly safe. The test dummy only exploded once!",
+    duration: 75,
+    mapShape: "ring",
+    mapColor: "#F4CF59",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Where events can appear. Both lists are built once, deterministically, from the world.
+// Lawn sites (City Under Attack): open ground inside street blocks, clear of buildings, rocks,
+// ramps, props and activity pads. Road spots (Tuning Ray, Reward Ring): street centerlines away
+// from intersections, ramps and activity pads.
+// ---------------------------------------------------------------------------
+const EVENT_LAWN_CLEARANCE = 9;
+function eventLawnSiteClear(x, z) {
+  if (Math.abs(x) > WORLD_HALF - 30 || Math.abs(z) > WORLD_HALF - 30) return false;
+  if (!propSpotAllowed(x, z) || isNearAnyRamp(x, z, EVENT_LAWN_CLEARANCE)) return false;
+  for (const line of streetLines)
+    if (Math.abs(x - line) < SIDEWALK_OUTER + 4 || Math.abs(z - line) < SIDEWALK_OUTER + 4)
+      return false;
+  for (const b of buildingColliders) {
+    const dx = Math.max(Math.abs(x - b.x) - b.hw, 0),
+      dz = Math.max(Math.abs(z - b.z) - b.hl, 0);
+    if (Math.hypot(dx, dz) < EVENT_LAWN_CLEARANCE) return false;
+  }
+  for (const p of props) if (Math.hypot(p.x - x, p.z - z) < EVENT_LAWN_CLEARANCE + 2) return false;
+  for (const def of activityDefs) {
+    const s = activityStart(def);
+    if (Math.hypot(s.x - x, s.z - z) < EVENT_LAWN_CLEARANCE + ACTIVITY_ZONE_RADIUS + 8) return false;
+  }
+  return true;
+}
+const eventLawnSites = [];
+for (const cx of [-330, -220, -110, 0, 110, 220, 330])
+  for (const cz of [-330, -220, -110, 0, 110, 220, 330])
+    for (const [ox, oz] of [[0, 0], [-20, -20], [20, 20], [-20, 20], [20, -20], [0, 24], [0, -24], [24, 0], [-24, 0]])
+      if (eventLawnSiteClear(cx + ox, cz + oz)) {
+        eventLawnSites.push({ x: cx + ox, z: cz + oz });
+        break; // one site per block keeps them spread out
+      }
+
+const eventRoadSpots = [];
+for (const line of streetLines)
+  for (let t = -WORLD_HALF + 30; t <= WORLD_HALF - 30; t += 11)
+    for (const axis of ["x", "z"]) {
+      // axis "z": the road runs along z at x = line. axis "x": along x at z = line.
+      const x = axis === "z" ? line : t,
+        z = axis === "z" ? t : line;
+      if (streetLines.some((other) => Math.abs((axis === "z" ? z : x) - other) < 24)) continue;
+      if (isNearAnyRamp(x, z, 12)) continue;
+      if (activityDefs.some((def) => {
+        const s = activityStart(def);
+        return Math.hypot(s.x - x, s.z - z) < 16;
+      })) continue;
+      eventRoadSpots.push({ x, z, axis });
+    }
+
+// Choose a site in the preferred distance band (ahead of the player when possible).
+function pickEventSite(list, preferAhead) {
+  const p = onFoot ? player : controlled;
+  if (!p || list.length === 0) return null;
+  const fx = Math.sin(p.yaw || 0),
+    fz = Math.cos(p.yaw || 0);
+  let band = list.filter((s) => {
+    const d = Math.hypot(s.x - p.x, s.z - p.z);
+    return d >= EVENT_SPAWN_MIN && d <= EVENT_SPAWN_MAX;
+  });
+  if (preferAhead) {
+    const ahead = band.filter((s) => (s.x - p.x) * fx + (s.z - p.z) * fz > 0);
+    if (ahead.length) band = ahead;
+  }
+  if (band.length === 0) {
+    // Nothing in the band: take the nearest site that is not right on top of the player.
+    band = list
+      .filter((s) => Math.hypot(s.x - p.x, s.z - p.z) >= 25)
+      .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))
+      .slice(0, 1);
+  }
+  return band.length ? band[Math.floor(Math.random() * band.length)] : null;
+}
+
+// ---------------------------------------------------------------------------
+// Meshes (built once)
+// ---------------------------------------------------------------------------
+// A blocky toy creature: stubby legs, round-ish body, big eyes, horns and little arms.
+function buildMonsterMesh(s, body, accent) {
+  const b = new MeshBuilder();
+  b.useMaterial(0.32, 0, 0);
+  const box = (x0, y0, z0, x1, y1, z1, c) => b.box(x0 * s, y0 * s, z0 * s, x1 * s, y1 * s, z1 * s, c);
+  box(-0.9, 0, -0.5, -0.3, 0.9, 0.4, accent); // legs
+  box(0.3, 0, -0.5, 0.9, 0.9, 0.4, accent);
+  box(-1.2, 0.8, -0.9, 1.2, 2.9, 0.9, body); // body
+  box(-0.9, 1.0, 0.85, 0.9, 2.3, 1.0, [0.98, 0.88, 0.62]); // belly
+  box(-1.0, 2.8, -0.8, 1.0, 4.0, 0.8, body); // head
+  box(-0.75, 3.25, 0.78, -0.2, 3.8, 0.95, [1, 1, 1]); // eyes
+  box(0.2, 3.25, 0.78, 0.75, 3.8, 0.95, [1, 1, 1]);
+  box(-0.55, 3.35, 0.93, -0.3, 3.65, 1.0, [0.08, 0.08, 0.1]);
+  box(0.3, 3.35, 0.93, 0.55, 3.65, 1.0, [0.08, 0.08, 0.1]);
+  box(-0.6, 2.95, 0.78, 0.6, 3.1, 0.92, [0.95, 0.95, 0.95]); // teeth
+  box(-1.0, 4.0, -0.2, -0.6, 4.7, 0.2, accent); // horns
+  box(0.6, 4.0, -0.2, 1.0, 4.7, 0.2, accent);
+  box(-1.9, 1.9, -0.3, -1.2, 2.4, 0.5, body); // arms
+  box(1.2, 1.9, -0.3, 1.9, 2.4, 0.5, body);
+  box(-0.3, 2.9, -1.1, 0.3, 3.6, -0.8, accent); // back spikes
+  box(-0.3, 1.9, -1.1, 0.3, 2.6, -0.85, accent);
+  return b.finish();
+}
+// City Under Attack difficulty tiers (chosen with equal weight).
+const MONSTER_TIERS = [
+  { id: "small", scale: 1.0, radius: 1.7, hp: 8, payout: 200, body: [0.36, 0.82, 0.4], accent: [0.98, 0.78, 0.22] },
+  { id: "medium", scale: 1.35, radius: 2.2, hp: 15, payout: 300, body: [0.62, 0.42, 0.92], accent: [0.98, 0.5, 0.75] },
+  { id: "large", scale: 1.75, radius: 2.9, hp: 24, payout: 450, body: [0.95, 0.38, 0.28], accent: [0.25, 0.75, 0.95] },
+];
+for (const tier of MONSTER_TIERS) tier.model = buildMonsterMesh(tier.scale, tier.body, tier.accent);
+
+function buildEventBeaconMesh(color) {
+  const b = new MeshBuilder();
+  b.useMaterial(0.2, 0, 0);
+  b.cylinderY(0, 0, 0, 0.35, 30, color, 10);
+  return b.finish();
+}
+const eventBeacons = {
+  cityAttack: buildEventBeaconMesh([0.96, 0.34, 0.27]),
+  tuningRay: buildEventBeaconMesh([0.2, 0.85, 0.95]),
+  rewardRing: buildEventBeaconMesh([1.0, 0.8, 0.2]),
+};
+const monsterHealthPip = (() => {
+  const b = new MeshBuilder();
+  b.useMaterial(0.3, 0, 0);
+  b.box(-0.22, -0.22, -0.22, 0.22, 0.22, 0.22, [0.96, 0.34, 0.27]);
+  return b.finish();
+})();
+// The ray gate is built along local +X (across the road) and placed with a yaw for its road.
+const tuningRayGate = (() => {
+  const b = new MeshBuilder();
+  const half = ROAD_HALF_WIDTH + 1.6;
+  b.useMaterial(0.3, 0.2, 0);
+  b.box(-half - 0.5, 0, -0.5, -half + 0.5, 6.4, 0.5, [0.95, 0.36, 0.3]); // posts
+  b.box(half - 0.5, 0, -0.5, half + 0.5, 6.4, 0.5, [0.95, 0.36, 0.3]);
+  b.box(-half - 0.6, 6.2, -0.6, half + 0.6, 7.0, 0.6, [0.98, 0.8, 0.25]); // top bar
+  b.box(-1.0, 7.0, -1.0, 1.0, 7.6, 1.0, [0.3, 0.3, 0.35]); // ray emitter
+  b.cone(0, 7.6, 0, 1.3, 1.4, [0.2, 0.85, 0.95], 10);
+  b.useMaterial(0.15, 0, 0);
+  for (let i = 0; i < 7; i++) {
+    // Thin glowing "beam" strands hanging from the bar, and a stripe across the road.
+    const x = -half + 1.2 + (i * (half * 2 - 2.4)) / 6;
+    b.box(x - 0.06, 0.4, -0.06, x + 0.06, 6.2, 0.06, [0.45, 0.95, 1.0]);
+  }
+  b.box(-half, 0.02, -0.7, half, 0.08, 0.7, [0.45, 0.95, 1.0]);
+  return b.finish();
+})();
+const RING_RADIUS = 3.6,
+  RING_CENTER_Y = 3.9;
+const rewardRingMesh = (() => {
+  // A golden hoop standing upright in the local XY plane; the car drives through along local Z.
+  const b = new MeshBuilder();
+  b.useMaterial(0.18, 0.75, 0);
+  const n = 20,
+    t = 0.38;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2,
+      x = Math.cos(a) * RING_RADIUS,
+      y = Math.sin(a) * RING_RADIUS + RING_CENTER_Y;
+    b.box(x - t, y - t, -t, x + t, y + t, t, [1.0, 0.8, 0.2]);
+  }
+  return b.finish();
+})();
+
+// ---------------------------------------------------------------------------
+// Tuning Ray effects. Multipliers are applied where the value is used (vehicle_update.js),
+// so upgrades bought or won during an effect are kept when it ends.
+// ---------------------------------------------------------------------------
+const RAY_EFFECTS = {
+  soapTires: { name: "SOAP TIRES!", grip: 0.12, steer: 1.1 },
+  superSprings: { name: "SUPER SPRINGS!", hop: true },
+  turboOverload: { name: "TURBO OVERLOAD!", accel: 2.2, speed: 1.6 },
+  tankTreads: { name: "TANK TREADS!", grip: 3.0, steer: 0.5, accel: 0.75, speed: 0.8 },
+};
+const RAY_EFFECT_IDS = Object.keys(RAY_EFFECTS);
+// Multiplier for one handling value of a vehicle ("grip", "steer", "accel", "speed").
+function rayMul(v, key) {
+  const fx = v && v.rayEffect ? RAY_EFFECTS[v.rayEffect.id] : null;
+  return fx && fx[key] !== undefined ? fx[key] : 1;
+}
+// Top speed with any ray effect, capped so Turbo Overload stays controllable.
+function rayTopSpeed(v) {
+  const m = rayMul(v, "speed");
+  return m > 1 ? Math.min(v.maxSpeed * m, Math.max(v.maxSpeed, RAY_TOP_SPEED_CAP)) : v.maxSpeed * m;
+}
+function applyRayEffect(v, id) {
+  v.rayEffect = { id, until: eventClock + RAY_EFFECT_SECONDS, nextHop: 0 };
+  say(RAY_EFFECTS[id].name, 2400);
+}
+function updateRayEffects(dt) {
+  for (const v of vehicles) {
+    if (!v.rayEffect) continue;
+    if (eventClock >= v.rayEffect.until) {
+      v.rayEffect = null;
+      if (v === controlled && !onFoot) say("Back to normal!", 1400);
+      continue;
+    }
+    // Super Springs: small automatic hops while driving. Hops stay under the airtime bonus
+    // threshold, and they clear lastRampId so they never count as a stunt-ramp jump.
+    if (RAY_EFFECTS[v.rayEffect.id].hop && v === controlled && !onFoot && v.grounded !== false) {
+      if (Math.hypot(v.vx, v.vz) > 2.5 && eventClock >= v.rayEffect.nextHop) {
+        v.grounded = false;
+        v.vy = 3.2;
+        v.airTime = 0;
+        v.lastRampId = null;
+        v.suspensionVelocity -= 0.6;
+        v.rayEffect.nextHop = eventClock + 0.75;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Event state and flow
+// ---------------------------------------------------------------------------
+let currentEvent = null; // { type, t, ... } while an event runs, otherwise null
+let eventClock = 0;
+let eventNextRollAt = EVENT_FIRST_ROLL;
+let completedEvents = 0;
+
+// Places the event in the world. Returns false if no site was available (treated as no event).
+const eventSpawners = {
+  cityAttack(ev) {
+    const site = pickEventSite(eventLawnSites, false);
+    if (!site) return false;
+    const tier = MONSTER_TIERS[Math.floor(Math.random() * MONSTER_TIERS.length)];
+    ev.tier = tier;
+    ev.monster = {
+      type: "monster",
+      model: tier.model,
+      x: site.x,
+      z: site.z,
+      y: driveSurfaceH(site.x, site.z),
+      vx: 0,
+      vz: 0,
+      yaw: Math.random() * Math.PI * 2,
+      roll: 0,
+      mass: 10,
+      radius: tier.radius,
+      height: 4.2 * tier.scale, // vehicles in the air only clear it above this height
+      kickScale: 2.5, // exaggeratedly light: a 5 mph bump shoves even the large one about 3.5 units
+      hp: tier.hp,
+      maxHp: tier.hp,
+      smashCash: 0, // the event pays instead of the ordinary prop reward
+      broken: false,
+    };
+    props.push(ev.monster);
+    ev.x = site.x;
+    ev.z = site.z;
+    return true;
+  },
+  tuningRay(ev) {
+    const spot = pickEventSite(eventRoadSpots, true);
+    if (!spot) return false;
+    Object.assign(ev, { x: spot.x, z: spot.z, axis: spot.axis });
+    return true;
+  },
+  rewardRing(ev) {
+    const spot = pickEventSite(eventRoadSpots, true);
+    if (!spot) return false;
+    Object.assign(ev, { x: spot.x, z: spot.z, axis: spot.axis });
+    return true;
+  },
+};
+
+// Gate crossing for the ray and the ring: true on the frame the controlled vehicle passes the
+// gate line inside its width. Uses the previous frame's side, so fast cars cannot skip it.
+function eventGateCrossed(ev, halfWidth) {
+  if (onFoot || !controlled) {
+    ev.prevSide = undefined;
+    return false;
+  }
+  const v = controlled;
+  const along = ev.axis === "z" ? v.z - ev.z : v.x - ev.x;
+  const across = ev.axis === "z" ? v.x - ev.x : v.z - ev.z;
+  const side = Math.sign(along);
+  const crossed =
+    ev.prevSide !== undefined && side !== 0 && side !== ev.prevSide && Math.abs(along) < 6 &&
+    Math.abs(across) <= halfWidth;
+  if (side !== 0) ev.prevSide = side;
+  return crossed;
+}
+
+const eventUpdaters = {
+  cityAttack(ev) {
+    if (!ev.monster.broken) {
+      ev.x = ev.monster.x;
+      ev.z = ev.monster.z;
+      return null;
+    }
+    awardCash(ev.tier.payout);
+    spawnConfetti(ev.monster.x, ev.monster.z, 60);
+    say("MONSTER SMASHED!  +$" + ev.tier.payout, 2800);
+    return "done";
+  },
+  tuningRay(ev) {
+    if (!eventGateCrossed(ev, ROAD_HALF_WIDTH + 1.6)) return null;
+    applyRayEffect(controlled, RAY_EFFECT_IDS[Math.floor(Math.random() * RAY_EFFECT_IDS.length)]);
+    spawnConfetti(controlled.x, controlled.z, 24);
+    return "done";
+  },
+  rewardRing(ev) {
+    if (!eventGateCrossed(ev, RING_RADIUS - 0.4)) return null;
+    const tiers = ["speed", "acceleration", "impact"];
+    const tier = tiers[Math.floor(Math.random() * tiers.length)];
+    applyUpgrade(controlled, tier);
+    const text = {
+      speed: "TOP SPEED +5 MPH",
+      acceleration: "ACCELERATION +15%",
+      impact: "IMPACT POWER +20%",
+    }[tier];
+    spawnConfetti(controlled.x, controlled.z, 50);
+    say("REWARD RING!  " + text, 2800);
+    ev.reward = tier;
+    return "done";
+  },
+};
+
+// Removes what an event placed, without any message. Used for timeouts and after success.
+function cleanupEvent(ev) {
+  if (ev.monster && !ev.monster.broken) {
+    const i = props.indexOf(ev.monster);
+    if (i >= 0) props.splice(i, 1);
+  }
+}
+
+function startEvent(typeId) {
+  if (currentEvent || !eventTypes[typeId]) return false;
+  const ev = { type: typeId, t: 0 };
+  if (!eventSpawners[typeId](ev)) return false;
+  currentEvent = ev;
+  showEventComms(eventTypes[typeId]);
+  return true;
+}
+function endEvent() {
+  const ev = currentEvent;
+  if (!ev) return;
+  currentEvent = null;
+  cleanupEvent(ev);
+  eventNextRollAt = eventClock + EVENT_ROLL_INTERVAL;
+}
+function rollEvent() {
+  eventNextRollAt = eventClock + EVENT_ROLL_INTERVAL;
+  const pick = EVENT_POOL[Math.floor(Math.random() * EVENT_POOL.length)];
+  if (pick) startEvent(pick);
+  return pick;
+}
+function updateEvents(dt) {
+  eventClock += dt;
+  updateRayEffects(dt);
+  updateEventComms();
+  if (!currentEvent) {
+    if (eventClock >= eventNextRollAt) rollEvent();
+    return;
+  }
+  const ev = currentEvent;
+  ev.t += dt;
+  if (eventUpdaters[ev.type](ev) === "done") {
+    completedEvents++;
+    endEvent();
+  } else if (ev.t >= eventTypes[ev.type].duration) endEvent(); // timer: vanish quietly
+}
+
+// ---------------------------------------------------------------------------
+// Comms slide-out (markup and style in index.html)
+// ---------------------------------------------------------------------------
+const commsEl = $("comms"),
+  commsTitleEl = $("commsTitle"),
+  commsLineEl = $("commsLine");
+let commsHideAt = 0;
+function showEventComms(type) {
+  commsTitleEl.textContent = type.name;
+  commsLineEl.textContent = type.line;
+  commsEl.classList.add("show");
+  commsEl.setAttribute("aria-hidden", "false");
+  commsHideAt = eventClock + EVENT_COMMS_SECONDS;
+}
+function updateEventComms() {
+  if (commsHideAt && eventClock >= commsHideAt) {
+    commsHideAt = 0;
+    commsEl.classList.remove("show");
+    commsEl.setAttribute("aria-hidden", "true");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Markers for the minimap (hud.js) and the world (camera_render.js)
+// ---------------------------------------------------------------------------
+function eventMarkers() {
+  if (!currentEvent) return [];
+  const type = eventTypes[currentEvent.type];
+  return [
+    { kind: "event", x: currentEvent.x, z: currentEvent.z, pin: true, shape: type.mapShape, color: type.mapColor },
+  ];
+}
+function drawEvents(vp) {
+  const ev = currentEvent;
+  if (!ev) return;
+  const cam = [camera.x, camera.y, camera.z];
+  const t = performance.now() / 1000;
+  const ground = driveSurfaceH(ev.x, ev.z);
+  if (ev.type === "cityAttack") {
+    // The creature itself is a prop (drawn with the props). Add a beacon and health pips.
+    const m = ev.monster;
+    draw(eventBeacons.cityAttack, modelMatrix(m.x, m.y + m.height + 1.2, m.z, 0), vp, cam);
+    const pips = Math.max(1, Math.ceil((m.hp / m.maxHp) * 5));
+    for (let i = 0; i < pips; i++)
+      draw(
+        monsterHealthPip,
+        modelMatrix(m.x + (i - (pips - 1) / 2) * 0.62, m.y + m.height + 0.6 + Math.sin(t * 3 + i) * 0.08, m.z, t),
+        vp,
+        cam,
+      );
+    return;
+  }
+  const yaw = ev.axis === "z" ? 0 : Math.PI / 2; // local Z points along the road
+  if (ev.type === "tuningRay") {
+    draw(tuningRayGate, modelMatrix(ev.x, ground, ev.z, yaw), vp, cam);
+    draw(eventBeacons.tuningRay, modelMatrix(ev.x, ground + 9, ev.z, 0, 1 + Math.sin(t * 6) * 0.15), vp, cam);
+  } else if (ev.type === "rewardRing") {
+    draw(rewardRingMesh, modelMatrix(ev.x, ground + Math.sin(t * 2) * 0.2, ev.z, yaw), vp, cam);
+    draw(eventBeacons.rewardRing, modelMatrix(ev.x, ground + RING_CENTER_Y + RING_RADIUS + 1, ev.z, 0), vp, cam);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Data check used by tools/smoke_test.js. Returns a list of problems (empty means OK).
+// ---------------------------------------------------------------------------
+function validateEventData() {
+  const problems = [];
+  if (eventLawnSites.length < 12) problems.push("only " + eventLawnSites.length + " lawn sites for City Under Attack");
+  if (eventRoadSpots.length < 60) problems.push("only " + eventRoadSpots.length + " road spots for the ray and ring");
+  for (const s of eventLawnSites)
+    for (const b of buildingColliders)
+      if (Math.abs(s.x - b.x) < b.hw + MONSTER_TIERS[2].radius && Math.abs(s.z - b.z) < b.hl + MONSTER_TIERS[2].radius)
+        problems.push("lawn site " + s.x + "," + s.z + " touches a " + (b.kind || "building"));
+  for (const s of eventRoadSpots) {
+    const across = s.axis === "z" ? s.x : s.z;
+    if (!streetLines.includes(across)) problems.push("road spot " + s.x + "," + s.z + " is not on a street");
+    if (roadSurfaceAt(s.x, s.z) === null) problems.push("road spot " + s.x + "," + s.z + " has no road under it");
+  }
+  for (const id of EVENT_POOL) if (id && !eventTypes[id]) problems.push("pool has unknown event " + id);
+  if (!EVENT_POOL.includes(null)) problems.push("pool is missing the no-event option");
+  for (const id in eventTypes) if (!EVENT_POOL.includes(id)) problems.push(id + " is not in the pool");
+  return problems;
+}
