@@ -28,6 +28,21 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 
 The HUD should feel like a **molded dashboard** built into the same toy world as the vehicles: compact, tactile, friendly and easy to scan. It should not look like a pile of unrelated translucent game panels or a loud arcade overlay.
 
+### Design tokens (initial specification)
+
+| Token | Value | Use |
+|---|---|---|
+| Deep petrol | `#152A34` | Main HUD surface |
+| Raised teal | `#203D48` | Secondary surface / selected control |
+| Warm ivory | `#F4F1E8` | Primary text and high-contrast symbols |
+| Blue-grey | `#AFC2C8` | Secondary text and quiet map detail |
+| Aqua | `#72D2DC` | Interactive / selected / player-navigation accent |
+| Warm yellow | `#F4CF59` | Objective, reward and upgrade accent |
+| Soft coral | `#F28F73` | Impact, warning and destructive action |
+| Soft green | `#8BC99B` | Completion and success |
+
+Use a 4 px spacing base (4, 8, 12, 16, 24 px), three shared corner radii (8, 12, 18 px), and a single subtle 1 px light border. Keep typography to a small scale: 11–12 px secondary labels, 14 px standard controls, 18 px section values and 26–30 px primary speed. Use sentence case; reserve all-caps for very short status abbreviations. Prefer mostly opaque surfaces over heavy backdrop blur so mobile controls stay crisp and inexpensive to composite.
+
 ### Visual language
 - **Surfaces:** deep petrol/navy panels with a subtle molded-plastic finish; restrained translucency, soft edge highlights and minimal shadow. Avoid strong neon glows, stacked borders and decorative gradients.
 - **Typography:** use the existing readable system sans-serif. Large, tabular numerals for speed and cash; short labels; muted secondary text. Avoid long all-caps instructions.
