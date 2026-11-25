@@ -421,3 +421,9 @@ Next agent should: Claude review the CSS/markup and run the full smoke test; the
 ### 2026-11-25 | ChatGPT -> All | T-013 readability refinement
 Status: done
 Body: Kept the same compact overall footprint but moved a few pixels from the map to the objective row: 18×29px strip/map sizing on desktop and 16×23px on mobile; map width is 80px desktop and 64px mobile. Increased objective text and SKIP label sizes, and improved compact boost/cash/profile label sizing. This supersedes the map dimensions in the preceding T-013 HANDOFF. Browser/touch readability still needs owner validation.
+
+
+### 2026-11-25 | ChatGPT -> All | CLAIM T-014
+Status: open
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Plan: Replace the stacked objective-above-map center column with a compact side-by-side map/objective arrangement, with a substantially larger map and a readable objective/skip panel. Keep the existing dashboard footprint and game logic; update docs and layout regression checks.
