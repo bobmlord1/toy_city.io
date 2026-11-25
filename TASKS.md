@@ -91,7 +91,7 @@ Notes:
  
 ### T-012 HUD, minimap and mobile interaction redesign
 Assigned to: ChatGPT (implementation); Claude review requested after handoff.
-Status: implementation and static-review fixes committed to `feature/t012-molded-dashboard`; automated smoke test and owner browser/touch playtest remain pending.
+Status: HUD refinement committed to `feature/t012-molded-dashboard`; automated smoke test and owner browser/touch playtest remain pending.
 Files: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`, `agent_comments.md`.
 
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
@@ -99,7 +99,7 @@ Done when:
 - Define one cohesive toy-like visual language: approved palette, typography, shapes, spacing, surfaces, borders, icon treatment and semantic status colors.
 - Specify a compact, persistent top-center dashboard with the minimap integrated into its center and essential vehicle/speed/cash readouts around it.
 - Specify separate desktop and mobile HUD layouts, automatic profile detection, and a persistent manual Auto / Desktop / Mobile override.
-- Specify a tilted, player-relative minimap that rotates with the player's heading, stays visible in every view and focuses on the player plus relevant objectives rather than all world objects or traffic.
+- Specify a fixed world-oriented minimap that stays visible in every view, focuses on the player plus relevant objectives, and rotates only the vehicle marker so its turn direction matches the in-world view.
 - Specify mobile invisible swipe-stick driving, with brake, boost and contextual enter/exit icon buttons at the bottom right.
 - Include child-focused language rules: icons first, short labels, no paragraphs of instructions during play.
 - Keep desktop keyboard and mobile touch both supported. Keyboard remains available in either profile; mobile swipe controls support simultaneous action-button touches.
@@ -107,10 +107,10 @@ Notes:
 - **Approved visual direction:** Molded dashboard, but intentionally more toy-like and less realistic than a real instrument cluster. Use chunky rounded shapes, raised molded-plastic edges and friendly simple icons.
 - **Approved palette:** deep petrol `#152A34`, raised teal `#203D48`, warm ivory `#F4F1E8`, blue-grey `#AFC2C8`, aqua `#72D2DC`, warm yellow `#F4CF59`, soft coral `#F28F73`, soft green `#8BC99B`. Use accents semantically.
 - **Approved placement:** one compact dashboard centered at the top/overhead edge of the play area so the bottom remains clear for thumbs. The minimap is integrated into the dashboard center and persists across driving, on-foot and other views.
-- **Approved minimap:** tilted/oblique toy-diorama view, player-relative rotation with the direction of travel always toward the top; show the player and relevant objective markers, with only faint road context if needed. Do not show all traffic, buildings, rocks and ordinary props. No north-up compass requirement.
+- **Approved minimap refinement (2026-11-25):** keep the street grid fixed in world orientation and rotate the player marker with vehicle heading. Align map left/right with the chase-camera view. Show only the player, active objective and quiet road context; omit traffic, buildings, rocks and ordinary props.
 - **Approved desktop/mobile approach:** distinct layouts. Auto-detect using pointer capability and viewport dimensions rather than user-agent sniffing; offer a persistent Auto / Desktop / Mobile override for hybrid devices or detection errors.
 - **Approved mobile controls:** invisible floating swipe-stick on the left/lower-left area (touch origin plus finger displacement for steering and forward/reverse); brake, boost and contextual enter/exit icon buttons in a bottom-right cluster. Support simultaneous touches. A brief first-use cue may teach the invisible stick, but no permanent joystick graphic or instruction panel.
-- The prior north-up map, N marker, traffic-rich minimap and visible left thumbstick/right accelerator proposal are superseded.
+- The earlier heading-up/counter-rotating minimap was superseded after owner playtesting on 2026-11-25. The original north-up compass/traffic-rich map and visible left thumbstick/right accelerator proposal remain rejected.
 - T-003's exact primary device remains unconfirmed, but supporting both profiles with automatic detection and manual override means it no longer blocks T-012.
  
 ## Later: proposed order, not yet authorized as coding tasks
