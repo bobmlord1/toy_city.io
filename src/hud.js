@@ -6,6 +6,7 @@ const boostEl = $("boostStatus");
 const cashEl = $("cash");
 const mapCanvas = $("map");
 const speedGaugeEl = $("speedGauge");
+const speedUnitEl = $("speedUnit");
 let lastVehicleName = "", lastSpeedText = "", lastBoostText = "", lastBoostColor = "";
 
 function setHudText(element, value, previous) {
@@ -38,11 +39,21 @@ function updateUI() {
   }
 
   lastVehicleName = setHudText(vehicleNameEl, name, lastVehicleName);
-  lastSpeedText = setHudText(speedEl, String(speedValue), lastSpeedText);
+
+  // The HUD and script can briefly be out of sync on cached/static deployments.
+  // Keep speed telemetry functional even when an older page has no gauge wrapper.
+  if (speedUnitEl) {
+    lastSpeedText = setHudText(speedEl, String(speedValue), lastSpeedText);
+  } else {
+    const legacySpeedHtml = speedValue + " <small>MPH</small>";
+    if (speedEl.innerHTML !== legacySpeedHtml) speedEl.innerHTML = legacySpeedHtml;
+  }
 
   const maxSpeed = !onFoot && controlled ? Math.max(controlled.maxSpeed * MPH_PER_MS, 1) : 1;
   const speedRatio = Math.max(0, Math.min(1, speedValue / maxSpeed));
-  speedGaugeEl.style.setProperty("--speed-sweep", (speedRatio * 270).toFixed(1) + "deg");
+  if (speedGaugeEl) {
+    speedGaugeEl.style.setProperty("--speed-sweep", (speedRatio * 270).toFixed(1) + "deg");
+  }
 
   const cashText = "$" + Math.floor(cash).toLocaleString("en-US");
   if (cashEl.textContent !== cashText) cashEl.textContent = cashText;
