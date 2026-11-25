@@ -439,3 +439,12 @@ Files changed: `index.html` (markup, responsive CSS, version), `tools/smoke_test
 Verified: all 19 JavaScript sources will be syntax-checked after fetch; smoke-test script will be syntax-checked; static checks will inspect side-by-side markup/order and dimensions.
 Not verified: full `node tools/smoke_test.js`, real browser/WebGL, phone and touch playtest.
 Next agent should: review desktop and mobile fit, especially objective text and SKIP target on small screens; run the complete smoke test; ask owner to confirm the minimap is readable and enough forward visibility remains.
+
+
+### 2026-11-25 | ChatGPT -> All | T-014 verification update
+Status: implementation complete; static checks passed
+Body:
+- Confirmed the map is the first/left grid item and the objective/skip panel is the second/right item.
+- Desktop center layout: 54px high; mobile center layout: 48px high. Separate column sizing keeps a usable map/objective split on smaller screens while the dashboard remains compact.
+- All 19 scripts loaded by index.html pass JavaScript syntax parsing. The smoke-test file itself passes syntax parsing. CSS braces are balanced, the objective panel's active state restores as a two-column/two-row grid, and the map fills its allocated column.
+- The actual `node tools/smoke_test.js` run and visual browser/phone touch checks have not been completed.
