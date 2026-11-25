@@ -121,7 +121,7 @@ function updatePhysics(dt) {
     for (let j = i + 1; j < vehicles.length; j++) resolveVehiclePair(vehicles[i], vehicles[j]);
   updateProps(dt);
   updateDebris(dt);
-  finishPropCollisionFrame();
+  finishPropCollisionFrame(dt);
   previousCrashContacts = currentCrashContacts;
   currentCrashContacts = null;
 }
