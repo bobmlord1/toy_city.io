@@ -36,8 +36,9 @@ Notes:
 
 ### T-003 Confirm the child's primary input device
 Assigned to: project owner.
-Why: Keyboard, touch or controller changes activity controls and HUD decisions.
-Done when: the primary input device is written into `DESIGN.md` under Audience.
+Status: no longer blocks interface design; T-012 supports keyboard and touch with automatic desktop/mobile detection and a manual override. Confirm the most-used device after further playtesting if it becomes useful.
+Why: Knowing the primary device can guide later usability tuning, but both input modes are supported.
+Done when: record the most-used device in `DESIGN.md` if/when confirmed.
 
 ### T-006 Traffic routing improvements (first pass)
 Assigned to: ChatGPT (delegated by the project owner on 2026-11-24).
@@ -89,25 +90,27 @@ Notes:
 - No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
  
 ### T-012 HUD, minimap and mobile interaction redesign (design phase)
-Assigned to: ChatGPT (design specification; implementation requires a separate approval).
-Status: direction selected; detailed component/layout specification next. No UI code authorized yet.
-Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Assigned to: ChatGPT (design specification; implementation requires separate approval).
+Status: owner-approved visual language and layout direction; detailed specification recorded in `DESIGN.md`. Desktop/mobile mockups are the next design deliverable. No UI code authorized yet.
+Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`; mockups may be added as design references.
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
 Done when:
-- Define one cohesive visual language: palette, typography, shape, spacing, surfaces, borders, icon treatment and semantic status colors.
-- Define a compact always-visible HUD hierarchy and which panels/actions become contextual.
-- Specify a simpler north-up minimap with clear player heading/bearing, reduced map noise, readable traffic/objective markers and an expand interaction.
-- Specify a responsive touch-control approach that preserves large usable touch targets while reducing persistent visual clutter.
+- Define one cohesive toy-like visual language: approved palette, typography, shapes, spacing, surfaces, borders, icon treatment and semantic status colors.
+- Specify a compact, persistent top-center dashboard with the minimap integrated into its center and essential vehicle/speed/cash readouts around it.
+- Specify separate desktop and mobile HUD layouts, automatic profile detection, and a persistent manual Auto / Desktop / Mobile override.
+- Specify a tilted, player-relative minimap that rotates with the player's heading, stays visible in every view and focuses on the player plus relevant objectives rather than all world objects or traffic.
+- Specify mobile invisible swipe-stick driving, with brake, boost and contextual enter/exit icon buttons at the bottom right.
 - Include child-focused language rules: icons first, short labels, no paragraphs of instructions during play.
 - Keep desktop keyboard and mobile touch both supported. No code changes in this design phase.
 Notes:
-- Selected direction: **Molded dashboard** — a calm, compact instrument-panel UI that belongs to the glossy die-cast / molded-plastic toy world, rather than generic futuristic glass UI or oversized arcade buttons.
-- Design palette: deep petrol/navy surfaces; warm ivory primary text; muted blue-grey secondary text; restrained aqua for interaction; warm yellow for rewards/objectives; coral for warnings/impact; soft green for success. Accent colors carry meaning and are not used decoratively.
-- North-up map orientation is preferred for stable world bearings. Add an obvious N marker and a bright player arrow/short heading cone; do not rotate the whole map while driving.
-- Static map geometry should be cached once; moving traffic, player and activity markers are drawn dynamically.
-- Persistent UI should be limited to driving essentials and a compact map. Hide help text and secondary actions by default; show interaction, tuning and activity details only when relevant.
-- Mobile control direction: low-contrast but discoverable left thumbstick plus right-side accelerator and smaller brake; contextual enter/exit and camera controls appear only when useful. Touch controls become visually quiet when idle but retain generous hit areas.
-- T-003's exact primary child input device remains unconfirmed; design both keyboard and touch layouts rather than blocking this phase.
+- **Approved visual direction:** Molded dashboard, but intentionally more toy-like and less realistic than a real instrument cluster. Use chunky rounded shapes, raised molded-plastic edges and friendly simple icons.
+- **Approved palette:** deep petrol `#152A34`, raised teal `#203D48`, warm ivory `#F4F1E8`, blue-grey `#AFC2C8`, aqua `#72D2DC`, warm yellow `#F4CF59`, soft coral `#F28F73`, soft green `#8BC99B`. Use accents semantically.
+- **Approved placement:** one compact dashboard centered at the top/overhead edge of the play area so the bottom remains clear for thumbs. The minimap is integrated into the dashboard center and persists across driving, on-foot and other views.
+- **Approved minimap:** tilted/oblique toy-diorama view, player-relative rotation with the direction of travel always toward the top; show the player and relevant objective markers, with only faint road context if needed. Do not show all traffic, buildings, rocks and ordinary props. No north-up compass requirement.
+- **Approved desktop/mobile approach:** distinct layouts. Auto-detect using pointer capability and viewport dimensions rather than user-agent sniffing; offer a persistent Auto / Desktop / Mobile override for hybrid devices or detection errors.
+- **Approved mobile controls:** invisible floating swipe-stick on the left/lower-left area (touch origin plus finger displacement for steering and forward/reverse); brake, boost and contextual enter/exit icon buttons in a bottom-right cluster. Support simultaneous touches. A brief first-use cue may teach the invisible stick, but no permanent joystick graphic or instruction panel.
+- The prior north-up map, N marker, traffic-rich minimap and visible left thumbstick/right accelerator proposal are superseded.
+- T-003's exact primary device remains unconfirmed, but supporting both profiles with automatic detection and manual override means it no longer blocks T-012.
  
 ## Later: proposed order, not yet authorized as coding tasks
 
