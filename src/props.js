@@ -25,7 +25,8 @@ function addProp(type, x, z) {
     roll: 0,
     mass: type === "barrel" ? 16 : 34,
     radius: type === "barrel" ? 0.48 : 0.72,
-    hp: type === "barrel" ? 6.0 : 8.5,
+    // A normal-speed clean ram should break a barrel in roughly two hits and a crate in three.
+    hp: type === "barrel" ? 5.0 : 9.5,
     broken: false,
   });
 }

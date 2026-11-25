@@ -88,6 +88,43 @@ const end = JSON.parse(
 const failures = [];
 if (uncaught) failures.push("Uncaught error: " + uncaught);
 
+// ---- Smashable prop regression: pushing must not count as repeated impacts ----
+const smashRegression = JSON.parse(run(`(() => {
+  const p = {type:"barrel",hp:5,broken:false,x:0,y:0,z:0,vx:0,vz:0};
+  const rammer = {id:"smash-regression",impactMultiplier:1};
+  props.push(p);
+  beginPropCollisionFrame();
+  registerPropImpact(p,rammer,8);
+  finishPropCollisionFrame(1/60);
+  const afterFirstHit = p.hp;
+  beginPropCollisionFrame();
+  registerPropImpact(p,rammer,8);
+  finishPropCollisionFrame(1/60);
+  const afterSustainedContact = p.hp;
+  // A brief gap is still part of the same shove; require a real disengagement.
+  for (let i = 0; i < 10; i++) {
+    beginPropCollisionFrame();
+    finishPropCollisionFrame(1/60);
+  }
+  const afterBriefSeparation = p.hp;
+  for (let i = 0; i < 20; i++) {
+    beginPropCollisionFrame();
+    finishPropCollisionFrame(1/60);
+  }
+  beginPropCollisionFrame();
+  registerPropImpact(p,rammer,8);
+  finishPropCollisionFrame(1/60);
+  const result = {afterFirstHit,afterSustainedContact,afterBriefSeparation,broken:p.broken};
+  props.splice(props.indexOf(p),1);
+  return result;
+})()`, "smashable-prop-regression"));
+if (!(smashRegression.afterFirstHit < 5 &&
+      smashRegression.afterSustainedContact === smashRegression.afterFirstHit &&
+      smashRegression.afterBriefSeparation === smashRegression.afterFirstHit &&
+      smashRegression.broken))
+  failures.push("Smashable props: sustained pushing applied repeated damage or a fresh impact failed to break the barrel");
+
+
 // ---- T-012 HUD and touch-input checks ----
 const profileButton = w.document.getElementById("profileToggle");
 if (!w.document.body.classList.contains("hud-desktop"))

@@ -96,7 +96,9 @@ function spawnPropDebris(p, kind, impact) {
 function damageProp(p, impact, rammer) {
   if (!p || p.broken || impact < 3.0) return false;
   const multiplier = rammer && rammer === controlled ? rammer.impactMultiplier || 1 : 1;
-  p.hp -= Math.max(0, impact - 2.35) * 0.52 * multiplier;
+  // A clean, meaningful hit should make visible progress without requiring an impact upgrade.
+  // Contact latching below prevents sustained pushing from applying this repeatedly.
+  p.hp -= Math.max(0, impact - 2.35) * 0.68 * multiplier;
   if (p.hp <= 0) {
     p.broken = true;
     spawnPropDebris(p, p.type, impact);
@@ -108,6 +110,36 @@ function damageProp(p, impact, rammer) {
     return true;
   }
   return false;
+}
+function registerPropImpact(p, rammer, impact, isTrailer = false) {
+  if (!p || p.broken || !rammer) return false;
+  // Record every overlapping frame, including soft contact. Otherwise a slow frame
+  // could reset the latch while the vehicle is still pushing the prop.
+  const key = (isTrailer ? "trailer:" : "vehicle:") + rammer.id;
+  const cooldowns = p._damageContactCooldowns || new Map();
+  const current = p._damageContactsNow || (p._damageContactsNow = new Set());
+  current.add(key);
+  // A short separation grace period prevents tiny physics gaps from turning one long
+  // shove into a series of artificial impacts. The player must disengage before re-ramming.
+  if ((cooldowns.get(key) || 0) > 0 || impact < 3.0) return false;
+  return damageProp(p, impact, rammer);
+}
+function beginPropCollisionFrame() {
+  for (const p of props) p._damageContactsNow = new Set();
+}
+function finishPropCollisionFrame(dt) {
+  for (const p of props) {
+    const cooldowns = p._damageContactCooldowns || new Map();
+    const current = p._damageContactsNow || new Set();
+    for (const [key, remaining] of cooldowns) {
+      if (current.has(key)) cooldowns.set(key, 0.4);
+      else if (remaining <= dt) cooldowns.delete(key);
+      else cooldowns.set(key, remaining - dt);
+    }
+    for (const key of current) if (!cooldowns.has(key)) cooldowns.set(key, 0.4);
+    p._damageContactCooldowns = cooldowns;
+    delete p._damageContactsNow;
+  }
 }
 function resolveVehicleProp(v, p, propIndex) {
   if (!p || p.broken) return;
@@ -141,7 +173,7 @@ function resolveVehicleProp(v, p, propIndex) {
     const rel = (p.vx - v.vx) * nx + (p.vz - v.vz) * nz;
     const impact = Math.max(0, -rel);
     if (v === controlled) registerCrashReward("prop:" + v.id + ":" + propIndex, impact);
-    damageProp(p, impact, v);
+    registerPropImpact(p, v, impact);
     const ramPower = v === controlled ? v.impactMultiplier || 1 : 1;
     const kick = clamp((impact * 1.25 + 1.5) * ramPower, 1.5, 24);
     p.vx += nx * kick;
@@ -340,7 +372,7 @@ function resolveTrailerProp(semi, p, index) {
   const rel = (p.vx - t.vx) * nx + (p.vz - t.vz) * nz,
     impact = Math.max(0, -rel);
   if (semi === controlled) registerCrashReward("trailer-prop:" + index, impact);
-  damageProp(p, impact, semi);
+  registerPropImpact(p, semi, impact, true);
   const ramPower = semi === controlled ? semi.impactMultiplier || 1 : 1;
   const kick = clamp((impact * 1.15 + 1.0) * ramPower, 1.0, 20);
   p.vx += nx * kick;
