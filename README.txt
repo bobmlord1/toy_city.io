@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.16.1 (HUD refinement branch)
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.2 (HUD refinement branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -66,3 +66,7 @@ Version 0.16.1 (T-012 HUD refinement branch):
 - Moved the PBR lighting selector to the startup screen; it is no longer part of the driving HUD.
 - Added smoke-test coverage for map orientation, speed-gauge markup and startup-only lighting placement.
 - Automated smoke testing and real browser/touch playtesting are still required.
+
+Version 0.16.2:
+- Made the speed gauge optional at runtime; older/cached page markup falls back to a numeric MPH readout instead of stopping the game loop.
+- Versioned dynamic game-script URLs to reduce stale HTML/script combinations.
