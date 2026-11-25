@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.16.3 (HUD refinement branch)
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.4 (HUD refinement branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -76,3 +76,9 @@ Version 0.16.3 (T-013 compact dashboard):
 - Cut the dashboard's vertical footprint to roughly half by arranging vehicle and cash telemetry in compact side panels.
 - Moved the active delivery instruction, distance and SKIP action into a reserved strip immediately above the minimap.
 - Kept the objective strip's space reserved so the dashboard does not jump when an activity appears or clears.
+
+
+Version 0.16.4 (T-014 side-by-side map/objective layout):
+- Placed the integrated minimap beside the objective information and SKIP control instead of stacking the objective above a very short map.
+- Enlarged the minimap while keeping the compact top dashboard; desktop and mobile have separate map/objective column sizing.
+- The objective panel keeps its column reserved when hidden, so the dashboard does not shift when an activity starts or ends.
