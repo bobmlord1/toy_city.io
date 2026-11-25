@@ -84,34 +84,80 @@
     #activityIcon { font-size:20px; }
     #interact { display:block; bottom:92px; }
   }
+
+  /* T-012 Molded Dashboard */
+  :root { color-scheme:dark; --petrol:#152A34; --teal:#203D48; --ivory:#F4F1E8; --muted:#AFC2C8; --aqua:#72D2DC; --yellow:#F4CF59; --coral:#F28F73; --green:#8BC99B; }
+  #dashboard { position:fixed; z-index:4; top:max(10px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%); width:min(620px,calc(100vw - 28px)); min-height:112px; display:grid; grid-template-columns:minmax(108px,1fr) 240px minmax(108px,1fr); align-items:center; gap:10px; padding:10px 14px; border-radius:18px; background:rgba(21,42,52,.96); border:1px solid rgba(244,241,232,.26); box-shadow:0 5px 18px rgba(0,0,0,.18); color:var(--ivory); }
+  .dash-side { min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; }
+  #vehicleName { color:var(--muted); font-size:11px; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }
+  #speed { color:var(--ivory); font-size:29px; line-height:1; font-weight:900; font-variant-numeric:tabular-nums; }
+  #speed small { font-size:10px; color:var(--muted); }
+  #boostStatus { color:var(--aqua); font-size:9px; font-weight:850; letter-spacing:.04em; }
+  #mapbox { width:100%; height:94px; padding:4px; border-radius:14px; background:var(--teal); border:1px solid rgba(244,241,232,.18); overflow:hidden; }
+  #map { display:block; width:100%; height:100%; border-radius:10px; }
+  .dash-right { gap:2px; }
+  .cash-label { color:var(--muted); font-size:9px; font-weight:850; letter-spacing:.1em; }
+  #cash { color:var(--yellow); font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
+  #profileToggle,#lightingToggle { pointer-events:auto; border:1px solid rgba(244,241,232,.2); border-radius:9px; padding:4px 8px; background:#294955; color:var(--ivory); font:800 9px system-ui; cursor:pointer; }
+  #lightingToggle { max-width:none; white-space:nowrap; }
+  #activity { top:132px; left:50%; transform:translateX(-50%); max-width:min(360px,calc(100vw - 24px)); padding:7px 10px; border-radius:12px; background:rgba(21,42,52,.94); font-size:12px; }
+  #message { top:132px; background:rgba(21,42,52,.96); border-radius:12px; }
+  #hint,#help,#brand,#topbar { display:none !important; }
+  #touchActions { display:none; }
+  .actionbtn { width:58px; height:58px; border:1px solid rgba(244,241,232,.36); border-radius:18px; background:rgba(21,42,52,.94); color:var(--ivory); font-size:23px; font-weight:900; box-shadow:0 4px 12px rgba(0,0,0,.22); touch-action:none; user-select:none; -webkit-user-select:none; }
+  .actionbtn:active,.actionbtn.active { background:var(--teal); transform:scale(.96); }
+  .actionbtn.boost { color:var(--yellow); }
+  .actionbtn.interact { color:var(--aqua); }
+  #swipeCue { display:none; position:fixed; left:24px; bottom:26px; color:rgba(244,241,232,.72); font-size:10px; letter-spacing:.12em; pointer-events:none; }
+  #upgradePanel { background:rgba(21,42,52,.97); border:1px solid rgba(244,241,232,.22); border-radius:18px; }
+  #upgradePanel .eyebrow { color:var(--yellow); }
+  #upgradeButton,#accelerationButton,#impactButton { border-radius:12px; }
+  body.hud-mobile #dashboard { width:calc(100vw - 18px); min-height:88px; grid-template-columns:minmax(64px,.8fr) minmax(120px,1.45fr) minmax(64px,.8fr); gap:5px; padding:7px 8px; border-radius:16px; }
+  body.hud-mobile #mapbox { height:72px; padding:3px; }
+  body.hud-mobile #speed { font-size:23px; }
+  body.hud-mobile #vehicleName { font-size:9px; }
+  body.hud-mobile #boostStatus { font-size:8px; }
+  body.hud-mobile #cash { font-size:17px; }
+  body.hud-mobile #profileToggle,body.hud-mobile #lightingToggle { padding:3px 5px; font-size:8px; }
+  body.hud-mobile #activity { top:100px; }
+  body.hud-mobile #message { top:auto; bottom:100px; font-size:12px; }
+  body.hud-mobile #touchActions { display:flex; position:fixed; right:14px; bottom:max(16px,env(safe-area-inset-bottom)); flex-direction:column; gap:10px; z-index:5; pointer-events:auto; }
+  body.hud-mobile .actionbtn { width:62px; height:62px; border-radius:19px; }
+  body.hud-mobile #interact:not([hidden]) { display:block; }
+  body.hud-mobile #swipeCue { display:block; }
+  body.hud-mobile #upgradePanel { right:88px; bottom:16px; width:min(235px,calc(100vw - 110px)); }
+  body.hud-desktop #dashboard { grid-template-columns:minmax(120px,1fr) 260px minmax(120px,1fr); }
+  body.hud-desktop #touchActions,body.hud-desktop #swipeCue { display:none !important; }
+  @media (max-width:420px) { body.hud-mobile #dashboard { grid-template-columns:58px minmax(110px,1fr) 64px; } body.hud-mobile #mapbox { height:66px; } }
+
 </style>
 </head>
 <body>
 <canvas id="game" aria-label="3D free-roam car game"></canvas>
 <div id="vignette"></div>
-<div id="topbar">
-  <div id="brand" class="panel"><strong>FREE ROAM</strong><span>CAR PLAYGROUND · v0.15.2</span></div>
-  <div id="status" class="panel"><div id="vehicleName">Compact Car</div><div id="speed">0 <small>MPH</small></div></div>
-  <div id="cash" class="panel">CASH&nbsp; $0</div>
-  <div id="boostStatus" class="panel" style="padding:9px 12px;font-size:11px;font-weight:850;letter-spacing:.04em;color:#a8efff">BOOST READY · SHIFT</div>
-  <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED PBR: ON</button>
+<div id="dashboard" class="panel" aria-label="Driving dashboard">
+  <div class="dash-side dash-left">
+    <div id="vehicleName">COMPACT</div>
+    <div id="speed">0 <small>MPH</small></div>
+    <div id="boostStatus" aria-live="polite">BOOST READY</div>
+  </div>
+  <div id="mapbox" aria-label="Player-relative objective map"><canvas id="map" width="360" height="216"></canvas></div>
+  <div class="dash-side dash-right">
+    <div class="cash-label">CASH</div><div id="cash">$0</div>
+    <button id="profileToggle" type="button" aria-label="HUD layout: automatic. Change layout">AUTO</button>
+    <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">LIGHT</button>
+  </div>
 </div>
-<div id="mapbox" class="panel"><canvas id="map" width="264" height="264"></canvas></div>
 <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
 <div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
-<div id="touch">
-  <div class="padgroup">
-    <button class="touchbtn" data-control="left" aria-label="Steer left">◀</button>
-    <button class="touchbtn" data-control="right" aria-label="Steer right">▶</button>
-  </div>
-  <div class="padgroup">
-    <button class="touchbtn wide" data-control="brake" aria-label="Brake or reverse">BRAKE</button>
-    <button class="touchbtn wide" data-control="gas" aria-label="Accelerate">GO ▲</button>
-  </div>
+<div id="touchActions" aria-label="Driving actions">
+  <button class="actionbtn" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
+  <button class="actionbtn boost" id="boostButton" data-action="boost" aria-label="Boost">⚡</button>
+  <button class="actionbtn interact" id="interact" aria-label="Enter or exit vehicle" hidden>↗</button>
 </div>
-<button id="interact">ENTER / EXIT</button>
+<div id="swipeCue" aria-hidden="true">SWIPE TO DRIVE</div>
 <div id="upgradePanel" class="panel" role="region" aria-live="polite">
   <div class="eyebrow">TOY TOWN TUNING PAD</div>
   <div class="upgradeTitle" id="upgradeTitle">Top Speed</div>
