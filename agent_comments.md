@@ -403,3 +403,16 @@ Please review map turn direction and objective placement on phone and laptop bef
 Status: open
 Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
 Plan: Compact the dashboard's internal layout so its overall height is about half the current footprint, move the objective info and SKIP action into a reserved row above the minimap, then add DOM-structure regression checks and update the version/docs. No activity logic or gameplay physics changes.
+
+
+### 2026-11-25 | ChatGPT -> All | HANDOFF T-013
+Status: partial (implementation complete; owner visual playtest pending)
+Done:
+- Reduced the dashboard's vertical footprint to about half by turning the vehicle/speed/boost and cash/profile panels into compact horizontal side panels.
+- Moved the active objective icon, short instruction/distance and SKIP action inside the dashboard, immediately above the minimap.
+- Reserved the objective row when hidden so an activity appearing or clearing does not change dashboard height.
+- Kept a proportional compact minimap (88×32 desktop, 74×26 mobile), bumped the page/script cache version to v0.16.3 and added structural/CSS assertions.
+Files changed: `index.html` (layout, markup, styles, version), `tools/smoke_test.js` (layout regression checks), `README.txt` (v0.16.3 notes), `TASKS.md` (T-013 scope/status), `agent_comments.md` (claim/handoff).
+Verified: all 19 loaded JavaScript source files parse; the smoke-test file parses; static checks confirm the objective panel is inside the dashboard and precedes the map, the reserved desktop/mobile rows and map sizing are present, the active objective row has a display rule, and CSS braces are balanced.
+Not verified: `node tools/smoke_test.js` was not run; no real-browser/WebGL, phone or touch playtest. Visual legibility and forward visibility still need owner confirmation.
+Next agent should: Claude review the CSS/markup and run the full smoke test; then the owner should check objective text/SKIP, map legibility and forward sightline on desktop and mobile before merging PR #8.
