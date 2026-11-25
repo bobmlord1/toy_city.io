@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.16.4 (HUD refinement branch)
+FREE ROAM CAR PLAYGROUND - VERSION 0.17.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -82,3 +82,11 @@ Version 0.16.4 (T-014 side-by-side map/objective layout):
 - Placed the integrated minimap beside the objective information and SKIP control instead of stacking the objective above a very short map.
 - Enlarged the minimap while keeping the compact top dashboard; desktop and mobile have separate map/objective column sizing.
 - The objective panel keeps its column reserved when hidden, so the dashboard does not shift when an activity starts or ends.
+
+
+Version 0.17.0 (T-016 to T-019 activities):
+- Activities are no longer handed out one after another. Every activity now has a marked pad in the city and on the minimap; drive onto one to start it. SKIP stops it at any time with no penalty.
+- New smash targets activity: break the marked barrels and crates that appear by the pad.
+- New stunt jump activity: drive off the marked ramp fast enough for a good jump.
+- Deliveries now cover the whole city: 17 routes, paying more for longer trips.
+- Fixed the headless smoke test, which had stopped running after the prop changes.

@@ -116,7 +116,7 @@ const smashRegression = JSON.parse(run(`(() => {
   finishPropCollisionFrame(1/60);
   const result = {afterFirstHit,afterSustainedContact,afterBriefSeparation,broken:p.broken};
   props.splice(props.indexOf(p),1);
-  return result;
+  return JSON.stringify(result);
 })()`, "smashable-prop-regression"));
 if (!(smashRegression.afterFirstHit < 5 &&
       smashRegression.afterSustainedContact === smashRegression.afterFirstHit &&
@@ -133,7 +133,7 @@ const propRewardRegression = JSON.parse(run(`(() => {
   registerCrashReward("trailer-prop:smash-regression:999", 2.8);
   const after = cash;
   currentCrashContacts = previous;
-  return {before,after};
+  return JSON.stringify({before,after});
 })()`, "prop-reward-regression"));
 if (propRewardRegression.after !== propRewardRegression.before)
   failures.push("Smashable props: prop contact paid crash-bonus cash without breaking the prop");
@@ -351,50 +351,193 @@ const trafficProblems = get(`(() => {
 for (const problem of trafficProblems) failures.push("Traffic grid: " + problem);
 key("keyup", "w", "KeyW");
 for (const problem of get("validateActivityDefs()")) failures.push("Activity data: " + problem);
+
+// ---- Activity board (T-017): nothing starts on its own; driving onto a pad starts it ----
+const actId = () => get("currentActivity && currentActivity.def.id");
+const actPhase = () => get("currentActivity && currentActivity.phase");
+const skipVisible = () => w.document.getElementById("activitySkip").style.visibility !== "hidden";
+const defOf = (id) => get(`(() => { const d = activityDefs.find(q => q.id === "${id}"); return Object.assign({}, d, {startPad: activityStart(d)}); })()`);
+// The leftover activity-free spot is the empty middle of the central block.
+const idleSpot = { x: -12, z: -45 };
+run("onFoot=false; controlled=playerCar;", "act-setup");
+teleport(idleSpot);
 step(300);
-const offer = get("currentActivity && {id:currentActivity.def.id, phase:currentActivity.phase}");
-if (!offer || offer.phase !== "offer") {
-  failures.push("No delivery offer is available");
-} else {
-  const def = get(`activityDefs.find(d=>d.id==="${offer.id}")`);
-  const cash0 = get("cash");
-  step(60);
-  if (get("cash") !== cash0 || get("currentActivity && currentActivity.phase") !== "offer")
-    failures.push("An ignored offer changed the game state");
-  // On foot does not pick up a parcel.
-  run("onFoot=true;player.x=" + def.pickup.x + ";player.z=" + def.pickup.z, "foot");
-  step(5);
-  if (get("currentActivity && currentActivity.phase") !== "offer")
-    failures.push("On-foot player triggered the pickup");
-  run("onFoot=false", "foot");
-  // Pickup, then leave the area: no penalty and still carrying.
-  teleport(def.pickup);
-  step(3);
-  if (get("currentActivity && currentActivity.phase") !== "carrying")
-    failures.push("Pickup did not start the delivery");
-  teleport({ x: 0, z: 0 });
-  step(30);
-  if (get("currentActivity && currentActivity.phase") !== "carrying" || get("cash") !== cash0)
-    failures.push("Leaving the pickup area changed the delivery or cash");
-  // Drop-off pays exactly once.
-  teleport(def.dropoff);
-  step(3);
-  if (get("cash") !== cash0 + def.payout)
-    failures.push("Payout wrong: expected " + (cash0 + def.payout) + ", got " + get("cash"));
-  if (get("currentActivity") !== null) failures.push("Activity still active after completion");
-  step(10);
-  if (get("cash") !== cash0 + def.payout) failures.push("Payout was paid more than once");
-  // Another offer appears without reloading, and it can be skipped with no penalty.
-  step(200);
-  const next = get("currentActivity && {id:currentActivity.def.id, phase:currentActivity.phase}");
-  if (!next || next.phase !== "offer" || next.id === offer.id)
-    failures.push("A new, different offer did not appear after completion");
-  run("skipActivity()", "skip");
-  if (get("currentActivity") !== null) failures.push("Skip did not clear the activity");
-  step(60);
-  if (get("currentActivity === null")) failures.push("No offer appeared after skipping");
-  if (get("cash") !== cash0 + def.payout) failures.push("Skipping changed cash");
-}
+if (actId() !== null) failures.push("Activity board: an activity started without driving onto its pad");
+const idleMarkers = get("activeMarkers()");
+if (idleMarkers.length !== get("activityDefs.length") || !idleMarkers.every((m) => m.start))
+  failures.push("Activity board: not every start pad is on the map while idle");
+if (idleMarkers.filter((m) => m.pin).length !== 3)
+  failures.push("Activity board: expected the nearest pad of each of the 3 types to be pinned");
+if (get("new Set(activityDefs.map(d => d.type)).size") !== 3)
+  failures.push("Activity board: expected delivery, smash and stunt activities");
+if (get("activityDefs.filter(d => d.type === 'delivery').length") < 15)
+  failures.push("Deliveries: expected at least 15 delivery routes across the city");
+const pickupQuadrants = get(`activityDefs.filter(d => d.type === "delivery").map(d => (d.pickup.x < 0 ? "W" : "E") + (d.pickup.z < 0 ? "S" : "N"))`);
+if (new Set(pickupQuadrants).size !== 4) failures.push("Deliveries: pickups do not cover all four quadrants");
+if (get("activityDefs.filter(d => d.type === 'delivery').some(d => Math.max(Math.abs(d.pickup.x), Math.abs(d.pickup.z)) > 250)") !== true)
+  failures.push("Deliveries: no pickup reaches the outer districts");
+step(2);
+if (!activityPanel.classList.contains("show") || skipVisible())
+  failures.push("Activity HUD: idle panel should point at the nearest pad with SKIP hidden");
+
+// On foot never starts an activity.
+const delivery1 = defOf("south-to-pink-house");
+run(`onFoot=true;player.x=${delivery1.pickup.x};player.z=${delivery1.pickup.z};`, "foot");
+step(5);
+if (actId() !== null) failures.push("Activity board: walking onto a pad started an activity");
+run("onFoot=false;", "foot");
+teleport(idleSpot);
+step(3);
+
+// ---- Delivery ----
+let cash0 = get("cash");
+teleport(delivery1.pickup);
+step(3);
+if (actId() !== delivery1.id || actPhase() !== "carrying")
+  failures.push("Delivery: driving onto the pickup did not start it");
+step(2);
+if (!skipVisible()) failures.push("Activity HUD: SKIP should be visible while an activity runs");
+// Other pads are ignored while an activity runs, and the board hides them.
+const otherPad = defOf("smash-west").startPad;
+teleport(otherPad);
+step(3);
+if (actId() !== delivery1.id) failures.push("Activity board: a second pad replaced the running activity");
+if (get("activeMarkers().some(m => m.start)")) failures.push("Activity board: start pads still shown during an activity");
+teleport(idleSpot);
+step(30);
+if (actId() !== delivery1.id || get("cash") !== cash0)
+  failures.push("Delivery: leaving the pickup area changed the delivery or cash");
+teleport(delivery1.dropoff);
+step(3);
+if (get("cash") !== cash0 + delivery1.payout)
+  failures.push("Delivery payout wrong: expected " + (cash0 + delivery1.payout) + ", got " + get("cash"));
+if (actId() !== null) failures.push("Delivery: still active after completion");
+step(10);
+if (get("cash") !== cash0 + delivery1.payout) failures.push("Delivery: paid more than once");
+
+// A pad entered during the short pause after a finish does not start, and waiting on it does
+// not start it either. Driving off and back on does.
+const delivery2 = defOf("cross-town-to-pink-house");
+teleport(delivery2.pickup);
+step(3);
+if (actId() !== null) failures.push("Activity board: a pad started during the pause after a finish");
+step(240);
+if (actId() !== null) failures.push("Activity board: sitting on a pad started it without driving onto it");
+teleport(idleSpot);
+step(2);
+teleport(delivery2.pickup);
+step(3);
+if (actId() !== delivery2.id) failures.push("Activity board: re-entering a pad did not start it");
+cash0 = get("cash");
+run("skipActivity()", "skip");
+step(2);
+if (actId() !== null || get("cash") !== cash0) failures.push("Skip: did not clear the activity or changed cash");
+step(60);
+if (actId() !== null) failures.push("Skip: an activity started again on its own");
+
+// ---- Smash targets (T-018) ----
+const smash = defOf("smash-northeast");
+teleport(idleSpot);
+step(60);
+const propsBefore = get("props.length");
+teleport(smash.startPad);
+step(3);
+if (actId() !== smash.id || actPhase() !== "smashing") failures.push("Smash: driving onto the pad did not start it");
+if (get("props.length") !== propsBefore + smash.targets.length)
+  failures.push("Smash: expected " + smash.targets.length + " target props to appear");
+if (get("activeMarkers().filter(m => m.kind === 'smashTarget').length") !== smash.targets.length)
+  failures.push("Smash: every target should have a marker");
+// Skipping removes the unbroken targets again.
+run("skipActivity()", "skip");
+step(2);
+if (get("props.length") !== propsBefore) failures.push("Smash: skipping left target props behind");
+teleport(idleSpot);
+step(60);
+teleport(smash.startPad);
+step(3);
+teleport(idleSpot); // the car leaves so only the scripted breaks below damage the targets
+cash0 = get("cash");
+// One target is broken by traffic (it still counts, with no cash), the rest by the player.
+run("currentActivity && currentActivity.targets && damageProp(currentActivity.targets[0], 60, trafficFleet[0]);", "smash");
+step(2);
+if (actId() !== smash.id) failures.push("Smash: finished before every target broke");
+if (get("currentActivity && currentActivity.targets ? currentActivity.targets.filter(p => p.broken).length : -1") !== 1 || !/1 \/ 4/.test(w.document.getElementById("activityText").textContent))
+  failures.push("Smash: progress did not count a broken target");
+run("currentActivity && currentActivity.targets && currentActivity.targets.filter(p => !p.broken).slice(0, -1).forEach(p => damageProp(p, 60, controlled));", "smash");
+step(2);
+if (actId() !== smash.id) failures.push("Smash: finished with one target still standing");
+run("if (currentActivity && currentActivity.targets) for (const p of currentActivity.targets) if (!p.broken) damageProp(p, 60, controlled);", "smash");
+step(3);
+const smashPropCash = 18 * (smash.targets.length - 1);
+if (actId() !== null) failures.push("Smash: did not finish after every target broke");
+if (get("cash") !== cash0 + smash.payout + smashPropCash)
+  failures.push("Smash payout wrong: expected " + (cash0 + smash.payout + smashPropCash) + ", got " + get("cash"));
+step(10);
+if (get("cash") !== cash0 + smash.payout + smashPropCash) failures.push("Smash: paid more than once");
+
+// ---- Stunt jump (T-018): real driving off the marked ramp ----
+const stunt = defOf("stunt-north");
+const stuntRamp = get(`allRamps.find(r => r.id === "${stunt.rampId}")`);
+const driveToLanding = (maxFrames) => {
+  let launched = false;
+  for (let i = 0; i < maxFrames; i++) {
+    step(1);
+    const g = get("controlled.grounded");
+    if (g === false) launched = true;
+    if (launched && g !== false) return true;
+  }
+  return launched;
+};
+const aimAtRamp = (speed) =>
+  run(`controlled.yaw=${stunt.startPad.z < stuntRamp.startZ ? 0 : Math.PI};controlled.yawRate=0;` +
+      `controlled.vx=0;controlled.vz=${(stunt.startPad.z < stuntRamp.startZ ? 1 : -1) * speed};controlled.grounded=true;`, "aim");
+teleport(idleSpot);
+step(200);
+teleport(stunt.startPad);
+step(2);
+if (actId() !== stunt.id || actPhase() !== "jumping") failures.push("Stunt: driving onto the pad did not start it");
+// A slow roll over the ramp launches but does not stay up long enough. No penalty, keep trying.
+cash0 = get("cash");
+run(`controlled.x=${stuntRamp.x};controlled.z=${stunt.startPad.z < stuntRamp.startZ ? stuntRamp.crestZ - 0.8 : stuntRamp.flatEndZ + 0.8};controlled.y=driveSurfaceH(controlled.x,controlled.z)+0.04;`, "slow");
+aimAtRamp(4);
+if (!driveToLanding(240)) failures.push("Stunt: the slow test roll did not launch");
+step(5);
+if (actId() !== stunt.id || get("cash") > cash0 + 30)
+  failures.push("Stunt: a slow roll should not finish the jump (airtime bonus aside)");
+// Full throttle from the pad completes it.
+teleport(stunt.startPad);
+aimAtRamp(0);
+cash0 = get("cash");
+key("keydown", "w", "KeyW");
+const landed = driveToLanding(400);
+key("keyup", "w", "KeyW");
+step(3);
+if (!landed) failures.push("Stunt: full throttle from the pad did not reach the ramp");
+if (actId() !== null) failures.push("Stunt: a full-speed jump off the marked ramp did not finish it");
+const stuntGain = get("cash") - cash0;
+if (stuntGain < stunt.payout || stuntGain > stunt.payout + 110)
+  failures.push("Stunt payout wrong: gained " + stuntGain + ", expected the payout plus any airtime bonus");
+step(10);
+if (get("cash") - cash0 !== stuntGain) failures.push("Stunt: paid more than once");
+// Jumping a different ramp does not count.
+const stuntW = defOf("stunt-west");
+teleport(idleSpot);
+step(200);
+teleport(stuntW.startPad);
+step(2);
+const eastRamp = get(`allRamps.find(r => r.id === "east-stunt")`);
+if (actId() !== stuntW.id) failures.push("Stunt: driving onto the west pad did not start it");
+run(`controlled.x=${eastRamp.x};controlled.z=${eastRamp.startZ - 16};controlled.yaw=0;controlled.yawRate=0;controlled.vx=0;controlled.vz=0;controlled.grounded=true;`, "wrong-ramp");
+const airBefore = get("cash");
+key("keydown", "w", "KeyW");
+if (!driveToLanding(400)) failures.push("Stunt: the wrong-ramp test jump did not launch");
+key("keyup", "w", "KeyW");
+step(3);
+if (get("cash") === airBefore) failures.push("Stunt: the wrong-ramp test jump was too short to prove anything");
+if (actId() !== stuntW.id) failures.push("Stunt: a jump off a different ramp finished the activity");
+run("skipActivity()", "skip");
+teleport(idleSpot);
+step(5);
 
 // Traffic should make intersection decisions, turn, and travel across the city grid over two simulated minutes.
 const trafficBefore = get(`trafficFleet.map((v) => ({
@@ -435,13 +578,27 @@ if (totalTrafficTurns < 48)
   );
 
 // Simulate a collision knockback for both classes and verify the shared soft recovery.
+// Use one compact and one pickup with no other vehicle close by, so a second collision during
+// the check cannot spin the car away and turn a lane-recovery test into a timing lottery.
+const recoveryPickExpr = `(() => {
+  const clear = (v) => vehicles.every((o) => o === v || Math.hypot(o.x - v.x, o.z - v.z) > 35);
+  const pick = (type) => trafficFleet.find((v) => (type === "pickup") === (v.type === "pickup") && clear(v)) ||
+    trafficFleet.find((v) => (type === "pickup") === (v.type === "pickup"));
+  return [pick("compact"), pick("pickup")];
+})()`;
 const recoverySetup = get(`(() => {
-  const targets = [trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")];
+  const targets = ${recoveryPickExpr};
+  window.__recoveryTargets = targets;
   return targets.map((v) => {
     const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
     const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
-    v.x = p.x + rightX * 8;
-    v.z = p.z + rightZ * 8;
+    // Knock to whichever side is clear of buildings. Teleporting a car inside a building
+    // collider tests building escape, not lane recovery, and depends on where traffic happens to be.
+    const inBuilding = (x, z) => buildingColliders.some((b) => b.kind === "building" &&
+      Math.abs(x - b.x) < b.hw + 3 && Math.abs(z - b.z) < b.hl + 3);
+    const side = inBuilding(p.x + rightX * 8, p.z + rightZ * 8) ? -1 : 1;
+    v.x = p.x + side * rightX * 8;
+    v.z = p.z + side * rightZ * 8;
     v.vx = 0;
     v.vz = 0;
     v.aiKnockTime = 2;
@@ -450,7 +607,7 @@ const recoverySetup = get(`(() => {
 })()`);
 step(240);
 const recoveryLateralErrors =
-  get(`[trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")].map((v) => {
+  get(`window.__recoveryTargets.map((v) => {
   const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);

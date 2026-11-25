@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.16.6</title>
+<title>Free Roam Car Playground · v0.17.0</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -335,7 +335,7 @@
   </div>
   <div class="dash-center">
     <div id="mapbox" aria-label="Fixed-orientation objective map with a rotating vehicle marker"><canvas id="map" width="360" height="216"></canvas></div>
-    <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
+    <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Stop this activity">SKIP (G)</button></div>
   </div>
   <div class="dash-side dash-right">
     <div class="cash-label">CASH</div><div id="cash">$0</div>
@@ -389,7 +389,7 @@
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
   const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
-   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.6";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
+   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.17.0";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;
   }
  } catch(error) {
