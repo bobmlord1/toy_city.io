@@ -139,9 +139,9 @@ if (!dashboard || !dashCenter || !activityPanel || !mapBox || !dashboard.contain
 if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== activityPanel || dashCenter.children[1] !== mapBox)
   failures.push("HUD: objective controls must sit directly above the minimap");
 const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
-if (!hudStyles.includes("grid-template-rows:15px 32px;") || !hudStyles.includes("grid-template-rows:13px 26px;"))
+if (!hudStyles.includes("grid-template-rows:18px 29px;") || !hudStyles.includes("grid-template-rows:16px 23px;"))
   failures.push("HUD: compact dashboard dimensions or mobile override are missing");
-if (!hudStyles.includes("width:88px;") || !hudStyles.includes("width:74px;height:26px;"))
+if (!hudStyles.includes("width:80px;") || !hudStyles.includes("width:64px;height:23px;"))
   failures.push("HUD: compact minimap proportions are missing");
 if (!hudStyles.includes("#dashboard #activity.show{display:flex}"))
   failures.push("HUD: active objective row is not restored when an activity is available");
