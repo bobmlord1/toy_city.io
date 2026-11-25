@@ -5,6 +5,13 @@
 // The big per-frame vehicle simulation function.
 // =============================================================================
 
+// True when a traffic car has left the street corridors far enough to touch a building or rock.
+function trafficOffStreet(v) {
+  const reach = SIDEWALK_OUTER - Math.hypot(v.width, v.length) * 0.5;
+  for (const line of streetLines)
+    if (Math.abs(v.x - line) < reach || Math.abs(v.z - line) < reach) return false;
+  return true;
+}
 function updateVehicle(v, dt) {
   if (v.boostCooldown > 0) v.boostCooldown = Math.max(0, v.boostCooldown - dt);
   const boostActive = v === controlled && !onFoot && v.boostTime > 0;
@@ -67,6 +74,9 @@ function updateVehicle(v, dt) {
       v.x += v.vx * dt;
       v.z += v.vz * dt;
       v.yaw = Math.atan2(v.vx, v.vz);
+      // T-020: a knocked car steering back to its lane must not drive through buildings or rocks.
+      // They only stand outside the street corridors, so on-road traffic skips this check.
+      if (trafficOffStreet(v)) for (const box of buildingColliders) resolveVehicleBuilding(v, box);
     } else {
       throw new Error("Unknown traffic route \"" + v.route + "\" for " + v.id);
     }
