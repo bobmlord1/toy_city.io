@@ -24,11 +24,30 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 7. **Short loops.** A simple activity should usually take about 30–90 seconds, but there is no time limit.
 8. **Safe.** No ads, tracking, external links, chat or real-money features.
 
-## Current state (v0.15.0)
+## Interface design direction (T-012 — selected for design phase)
+
+The HUD should feel like a **molded dashboard** built into the same toy world as the vehicles: compact, tactile, friendly and easy to scan. It should not look like a pile of unrelated translucent game panels or a loud arcade overlay.
+
+### Visual language
+- **Surfaces:** deep petrol/navy panels with a subtle molded-plastic finish; restrained translucency, soft edge highlights and minimal shadow. Avoid strong neon glows, stacked borders and decorative gradients.
+- **Typography:** use the existing readable system sans-serif. Large, tabular numerals for speed and cash; short labels; muted secondary text. Avoid long all-caps instructions.
+- **Shapes:** one consistent family of rounded rectangles and circular controls, with a small spacing/radius scale reused everywhere. Buttons should look and behave like the same family of physical dashboard controls.
+- **Palette:** deep petrol/navy for surfaces; warm ivory for primary text; muted blue-grey for secondary text; restrained aqua for interaction; warm yellow for rewards/objectives; coral for warnings/impact; soft green for success. Color is semantic, not decoration.
+- **Hierarchy:** one primary action at a time. Essential driving and navigation remain visible; help, tuning, camera and other secondary actions appear only when needed.
+
+### HUD and minimap principles
+- Keep the driving HUD to a compact speed/vehicle/cash cluster, with boost integrated into that cluster rather than occupying its own permanent panel.
+- The minimap is north-up for stable bearings, with a visible N marker, a high-contrast player arrow and a small heading cone. Reduce static building/rock detail to a quiet block silhouette; prioritize street connectivity, the player, traffic and the current activity.
+- Cache the minimap's static geometry once. Draw only moving vehicles, the player and activity markers each frame.
+- Allow the map to expand on tap/click. The expanded map remains north-up and should not cover essential driving controls for longer than needed.
+- Use short icon-led prompts. Show the activity card only when an activity is offered/active, tuning controls only at the tuning pad, and enter/exit controls only when interaction is relevant.
+- On touch devices, use a subdued but discoverable left thumbstick and right-side accelerator with a smaller brake. Keep large hit areas; let inactive controls become visually quiet rather than removing their affordance. Secondary actions are contextual.
+
+## Current state (v0.15.2)
 
 - Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles. The AI traffic fleet uses compact cars and pickups; semis remain player-driven for now.
 - Twenty-four persistent AI traffic vehicles start on varied road segments: 12 compact cars and 12 pickup trucks. They share the connected-grid controller and choose to continue, turn left or turn right, travelling between all four city quadrants.
-- Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants, larger collision footprints and slightly lower cruising speeds; all traffic retains soft recovery after collisions knock it off its lane.
+- Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants and larger collision footprints. v0.15.2 adds varied traffic speeds, speed matching behind slower vehicles and reduced route preference for a slower leader's chosen exit when a car remains held back.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
 - The upgrade-ramp side-wall and ramp-shadow fixes are implemented; the owner still needs to confirm their appearance in a real browser.
