@@ -85,16 +85,16 @@ Use a 4 px spacing base (4, 8, 12, 16, 24 px), three shared corner radii (8, 12,
 ### Shared behavior and implementation constraints
 - Desktop keyboard and mobile touch must both remain fully supported, regardless of the selected HUD profile.
 - Keep controls icon-first and child-readable. Do not introduce long labels, paragraphs, or a full GPS route system as part of the HUD redesign.
-- Preserve the existing game systems and keep the implementation incremental. This T-012 work is a design/specification phase; HUD and input code changes require separate approval.
+- Preserve the existing game systems and keep the implementation incremental. The owner authorized implementation on 2026-11-25. The first pass is on `feature/t012-molded-dashboard`; treat this specification as the acceptance criteria for review and playtesting.
 
-## Current state (v0.15.2)
+## Current state (v0.16.0 HUD implementation branch)
 
 - Drive a compact car, pickup truck or semi with trailer around a flat 4x4 city. Walk on foot and swap vehicles. The AI traffic fleet uses compact cars and pickups; semis remain player-driven for now.
 - Twenty-four persistent AI traffic vehicles start on varied road segments: 12 compact cars and 12 pickup trucks. They share the connected-grid controller and choose to continue, turn left or turn right, travelling between all four city quadrants.
 - Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants and larger collision footprints. v0.15.2 adds varied traffic speeds, speed matching behind slower vehicles and reduced route preference for a slower leader's chosen exit when a car remains held back.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
-- The owner confirmed the upgrade-ramp side-wall and ramp-shadow fixes look right in a real browser.
+- The owner confirmed the upgrade-ramp side-wall and ramp-shadow fixes look right in a real browser.\n- T-012 first implementation pass: top-center molded dashboard, integrated player-relative tilted objective map, Auto/Desktop/Mobile profile selector, invisible mobile swipe steering and bottom-right brake/boost/contextual enter-exit controls. This is on a feature branch and has not yet passed owner browser/touch playtesting.
 
 ## Approved gameplay loop (T-001 — approved 2026-11-24)
 
