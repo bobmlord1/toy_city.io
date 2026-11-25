@@ -141,6 +141,8 @@ if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== act
 const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
 if (!hudStyles.includes("grid-template-rows:15px 32px;") || !hudStyles.includes("grid-template-rows:13px 26px;"))
   failures.push("HUD: compact dashboard dimensions or mobile override are missing");
+if (!hudStyles.includes("width:88px;") || !hudStyles.includes("width:74px;height:26px;"))
+  failures.push("HUD: compact minimap proportions are missing");
 if (!hudStyles.includes("#dashboard #activity.show{display:flex}"))
   failures.push("HUD: active objective row is not restored when an activity is available");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
