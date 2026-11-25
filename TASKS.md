@@ -90,6 +90,7 @@ Notes:
  
 ### T-012 HUD, minimap and mobile interaction redesign (design phase)
 Assigned to: ChatGPT (design specification; implementation requires a separate approval).
+Status: direction selected; detailed component/layout specification next. No UI code authorized yet.
 Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
 Done when:
@@ -110,7 +111,6 @@ Notes:
  
 ## Later: proposed order, not yet authorized as coding tasks
 
-- Minimap static layer: `drawMap()` redraws every building and rock rectangle each frame. Draw them once into an offscreen canvas and copy it each frame. Fold this into the UI polish pass, since the minimap needs rework anyway.
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
 - Optional traffic experiment: raising the AI steering cap from 1.55 to 2.6 rad/s halved moderate lawn excursions in simulation (39 to 21 in 10 minutes) but left severe ones unchanged. It makes turns tighter, which is a visual call for the owner.
 - Intersection yielding: remaining traffic incidents are crossing and oncoming contacts at intersections. Fixing them needs right-of-way rules, which is a design decision before it is a coding task.
@@ -122,7 +122,6 @@ Notes:
 - Reapply the accepted toy-playset visual direction after the refactor, using the existing WebGL renderer and procedural geometry/material system. See the prior visual-development brief in the project conversation; do not introduce Blender or a new rendering engine.
 - Consider cosmetic rewards (vehicle colors, stickers, city decorations) after the cash/activity loop is balanced.
 - Treat the flying/hover car as a late-game capstone, not part of the first objective milestone.
-- Kid-friendly HUD: fewer words, bigger icons, hide the tuning panel unless needed.
 - Sound: engine hum, crash pops, goal jingle. Keep volume low by default.
 - Optional driving assist and an easy un-stick action.
 - Replace stale README launch instructions (mentions scripts that are not in the repo).
