@@ -416,3 +416,8 @@ Files changed: `index.html` (layout, markup, styles, version), `tools/smoke_test
 Verified: all 19 loaded JavaScript source files parse; the smoke-test file parses; static checks confirm the objective panel is inside the dashboard and precedes the map, the reserved desktop/mobile rows and map sizing are present, the active objective row has a display rule, and CSS braces are balanced.
 Not verified: `node tools/smoke_test.js` was not run; no real-browser/WebGL, phone or touch playtest. Visual legibility and forward visibility still need owner confirmation.
 Next agent should: Claude review the CSS/markup and run the full smoke test; then the owner should check objective text/SKIP, map legibility and forward sightline on desktop and mobile before merging PR #8.
+
+
+### 2026-11-25 | ChatGPT -> All | T-013 readability refinement
+Status: done
+Body: Kept the same compact overall footprint but moved a few pixels from the map to the objective row: 18×29px strip/map sizing on desktop and 16×23px on mobile; map width is 80px desktop and 64px mobile. Increased objective text and SKIP label sizes, and improved compact boost/cash/profile label sizing. This supersedes the map dimensions in the preceding T-013 HANDOFF. Browser/touch readability still needs owner validation.
