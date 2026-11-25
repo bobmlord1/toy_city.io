@@ -65,6 +65,12 @@ function mapProjectPoint(x, z, origin, scale, width, height) {
   ];
 }
 
+function mapHeadingScreenAngle(yaw) {
+  // The legacy city map has +X to the right and +Z upward; positive vehicle yaw
+  // turns toward screen-left, so the map arrow rotates by the negative yaw.
+  return -yaw;
+}
+
 function drawMap() {
   // Match the backing store to the displayed dimensions for crisp markers without distortion.
   const bounds = mapCanvas.getBoundingClientRect();
@@ -139,7 +145,7 @@ function drawMap() {
   // Screen-up is fixed to the city's world grid; the icon itself follows vehicle yaw.
   ctx.save();
   ctx.translate(W * 0.5, H * 0.5);
-  ctx.rotate(-(p.yaw || 0));
+  ctx.rotate(mapHeadingScreenAngle(p.yaw || 0));
   ctx.shadowColor = "rgba(0,0,0,.42)";
   ctx.shadowBlur = 6 * pixelRatio;
   ctx.fillStyle = "#72D2DC";
