@@ -11,7 +11,7 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 ## Audience
 
 - A young child, with a parent often nearby.
-- Likely plays on keyboard or touch. The input device is still unconfirmed (see `TASKS.md`).
+- Desktop keyboard and mobile touch are both supported. The HUD auto-selects a desktop/mobile profile with a persistent manual override; the child's most-used device is still unconfirmed.
 
 ## Principles
 
@@ -24,11 +24,11 @@ The visual identity is **die-cast cars on a molded-plastic playset**: glossy toy
 7. **Short loops.** A simple activity should usually take about 30–90 seconds, but there is no time limit.
 8. **Safe.** No ads, tracking, external links, chat or real-money features.
 
-## Interface design direction (T-012 — selected for design phase)
+## Interface design direction (T-012 — owner-approved design phase)
 
-The HUD should feel like a **molded dashboard** built into the same toy world as the vehicles: compact, tactile, friendly and easy to scan. It should not look like a pile of unrelated translucent game panels or a loud arcade overlay.
+The HUD should feel like a **molded toy dashboard**: playful, chunky and integrated with the die-cast / molded-plastic toy world. It should be less like a realistic car instrument cluster and more like a friendly control console on a toy vehicle or playset. Keep it calm and compact rather than turning it into a collection of arcade panels.
 
-### Design tokens (initial specification)
+### Design tokens (approved palette and initial specification)
 
 | Token | Value | Use |
 |---|---|---|
@@ -44,19 +44,48 @@ The HUD should feel like a **molded dashboard** built into the same toy world as
 Use a 4 px spacing base (4, 8, 12, 16, 24 px), three shared corner radii (8, 12, 18 px), and a single subtle 1 px light border. Keep typography to a small scale: 11–12 px secondary labels, 14 px standard controls, 18 px section values and 26–30 px primary speed. Use sentence case; reserve all-caps for very short status abbreviations. Prefer mostly opaque surfaces over heavy backdrop blur so mobile controls stay crisp and inexpensive to composite.
 
 ### Visual language
-- **Surfaces:** deep petrol/navy panels with a subtle molded-plastic finish; restrained translucency, soft edge highlights and minimal shadow. Avoid strong neon glows, stacked borders and decorative gradients.
-- **Typography:** use the existing readable system sans-serif. Large, tabular numerals for speed and cash; short labels; muted secondary text. Avoid long all-caps instructions.
-- **Shapes:** one consistent family of rounded rectangles and circular controls, with a small spacing/radius scale reused everywhere. Buttons should look and behave like the same family of physical dashboard controls.
-- **Palette:** deep petrol/navy for surfaces; warm ivory for primary text; muted blue-grey for secondary text; restrained aqua for interaction; warm yellow for rewards/objectives; coral for warnings/impact; soft green for success. Color is semantic, not decoration.
-- **Hierarchy:** one primary action at a time. Essential driving and navigation remain visible; help, tuning, camera and other secondary actions appear only when needed.
+- **Toy-like, not realistic:** use chunky, friendly proportions, rounded molded edges, raised plastic-like bezels and simple high-contrast symbols. Avoid realistic dials, dense instrument markings, metallic cockpit styling and tiny decorative details.
+- **Surfaces:** deep petrol/navy panels with restrained translucency, soft edge highlights and minimal shadow. Avoid strong neon glows, stacked borders and decorative gradients.
+- **Typography:** use the existing readable system sans-serif. Large, tabular numerals for speed and cash; short labels; muted secondary text.
+- **Shapes:** one consistent family of rounded rectangles and circular controls, with a small spacing/radius scale reused everywhere. All buttons should feel like parts of the same toy dashboard.
+- **Palette:** use the approved colors semantically, not decoratively. Aqua marks interaction/player navigation; yellow marks objectives/rewards/upgrades; coral marks warnings/impact; green marks success.
 
-### HUD and minimap principles
-- Keep the driving HUD to a compact speed/vehicle/cash cluster, with boost integrated into that cluster rather than occupying its own permanent panel.
-- The minimap is north-up for stable bearings, with a visible N marker, a high-contrast player arrow and a small heading cone. Reduce static building/rock detail to a quiet block silhouette; prioritize street connectivity, the player, traffic and the current activity.
-- Cache the minimap's static geometry once. Draw only moving vehicles, the player and activity markers each frame.
-- Allow the map to expand on tap/click. The expanded map remains north-up and should not cover essential driving controls for longer than needed.
-- Use short icon-led prompts. Show the activity card only when an activity is offered/active, tuning controls only at the tuning pad, and enter/exit controls only when interaction is relevant.
-- On touch devices, use a subdued but discoverable left thumbstick and right-side accelerator with a smaller brake. Keep large hit areas; let inactive controls become visually quiet rather than removing their affordance. Secondary actions are contextual.
+### Dashboard placement and hierarchy
+- Use one compact dashboard centered along the **top/overhead edge** of the play area. Keep the lower screen clear because thumbs naturally rest there during mobile play.
+- Integrate the minimap into the center of this dashboard; it is the visual anchor, not a separate floating panel.
+- Arrange only essential readouts around it: speed, current vehicle and cash. Integrate boost status rather than giving it a permanent standalone panel.
+- Keep the same dashboard and map visible across all views and modes, including driving, on-foot play and camera/view changes.
+- Activity details appear only when relevant. Tuning controls appear only at the tuning pad. Enter/exit appears only when an interaction is possible. Help and secondary actions stay contextual.
+- Prefer symbols and very short labels over sentences. Never require reading a paragraph while driving.
+
+### Minimap: player-relative toy diorama
+- Use a **tilted / oblique miniature-playset view** with a restrained tilt-shift toy-diorama feel. Keep markers crisp; do not blur important information for a photographic depth-of-field effect.
+- Rotate the map with the player's heading so the direction the player is travelling always points toward the top of the map. Do not use the previous north-up orientation or a permanent N marker.
+- Keep the player marker prominent and centered or near-centered. Show only the player and relevant activity/objective markers. A very quiet, simplified road pattern may remain as spatial context, but omit traffic icons, individual buildings, rocks, ordinary props and other background clutter.
+- Use large, distinct, icon-led objective markers with the approved semantic colors. Make current/next objective state obvious at a glance.
+- Keep the minimap present in every view, including when walking or when no objective is active. When there is no active objective, show the player and only relevant available activity cues rather than filling the map with world detail.
+- Cache the simplified map backdrop. Update player position/orientation and objective markers dynamically; do not redraw every city object each frame.
+- Any optional map expansion should enlarge the integrated map in place and preserve the dashboard relationship, rather than opening an unrelated full-screen map by default.
+
+### Desktop and mobile profiles
+- Design separate desktop and mobile HUD arrangements; do not simply scale one layout down.
+- In automatic mode, infer the layout from primary pointer capability and viewport dimensions. Prefer capability/responsive detection rather than user-agent string sniffing.
+- Provide a user-accessible override with three modes: **Auto / Desktop / Mobile**. A manual choice must take precedence over detection and persist across reloads. This covers hybrid devices and cases where detection chooses incorrectly.
+- Desktop keeps keyboard support and uses the top-center dashboard with a roomier layout. Keyboard help belongs in a small temporary help overlay, not permanently across the play area.
+- Mobile keeps the same top-center dashboard but uses a more compact arrangement and leaves the bottom of the screen open for touch interaction.
+
+### Mobile driving controls
+- Use an **invisible, floating swipe stick** on the lower-left / left-side play area. The initial touch establishes the stick's origin; finger displacement controls steering and forward/reverse movement. Do not draw a permanent joystick base or knob.
+- Releasing the touch returns the stick to neutral. Support simultaneous touches so the player can steer while pressing a right-side button.
+- Put **brake**, **boost** and the contextual **enter/exit** action in a consistent icon-button cluster at the bottom right. Show enter when near a usable vehicle and exit while inside one; use one contextual enter/exit button rather than two permanent buttons.
+- The stick and buttons must have forgiving hit areas and avoid overlapping the top dashboard. The control buttons should share the dashboard's molded-plastic shape language and remain visually distinct from the driving scene.
+- On-foot movement uses the same invisible stick. Only show vehicle-specific actions when they apply.
+- Because the stick is invisible, allow a brief, optional first-use swipe cue; it should fade quickly and never become a permanent instructional panel.
+
+### Shared behavior and implementation constraints
+- Desktop keyboard and mobile touch must both remain fully supported, regardless of the selected HUD profile.
+- Keep controls icon-first and child-readable. Do not introduce long labels, paragraphs, or a full GPS route system as part of the HUD redesign.
+- Preserve the existing game systems and keep the implementation incremental. This T-012 work is a design/specification phase; HUD and input code changes require separate approval.
 
 ## Current state (v0.15.2)
 
@@ -65,7 +94,7 @@ Use a 4 px spacing base (4, 8, 12, 16, 24 px), three shared corner radii (8, 12,
 - Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants and larger collision footprints. v0.15.2 adds varied traffic speeds, speed matching behind slower vehicles and reduced route preference for a slower leader's chosen exit when a car remains held back.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
-- The upgrade-ramp side-wall and ramp-shadow fixes are implemented; the owner still needs to confirm their appearance in a real browser.
+- The owner confirmed the upgrade-ramp side-wall and ramp-shadow fixes look right in a real browser.
 
 ## Approved gameplay loop (T-001 — approved 2026-11-24)
 
@@ -113,3 +142,4 @@ These activities exercise navigation, destructible props, and ramps/airtime.
 - 2026-11-24: Approved optional delivery, marked-prop smash, and stunt-jump activities; visual beacon plus minimap guidance; activity payouts of approximately $75–$150 as primary predictable income; retain crash/airtime cash as incidental bonuses. No timers, failure states, penalties, or forced participation. T-002 authorized.
 - 2026-11-24: Owner playtest of v0.13.0 found that fixed district loops did not produce visible traffic moving through the wider street grid. T-007 replaces closed loops with simple intersection decisions and seeded, varied starting road segments.
 - 2026-11-24: The owner reported that the city still felt empty after T-007 and requested 12 additional trucks plus six semis. T-008 adds 12 AI pickups using the same seeded grid controller (24 traffic vehicles total); moving AI semis are deferred until the route planner handles tractor-trailer swept clearance.
+- 2026-11-25: The owner approved the T-012 palette and dashboard direction, moved the dashboard to the top-center, chose a toy-like interface, and replaced the proposed north-up map/visible stick with a player-relative tilted objective map and invisible swipe-stick mobile controls. Desktop/mobile profiles should be detected automatically with a manual override.
