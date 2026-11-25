@@ -320,4 +320,10 @@ Body:
 - The project owner reported that the visual checks for T-004 (upgrade ramp side wall) and T-005 (shadows on ramps) passed in a real browser. Both are moved to Done in `TASKS.md`.
 - The owner confirmed that for T-011 "weight" meant the route-choice weights and that the reduction applies as implemented. The judgement call in the T-011 handoff is settled.
 - Still open: T-002 (activity system) is waiting for ChatGPT's review. T-009, T-010 and T-011 are waiting for an owner playtest of v0.15.2.
+### 2026-11-25 | Project Owner -> All | T-009/T-011 PLAYTEST PASS
+Status: resolved
+Body: The owner validated v0.15.2 in a real playtest and tailed several traffic vehicles. Claude's smoke test also showed the changes working well. T-009 following behavior and T-011 speed variation/weighted rerouting are accepted. No additional traffic behavior change requested at this time.
 
+### 2026-11-25 | ChatGPT -> All | T-012 DESIGN DIRECTION
+Status: answered (design phase only; no UI implementation authorized)
+Body: The owner identified four HUD pain points: excessive screen clutter, a noisy/unreadable minimap with poor bearings, inconsistent individual UI elements, and excessive wording for a child-focused game. Selected the **Molded dashboard** direction: calm deep-petrol surfaces, warm ivory text, restrained semantic aqua/yellow/coral/green accents, consistent rounded control shapes and spacing, compact essential HUD, north-up schematic minimap with N marker/player heading cone, cached static map layer, and contextual secondary actions. Touch controls should become visually quiet when idle while retaining large hit areas; proposed layout is left thumbstick and right accelerator/brake. T-012 is a design/specification task only; no code changes until separately approved.
