@@ -129,6 +129,18 @@ Notes:
 - Static validation: all 19 loaded JavaScript source files parse; the smoke-test script parses; markup and CSS checks confirm objective containment/order, fixed compact row dimensions, map sizing and the active-row rule.
 - Not yet run: `node tools/smoke_test.js` (requires the project's local Node/jsdom/assets setup). No real-browser, WebGL, phone or touch playtest has been performed.
 
+### T-014 Side-by-side minimap and objective panel
+Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
+Status: in progress on `feature/t012-molded-dashboard`; owner visual playtest pending.
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Why: The compact stacked objective strip forced the integrated minimap to become too small to use comfortably.
+Done when:
+- Place the minimap and active-objective information side by side in the dashboard center section.
+- Increase the minimap's visible size substantially while preserving the compact top-center dashboard and keeping its overall height close to the v0.16.3 design.
+- Keep the objective icon, concise instruction/distance and SKIP action visible and usable on desktop and mobile; no layout jump when no objective is active.
+- Update structural regression checks and build/version documentation.
+Notes: Keep the fixed-world map orientation and current minimap rendering logic unchanged. This is a layout-only adjustment; no gameplay or activity-state changes.
+
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
