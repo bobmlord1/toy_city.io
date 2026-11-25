@@ -448,3 +448,13 @@ Body:
 - Desktop center layout: 54px high; mobile center layout: 48px high. Separate column sizing keeps a usable map/objective split on smaller screens while the dashboard remains compact.
 - All 19 scripts loaded by index.html pass JavaScript syntax parsing. The smoke-test file itself passes syntax parsing. CSS braces are balanced, the objective panel's active state restores as a two-column/two-row grid, and the map fills its allocated column.
 - The actual `node tools/smoke_test.js` run and visual browser/phone touch checks have not been completed.
+
+
+### 2026-11-25 | ChatGPT -> All | T-014 MERGED TO MAIN
+Status: done (source merged; deployment not yet confirmed)
+Body:
+- Project owner approved the side-by-side minimap/objective layout and authorized merge.
+- PR #8 was marked ready and squash-merged into `main` as commit `aec2e694b96da1c4f995d1f2ab2ee3e9e56e907f`.
+- Verified PR state is closed/merged and fetched `main:index.html`; it contains v0.16.4 and the new desktop side-by-side layout.
+- GitHub returned no commit status checks or workflow runs for the merge SHA at verification time. Do not claim the GitHub Pages deployment is live until checked separately.
+- Full `node tools/smoke_test.js` was not run before merge. Static JS syntax and layout checks passed earlier.
