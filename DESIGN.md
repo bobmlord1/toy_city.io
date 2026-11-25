@@ -146,3 +146,8 @@ These activities exercise navigation, destructible props, and ramps/airtime.
 - 2026-11-25: The owner approved the T-012 palette and dashboard direction, moved the dashboard to the top-center, chose a toy-like interface, and initially chose a player-relative tilted map with invisible swipe-stick mobile controls. Desktop/mobile profiles should be detected automatically with a manual override.
 - 2026-11-25: After seeing the heading-up map in play, the owner found its counter-rotating street grid disorienting. T-012 refinement switches to a fixed world-oriented street map with a vehicle marker that rotates with the car. The map's horizontal axis is aligned with the chase-camera view so the marker and objective bearings match the left/right direction seen in play.
 - 2026-11-25: The owner asked to move the PBR lighting selector from the driving HUD to the startup screen, and to make the HUD more distinctive by using the approved aqua, yellow, coral and green accents more strongly. T-012 refinement adds a compact digital speed readout in a ring gauge and uses stronger molded-plastic color blocking.
+
+
+### 2026-11-25 HUD layout refinement
+- The compact dashboard keeps the minimap and active objective details side by side in its center section, rather than stacking the objective strip above the map. Give the map the first/left column and the objective text plus SKIP action the second/right column.
+- Keep the overall dashboard short; use distinct desktop/mobile proportions so the map remains legible on a phone. The objective column remains reserved when no activity is active.
