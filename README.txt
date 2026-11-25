@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.16.2 (HUD refinement branch)
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.3 (HUD refinement branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -70,3 +70,9 @@ Version 0.16.1 (T-012 HUD refinement branch):
 Version 0.16.2:
 - Made the speed gauge optional at runtime; older/cached page markup falls back to a numeric MPH readout instead of stopping the game loop.
 - Versioned dynamic game-script URLs to reduce stale HTML/script combinations.
+
+
+Version 0.16.3 (T-013 compact dashboard):
+- Cut the dashboard's vertical footprint to roughly half by arranging vehicle and cash telemetry in compact side panels.
+- Moved the active delivery instruction, distance and SKIP action into a reserved strip immediately above the minimap.
+- Kept the objective strip's space reserved so the dashboard does not jump when an activity appears or clears.
