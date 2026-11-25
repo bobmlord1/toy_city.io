@@ -113,6 +113,19 @@ Notes:
 - The earlier heading-up/counter-rotating minimap was superseded after owner playtesting on 2026-11-25. The original north-up compass/traffic-rich map and visible left thumbstick/right accelerator proposal remain rejected.
 - T-003's exact primary device remains unconfirmed, but supporting both profiles with automatic detection and manual override means it no longer blocks T-012.
  
+### T-013 Compact dashboard and integrated objective strip
+Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
+Status: implementation in progress on `feature/t012-molded-dashboard`; owner visual playtest pending.
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
+Why: The top-center dashboard currently obscures too much of the driving view, and the separate objective panel competes with the dashboard for screen space.
+Done when:
+- Reduce the dashboard's visible vertical footprint to approximately half its current size on desktop and mobile, while retaining readable speed, vehicle, boost, cash and profile controls.
+- Put the active objective icon, concise instruction/distance and SKIP control inside the dashboard, in a compact row directly above the minimap.
+- Reserve the objective row so the dashboard does not jump in height when an activity appears or disappears.
+- Keep the minimap, objective skip interaction, touch controls and desktop keyboard behavior working.
+- Add structural regression checks and update the build version/documentation.
+Notes: Avoid gameplay or activity-state changes. A real browser/touch check is still required to judge map legibility and actual forward visibility.
+
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
