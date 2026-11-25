@@ -139,7 +139,7 @@ function drawMap() {
   // Screen-up is fixed to the city's world grid; the icon itself follows vehicle yaw.
   ctx.save();
   ctx.translate(W * 0.5, H * 0.5);
-  ctx.rotate(p.yaw || 0);
+  ctx.rotate(-(p.yaw || 0));
   ctx.shadowColor = "rgba(0,0,0,.42)";
   ctx.shadowBlur = 6 * pixelRatio;
   ctx.fillStyle = "#72D2DC";
