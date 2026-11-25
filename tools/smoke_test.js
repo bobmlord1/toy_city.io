@@ -136,15 +136,17 @@ const activityPanel = w.document.getElementById("activity");
 const mapBox = w.document.getElementById("mapbox");
 if (!dashboard || !dashCenter || !activityPanel || !mapBox || !dashboard.contains(activityPanel))
   failures.push("HUD: objective panel is not integrated into the dashboard");
-if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== activityPanel || dashCenter.children[1] !== mapBox)
-  failures.push("HUD: objective controls must sit directly above the minimap");
+if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== mapBox || dashCenter.children[1] !== activityPanel)
+  failures.push("HUD: minimap and objective details must be side by side, with map first");
 const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
-if (!hudStyles.includes("grid-template-rows:18px 29px;") || !hudStyles.includes("grid-template-rows:16px 23px;"))
-  failures.push("HUD: compact dashboard dimensions or mobile override are missing");
-if (!hudStyles.includes("width:80px;") || !hudStyles.includes("width:64px;height:23px;"))
-  failures.push("HUD: compact minimap proportions are missing");
-if (!hudStyles.includes("#dashboard #activity.show{display:flex}"))
-  failures.push("HUD: active objective row is not restored when an activity is available");
+if (!hudStyles.includes("grid-template-columns:minmax(96px,.9fr) minmax(120px,1.1fr);") || !hudStyles.includes("grid-template-rows:54px;"))
+  failures.push("HUD: desktop side-by-side map/objective dimensions are missing");
+if (!hudStyles.includes("grid-template-columns:minmax(64px,.9fr) minmax(88px,1.1fr);") || !hudStyles.includes("grid-template-rows:48px;"))
+  failures.push("HUD: mobile side-by-side map/objective dimensions are missing");
+if (!hudStyles.includes("#dashboard #activity.show{display:grid}"))
+  failures.push("HUD: active objective panel is not restored when an activity is available");
+if (!hudStyles.includes("width:100%;") || !hudStyles.includes("height:54px;"))
+  failures.push("HUD: minimap is not sized to fill its larger dashboard column");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
