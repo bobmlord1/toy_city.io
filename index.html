@@ -185,7 +185,20 @@
   }
   .dash-left .speed-gauge{grid-area:gauge;width:38px;height:38px}
   #dashboard #vehicleName{grid-area:name;align-self:end;justify-self:start;width:100%;font-size:8px;letter-spacing:.04em}
-  #dashboard #boostStatus{grid-area:boost;align-self:start;justify-self:start;padding:2px 5px;font-size:7px;letter-spacing:0}
+  #dashboard #boostStatus{
+    grid-area:boost;
+    align-self:start;
+    justify-self:start;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    padding:2px 5px;
+    font-size:7px;
+    letter-spacing:0;
+  }
+  #dashboard #speed{font-size:16px}
+  #dashboard #speedUnit{font-size:6px}
   .dash-center{
     min-width:0;
     width:100%;
@@ -277,7 +290,7 @@
     body.hud-mobile #dashboard .dash-right{min-height:38px;padding:2px 3px;border-radius:10px;gap:1px 3px}
     body.hud-mobile #dashboard .dash-left .speed-gauge{width:32px;height:32px}
     body.hud-mobile #dashboard #vehicleName{font-size:7px;letter-spacing:0}
-    body.hud-mobile #dashboard #speed{font-size:14px}
+    body.hud-mobile #dashboard #speed{font-size:12px}
     body.hud-mobile #dashboard #speedUnit{font-size:6px;margin-top:1px}
     body.hud-mobile #dashboard #boostStatus{padding:1px 3px;font-size:6px}
     body.hud-mobile #dashboard .dash-center{grid-template-rows:13px 26px;gap:1px}
