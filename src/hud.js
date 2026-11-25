@@ -140,12 +140,24 @@ function drawMap() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Only current objective(s) are shown. Color is meaningful: yellow pickup, green drop-off.
+  // Activity markers (src/activities.js): the running activity's objective, or every start pad
+  // when none is running. Colors come from ACTIVITY_MAP_COLORS. Markers flagged "pin" stay on
+  // the map edge when they are out of view, so there is always a direction to drive.
+  const edge = Math.max(6, 9 * scale) + 2;
   for (const marker of activeMarkers()) {
-    const [x, y] = project(marker.x, marker.z);
-    const color = marker.kind === "pickup" ? "#F4CF59" : "#8BC99B";
+    let [x, y] = project(marker.x, marker.z);
+    const outside = x < edge || x > W - edge || y < edge || y > H - edge;
+    if (outside && !marker.pin) continue;
+    if (outside) {
+      const dx = x - W * 0.5, dy = y - H * 0.5;
+      const k = Math.min((W * 0.5 - edge) / Math.max(Math.abs(dx), 1e-6), (H * 0.5 - edge) / Math.max(Math.abs(dy), 1e-6));
+      x = W * 0.5 + dx * k;
+      y = H * 0.5 + dy * k;
+    }
+    const radius = Math.max(6, 9 * scale) * (outside || marker.kind === "smashTarget" ? 0.75 : 1);
+    const color = ACTIVITY_MAP_COLORS[marker.kind] || "#8BC99B";
     ctx.beginPath();
-    ctx.arc(x, y, Math.max(6, 9 * scale), 0, Math.PI * 2);
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
     ctx.lineWidth = Math.max(1.5, 2.5 * scale);

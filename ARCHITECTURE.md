@@ -40,7 +40,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
 | `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
-| `activities.js` | Optional activities: offers, beacons, minimap markers, payouts. Ships the `delivery` type. |
+| `activities.js` | Optional activities: start pads, objective markers, minimap markers, payouts. Ships `delivery`, `smash` and `stunt`. |
 | `interaction.js` | `say()`, enter/exit vehicle, small vehicle helpers. |
 | `input.js` | Keyboard and touch, steering convention, boost. |
 | `collisions.js` | Collision resolution, trailer physics, suspension, airtime. |
@@ -90,11 +90,16 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 
 `src/activities.js` is the optional-activity framework. It is deliberately small.
 
-- **One offer at a time.** `currentActivity` is `{ def, phase, t }` or `null`. An "offer" is just a visible pickup beacon. Ignoring it costs nothing. The next offer appears about 2.6 seconds after a completion or a skip.
-- **Data plus type.** `activityDefs` holds hand-authored locations and payouts. `activityTypes[type]` holds behaviour: `markers(act)` returns what to draw, `hud(act)` returns an icon and short text, `update(act)` returns `"complete"` when the reward is due.
-- **Hooks into other files** (the only places other code touches it): `updateActivities(dt)` in `main.js`, `drawActivityMarkers(vp)` in `camera_render.js`, `drawActivityMapMarkers()` and `updateActivityHud()` in `hud.js`, the `G` key in `input.js`, and `awardCash()` in `economy.js`. The HUD panel markup is in `index.html`.
-- **Payout safety.** `completeActivity()` clears `currentActivity` before paying, so an activity can pay only once. There is no timer, no failure state and no cash deduction anywhere.
-- **Not built yet:** smash-target and stunt-jump types. Smash targets need stable prop identity and a break event: props have no ids and broken props are spliced out of `props` (see `damageProp()` in `collisions.js` and `updateProps()` in `physics.js`). Stunt jump needs the ramp that launched the vehicle to be identifiable (ramps have ids, but airtime state does not record which one was used).
+- **Activity board, nothing auto-assigned.** Every entry in `activityDefs` has a start pad. While no activity runs, every pad is drawn in the world (within `ACTIVITY_DRAW_DISTANCE` of the camera) and on the minimap, and the nearest pad of each type is pinned to the map edge. Driving onto a pad starts that activity. Walking onto it does nothing.
+- **Start on entry only.** `updateActivities()` keeps the set of pads the vehicle is on (`activityPadsInside`) and starts an activity only when the vehicle enters a pad. Finishing, spawning or skipping on top of a pad never starts it, and pads are also inactive for `ACTIVITY_RESTART_DELAY` seconds after a finish.
+- **One at a time.** `currentActivity` is `{ def, phase, t, ... }` or `null`. While one runs, other pads are hidden and ignored. SKIP (or the `G` key) stops it with no penalty; the SKIP button is hidden when nothing is running.
+- **Data plus type.** `activityDefs` holds hand-authored locations and payouts. `activityTypes[type]` holds behaviour: `start(def)` (pad position), `begin(act)`, `markers(act)`, `hud(act)`, `update(act)` (returns `"complete"` when the reward is due), `finish(act)` (celebration spot and text) and optional `cleanup(act)` on skip.
+- **Types.**
+  - `delivery`: pickup pad, then a drop-off. Payout is $75 plus 25 cents per world unit between them, capped at $150 (`deliveryPayout()`).
+  - `smash`: on start, `addProp()` places the def's targets (barrels and crates) just past the pad, and the activity keeps references to those prop objects. Broken props are spliced out of `props` but keep `broken = true`, which is how progress is counted. A target broken by traffic still counts. Skipping removes unbroken targets. Prop smash cash ($18 each) is still paid as usual.
+  - `stunt`: `updateVehicle()` records `v.lastRampId` at launch. The activity watches the controlled vehicle while it is airborne from the def's `rampId` and completes on landing if it stayed up at least `STUNT_MIN_AIR_SECONDS` (0.49 s). Measured headless: any launch gets about 0.47 s, and full throttle from the pad gives 0.5 to 0.7 s with every player vehicle at stock speed. A short jump says "go faster" and the activity keeps waiting.
+- **Hooks into other files** (the only places other code touches it): `updateActivities(dt)` in `main.js`, `drawActivityMarkers(vp)` in `camera_render.js`, `activeMarkers()`, `ACTIVITY_MAP_COLORS` and `updateActivityHud()` in `hud.js`, the `G` key in `input.js`, `awardCash()` in `economy.js`, `addProp()`/`propSpotAllowed()` in `props.js` and `v.lastRampId` in `vehicle_update.js`. The HUD panel markup is in `index.html`.
+- **Payout safety.** `completeActivity()` clears `currentActivity` before paying, so an activity can pay only once per run. There is no timer, no failure state and no cash deduction anywhere.
 
 ## Recipes
 
@@ -102,12 +107,13 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 - **New prop:** today there are two types, `crate` and `barrel`. Their meshes are built in `vehicles.js` (`crateModel`, `barrelModel`), their stats are in `addProp()` in `props.js`, and they are drawn in `camera_render.js`. A new type touches all three. Place props with `addProp(type, x, z)`.
 - **New street piece:** add an entry to `streetModules` in `world_streets.js` and place it through `placeStreetUnit`.
 - **New vehicle:** add its mesh to `assets/`, create it with `createVehicleVisual`, and spawn it with `vehicle(...)` in `vehicles.js`.
-- **New delivery:** add an entry to `activityDefs` in `activities.js` with fixed `pickup` and `dropoff` coordinates and a payout between $75 and $150. Run `node tools/smoke_test.js`, which rejects zones that overlap buildings, rocks or ramps.
-- **New activity type (smash targets, stunt jump):** add an entry to `activityTypes` with `markers(act)`, `hud(act)` and `update(act)`, then add defs that use it. See "Activities" below.
+- **New delivery:** add a `delivery(id, pickup, dropoff)` line to `activityDefs` in `activities.js`; the payout comes from the distance. Run `node tools/smoke_test.js`, which rejects pads that overlap buildings, rocks, ramps or each other, and drop-offs that sit on another activity's pad.
+- **New smash site or stunt jump:** add a def with `type: "smash"` (a `start` pad and `targets`) or `type: "stunt"` (a `start` pad on a ramp run-up and its `rampId`). The smoke test checks target spots and that a stunt pad lines up with its ramp.
+- **New activity type:** add an entry to `activityTypes` with the functions listed under "Activities", then add defs that use it.
 
 ## Testing
 
-- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, checks the activity board (nothing starts on its own, pads start only on entry, on foot does nothing, one activity at a time), plays a delivery, a smash run (including skip cleanup and a traffic-broken target) and a real full-throttle stunt jump (plus a slow roll and a wrong ramp that must not count), checks single payouts, checks activity locations against buildings, ramps and each other, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
 - `node tools/traffic_report.js [minutes]` simulates the AI traffic with no player and reports collision incidents (grouped, not per frame), their kinds, and how often and how long cars leave the road. Run it before and after changing traffic code. It is a measurement, not a pass/fail test.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 

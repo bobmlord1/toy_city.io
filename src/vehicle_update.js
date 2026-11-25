@@ -176,6 +176,7 @@ function updateVehicle(v, dt) {
           v.grounded = false;
           v.airTime = 0;
           v.lastRampLaunch = performance.now();
+          v.lastRampId = r.id; // read by the stunt-jump activity (src/activities.js)
           say("RAMP JUMP! Stay in the air to earn a bonus.", 1100);
           break;
         }

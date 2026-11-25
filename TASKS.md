@@ -57,13 +57,6 @@ Notes:
 - Toybox Events are a separate occasional spectacle layer alongside free roam and repeatable normal activities; they should remain optional and should not punish players for ignoring them.
 - Reuse current systems and keep scope modest. Avoid introducing complex AI, elaborate cutscenes, voice acting or a new combat system.
 
-### T-016 Repair the smoke test harness
-Assigned to: Claude. Owner approved 2026-11-25.
-Files: `tools/smoke_test.js`.
-Why: the prop regression checks added in PRs #9 and #10 return objects where the harness expects JSON text, so `node tools/smoke_test.js` crashed before checking anything.
-Done when: `node tools/smoke_test.js` runs to completion and prints SMOKE TEST PASSED on main.
-Status: done in v0.17.0 (see agent_comments.md).
-
 ### T-017 Activity board: drive-over start markers, no auto-assign
 Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/activities.js`, `src/props.js` (return the placed prop), `src/vehicle_update.js` (record the launch ramp id), `src/hud.js` (map marker color and edge pins only), `index.html` (skip button label and version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
@@ -90,7 +83,8 @@ Status: code complete in v0.17.0, waiting on owner playtest.
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
 - Optional traffic experiment: raising the AI steering cap from 1.55 to 2.6 rad/s halved moderate lawn excursions in simulation (39 to 21 in 10 minutes) but left severe ones unchanged. It makes turns tighter, which is a visual call for the owner.
 - Intersection yielding: remaining traffic incidents are crossing and oncoming contacts at intersections. Fixing them needs right-of-way rules, which is a design decision before it is a coding task.
-- Add the other two approved activity types after T-002 proves the activity framework.
+- Traffic can drive through buildings after a knock (found while fixing the smoke test, 2026-11-25): a traffic car spun around by a second collision drove through the yard warehouse and then the Yellow House. `resolveVehicleBuilding()` runs for traffic, but the route spring appears to pull the car through once it is deep enough. Needs a look in `vehicle_update.js` and `collisions.js` before it is a task.
+- Activity tuning after playtest: smash payout ($100 for four targets plus $18 per prop), the stunt airtime goal (0.49 s) and whether 24 pads feel like too many or too few.
 - After the owner playtests T-008, reassess whether 24 mixed traffic vehicles feel busy enough and whether desktop/mobile performance remains comfortable; do not add more traffic until that check.
 - Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
 - Distribute upgrade access around the city only if playtesting shows the single tuning pad is inconvenient.
@@ -105,6 +99,7 @@ Status: code complete in v0.17.0, waiting on owner playtest.
 
 ## Done
 
+- **T-016 Smoke test harness repair:** the prop regression checks returned objects instead of JSON, so the test crashed before checking anything. Fixed 2026-11-25; the smoke test runs again.
 - **T-002 — Optional activity system v1:** Added the optional delivery activity loop with visible guidance, completion feedback and cash payout; owner playtested the loop repeatedly and confirmed it is fun.
 - **T-004 — Upgrade ramp side-wall fix:** Corrected the ramp geometry so the right wall follows the slope without a fin or gap; owner confirmed in-browser.
 - **T-005 — Ramp and tuning-pad shadow fix:** Aligned shadows to ramp surfaces and cleared the tuning pad; owner confirmed in-browser. A narrow visual artifact can remain where a shadow crosses a ramp's vertical side wall.
