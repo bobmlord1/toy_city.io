@@ -88,30 +88,26 @@ Notes:
 - The owner also asked for six semis. Defer moving AI semis in this task: the trailer articulation simulation already runs for AI vehicles, but the existing compact-car turn path does not account for a tractor-trailer swept footprint. Do not add six semis as untested moving traffic; a later task should add trailer-aware path planning, turn clearance and speed control.
 - No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
  
-### T-009 Traffic following behavior
-Assigned to: Claude (engineering). Approved by the project owner on 2026-11-24.
-Status: implemented (v0.15.1). Waiting for an owner playtest in a real browser.
-Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`.
-Why: Traffic cars caught slower cars in the same lane and rear-ended them (25 of 52 incidents in 10 simulated minutes), which triggered knockback and trips onto the lawn.
-Done when: a fast car behind a slow car does not hit it (checked by `tools/smoke_test.js`), free-flowing traffic is unchanged, and the owner sees calmer traffic.
-Notes: Measured with `node tools/traffic_report.js 10`: rear-end incidents 25 to 5, contact time 13.5 s to 0.8 s, lawn excursions 89 to 76. See the HANDOFF in `agent_comments.md`.
-
-### T-010 Dead code cleanup and performance once-over
-Assigned to: Claude (engineering). Approved by the project owner on 2026-11-24.
-Status: implemented (v0.15.1). Behavior-preserving, verified exact.
-Files: `src/collisions.js`, `src/physics.js`, `src/vehicle_update.js`, `src/vehicles.js`, `src/hud.js`.
-Why: Remove unused code and fix obvious waste found by profiling.
-Done when: the simulation is identical before and after (same state fingerprint over 4,000 frames), physics cost drops, and the smoke test passes.
-Notes: Physics CPU per frame fell from 0.46 to 0.15 ms in headless measurement. Removed the unused `"z"` and `"x"` route branches and fields. Skipped idle props and far colliders, and cached HUD writes.
-
-### T-011 Traffic speed variation and weighted routing behind slower cars
-Assigned to: Claude (engineering). Requested by the project owner on 2026-11-25.
-Status: implemented (v0.15.2). Waiting for an owner playtest in a real browser.
-Files: `src/vehicles.js`, `tools/smoke_test.js`, `tools/traffic_report.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`.
-Why: Real traffic is not all the same speed, and a driver stuck behind a slower car tends to take a different road.
-Done when: traffic top speeds vary by up to 5 mph either way and differ on each page load; a car held back by a slower car has the weight of that car's exit halved at the shared intersection, and halved again at each further intersection (checked by `tools/smoke_test.js`); and the owner sees more varied traffic that spreads out.
-Notes: Interpretation confirmed by the owner on 2026-11-25: "weight" means the route-choice weights (0.56 straight, 0.22 left, 0.22 right). The reduction applies to whichever exit the slower car takes, not only straight. Measured over six random speed draws of 6 simulated minutes: time held back behind a slower car 3.4% to 2.4%, longest run of intersections while held back 6 to 3, incidents and lawn trips about unchanged.
-
+### T-012 HUD, minimap and mobile interaction redesign (design phase)
+Assigned to: ChatGPT (design specification; implementation requires a separate approval).
+Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
+Done when:
+- Define one cohesive visual language: palette, typography, shape, spacing, surfaces, borders, icon treatment and semantic status colors.
+- Define a compact always-visible HUD hierarchy and which panels/actions become contextual.
+- Specify a simpler north-up minimap with clear player heading/bearing, reduced map noise, readable traffic/objective markers and an expand interaction.
+- Specify a responsive touch-control approach that preserves large usable touch targets while reducing persistent visual clutter.
+- Include child-focused language rules: icons first, short labels, no paragraphs of instructions during play.
+- Keep desktop keyboard and mobile touch both supported. No code changes in this design phase.
+Notes:
+- Selected direction: **Molded dashboard** — a calm, compact instrument-panel UI that belongs to the glossy die-cast / molded-plastic toy world, rather than generic futuristic glass UI or oversized arcade buttons.
+- Design palette: deep petrol/navy surfaces; warm ivory primary text; muted blue-grey secondary text; restrained aqua for interaction; warm yellow for rewards/objectives; coral for warnings/impact; soft green for success. Accent colors carry meaning and are not used decoratively.
+- North-up map orientation is preferred for stable world bearings. Add an obvious N marker and a bright player arrow/short heading cone; do not rotate the whole map while driving.
+- Static map geometry should be cached once; moving traffic, player and activity markers are drawn dynamically.
+- Persistent UI should be limited to driving essentials and a compact map. Hide help text and secondary actions by default; show interaction, tuning and activity details only when relevant.
+- Mobile control direction: low-contrast but discoverable left thumbstick plus right-side accelerator and smaller brake; contextual enter/exit and camera controls appear only when useful. Touch controls become visually quiet when idle but retain generous hit areas.
+- T-003's exact primary child input device remains unconfirmed; design both keyboard and touch layouts rather than blocking this phase.
+ 
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Minimap static layer: `drawMap()` redraws every building and rock rectangle each frame. Draw them once into an offscreen canvas and copy it each frame. Fold this into the UI polish pass, since the minimap needs rework anyway.
@@ -138,3 +134,7 @@ Notes: Interpretation confirmed by the owner on 2026-11-25: "weight" means the r
 - 2026-11-25 T-004 Fixed the upgrade ramp's right side wall (one wrong vertex left a fin above the up-slope and a gap on the down-slope). Owner confirmed in a real browser that the ramp looks right.
 - 2026-11-25 T-005 Fixed shadows clipping through ramps and the tuning pad (shadows now follow the ramp surface and clear the pad). Owner confirmed in a real browser that shadows look right on the ramps. Known limit: a shadow straddling a ramp's vertical side wall can still look slightly off in a thin band.
 - 2026-11-23 Refactor: split the single 2,971-line `game.js` into 18 files in `src/`, formatted the code, added `tools/smoke_test.js`, and added the project docs. Gameplay is unchanged. Claude reports identical old/new 400-frame headless simulations; browser/touch playtesting remains outstanding.
+
+- 2026-11-25 T-009 Traffic following behavior — owner playtested v0.15.2 and tailed several cars; no blocking behavior reported. Claude's smoke test passed.
+- 2026-11-25 T-010 Dead-code cleanup and performance once-over — behavior-preserving fingerprint test and smoke test passed; headless physics CPU cost reduced from 0.46 to 0.15 ms/frame.
+- 2026-11-25 T-011 Traffic speed variation and weighted rerouting — owner playtested v0.15.2 and tailed several cars; Claude's smoke test passed.
