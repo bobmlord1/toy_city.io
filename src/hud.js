@@ -3,6 +3,8 @@
 // src/hud.js — T-012 molded dashboard and player-relative objective map.
 // =============================================================================
 const boostEl = $("boostStatus");
+const cashEl = $("cash");
+const mapCanvas = $("map");
 let lastVehicleName = "", lastSpeedHtml = "", lastBoostText = "", lastBoostColor = "";
 function setHudText(el, value, previous) { if (value !== previous) el.textContent = value; return value; }
 function setBoostHud(value, color) {
@@ -31,7 +33,18 @@ function updateUI() {
   if (performance.now() > messageUntil) messageEl.classList.remove("show");
 }
 function drawMap() {
-  const canvas = $("map"), ctx = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+  // Match the backing store to the displayed size so circles and arrows are not stretched.
+  const bounds = mapCanvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const targetWidth = Math.max(1, Math.round((bounds.width || mapCanvas.width) * pixelRatio));
+  const targetHeight = Math.max(1, Math.round((bounds.height || mapCanvas.height) * pixelRatio));
+  if (mapCanvas.width !== targetWidth || mapCanvas.height !== targetHeight) {
+    mapCanvas.width = targetWidth;
+    mapCanvas.height = targetHeight;
+  }
+  const canvas = mapCanvas;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
   const p = onFoot ? player : controlled;
   if (!p) return;
   ctx.clearRect(0, 0, W, H);
@@ -46,7 +59,7 @@ function drawMap() {
     return [W/2+right*scale, H/2-forward*scale*0.58];
   };
   ctx.save();
-  ctx.beginPath(); ctx.roundRect(0,0,W,H,12); ctx.clip();
+  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   // Quiet, simplified street context only; no building, rock or traffic symbols.
   ctx.strokeStyle="rgba(175,194,200,.28)"; ctx.lineWidth=8*scale; ctx.lineCap="round";
   ctx.beginPath();
@@ -79,19 +92,4 @@ function drawMap() {
   ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(9,9); ctx.lineTo(0,5); ctx.lineTo(-9,9); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
   ctx.restore();
-}
-const activityEl=$("activity"), activityIconEl=$("activityIcon"), activityTextEl=$("activityText");
-let lastActivityHud="";
-function updateActivityHud() {
-  let shown="";
-  if(currentActivity) {
-    const info=activityTypes[currentActivity.def.type].hud(currentActivity);
-    const target=activeMarkers()[0], p=onFoot?player:controlled;
-    const dist=target&&p?Math.round(Math.hypot(p.x-target.x,p.z-target.z)/10)*10:0;
-    shown=info.icon+"|"+(currentActivity.phase==="offer"?"GET PACKAGE": "DELIVER PACKAGE")+(dist>0?" · "+dist+"m":"");
-  }
-  if(shown===lastActivityHud)return;
-  lastActivityHud=shown;
-  if(!shown){activityEl.classList.remove("show");return;}
-  const [icon,label]=shown.split("|"); activityIconEl.textContent=icon; activityTextEl.textContent=label; activityEl.classList.add("show");
 }
