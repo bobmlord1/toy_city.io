@@ -110,6 +110,10 @@ run("touch.brake=false; swipeTouch.brake=false", "touch-source-reset");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
+if (run("started", "q") !== true)
+  failures.push("Frame loop: the game stopped during the initial driving frames");
+if (w.document.getElementById("map").width < 1 || w.document.getElementById("map").height < 1)
+  failures.push("HUD: minimap canvas has an invalid backing size");
 
 // ---- Activity checks (src/activities.js) ----
 const get = (expr) => JSON.parse(run("JSON.stringify(" + expr + ")", "q"));
