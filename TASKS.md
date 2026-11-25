@@ -115,7 +115,7 @@ Notes:
  
 ### T-013 Compact dashboard and integrated objective strip
 Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
-Status: implementation complete on `feature/t012-molded-dashboard`; full smoke test and owner browser/touch playtest pending.
+Status: superseded by T-014; included in the v0.16.4 merge to `main` (PR #8).
 Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
 Why: The top-center dashboard currently obscures too much of the driving view, and the separate objective panel competes with the dashboard for screen space.
 Done when:
@@ -131,7 +131,7 @@ Notes:
 
 ### T-014 Side-by-side minimap and objective panel
 Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
-Status: implementation complete on `feature/t012-molded-dashboard`; full smoke test and owner browser/touch playtest pending.
+Status: merged to `main` as v0.16.4 via PR #8 on 2026-11-25. Owner approved the final side-by-side layout. Full `node tools/smoke_test.js` and live Pages deployment were not verified at merge.
 Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
 Why: The compact stacked objective strip forced the integrated minimap to become too small to use comfortably.
 Done when:
@@ -163,6 +163,8 @@ Notes:
 - Optional: convert `src/` to ES modules only if the shared global scope becomes a real problem.
 
 ## Done
+
+- 2026-11-25 T-014 Side-by-side minimap and objective panel — merged to `main` as v0.16.4 via PR #8; owner approved the final layout. Static syntax/layout checks passed; full smoke test and Pages deployment confirmation remain outstanding.
 
 - 2026-11-25 T-004 Fixed the upgrade ramp's right side wall (one wrong vertex left a fin above the up-slope and a gap on the down-slope). Owner confirmed in a real browser that the ramp looks right.
 - 2026-11-25 T-005 Fixed shadows clipping through ramps and the tuning pad (shadows now follow the ramp surface and clear the pad). Owner confirmed in a real browser that shadows look right on the ramps. Known limit: a shadow straddling a ramp's vertical side wall can still look slightly off in a thin band.
