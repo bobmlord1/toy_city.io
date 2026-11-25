@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.16.2</title>
+<title>Free Roam Car Playground · v0.16.3</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -162,6 +162,137 @@
 @media(max-width:760px){.dash-left,.dash-right{min-height:78px;padding:3px 2px;gap:3px;border-radius:13px}.speed-gauge{width:50px;height:50px}.speed-gauge:before{inset:4px;border-width:1.5px}#speed{font-size:19px}#speedUnit{font-size:7px;margin-top:2px}#vehicleName{font-size:8px;letter-spacing:.04em}#boostStatus{padding:2px 4px;font-size:7px;letter-spacing:0}#cash{font-size:14px;padding:2px}#profileToggle{min-height:28px;padding:4px 6px;font-size:8px}#activity{top:calc(max(10px,env(safe-area-inset-top)) + 100px)}}
 @media(max-width:420px){.speed-gauge{width:48px;height:48px}}
 
+  
+  /* T-013: compact overhead dashboard with objective details in a reserved map header. */
+  #dashboard{
+    min-height:0;
+    grid-template-columns:minmax(110px,1fr) minmax(130px,240px) minmax(110px,1fr);
+    align-items:center;
+    gap:7px;
+    padding:5px 9px;
+    border-radius:16px;
+  }
+  .dash-left,.dash-right{min-height:44px;padding:3px 6px;border-radius:12px}
+  .dash-left{
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr);
+    grid-template-rows:1fr 1fr;
+    grid-template-areas:"gauge name" "gauge boost";
+    align-items:center;
+    justify-items:start;
+    gap:2px 5px;
+    text-align:left;
+  }
+  .dash-left .speed-gauge{grid-area:gauge;width:38px;height:38px}
+  #dashboard #vehicleName{grid-area:name;align-self:end;justify-self:start;width:100%;font-size:8px;letter-spacing:.04em}
+  #dashboard #boostStatus{grid-area:boost;align-self:start;justify-self:start;padding:2px 5px;font-size:7px;letter-spacing:0}
+  .dash-center{
+    min-width:0;
+    width:100%;
+    display:grid;
+    grid-template-rows:15px 32px;
+    gap:1px;
+    align-content:center;
+  }
+  #dashboard #activity{
+    position:static;
+    inset:auto;
+    transform:none;
+    display:none;
+    width:100%;
+    max-width:none;
+    min-width:0;
+    height:15px;
+    padding:0 4px;
+    border:1px solid #8BC99B;
+    border-left:3px solid #8BC99B;
+    border-radius:7px;
+    background:#152A34F7;
+    box-shadow:none;
+    backdrop-filter:none;
+    align-items:center;
+    gap:4px;
+    font-size:8px;
+    line-height:1;
+    z-index:auto;
+    pointer-events:auto;
+  }
+  #dashboard #activity.show{display:flex}
+  #dashboard #activityIcon{flex:none;font-size:10px;line-height:1}
+  #dashboard #activityText{
+    min-width:0;
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:8px;
+    line-height:1.1;
+  }
+  #dashboard #activitySkip{
+    flex:none;
+    padding:2px 4px;
+    border-radius:6px;
+    font:900 7px/1 system-ui,sans-serif;
+    letter-spacing:0;
+    white-space:nowrap;
+  }
+  #dashboard #mapbox{
+    position:relative;
+    top:auto;
+    right:auto;
+    width:100%;
+    height:32px;
+    min-height:0;
+    padding:2px;
+    border-radius:9px;
+  }
+  #dashboard #map{width:100%;height:100%;min-height:0;border-radius:6px}
+  .dash-right{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:1fr 1fr;
+    grid-template-areas:"label profile" "cash profile";
+    align-items:center;
+    justify-items:start;
+    gap:1px 5px;
+    text-align:left;
+  }
+  #dashboard .cash-label{grid-area:label;align-self:end;font-size:7px;letter-spacing:.1em}
+  #dashboard #cash{grid-area:cash;align-self:start;font-size:15px;padding:1px 4px}
+  #dashboard #profileToggle{grid-area:profile;align-self:center;min-height:24px;padding:4px 7px;font-size:8px}
+  #message{top:76px}
+
+  @media(max-width:760px){
+    body.hud-mobile #dashboard{
+      width:calc(100vw - 18px);
+      min-height:0;
+      grid-template-columns:minmax(49px,.8fr) minmax(100px,1.45fr) minmax(55px,.8fr);
+      gap:4px;
+      padding:3px 5px;
+      border-radius:14px;
+    }
+    body.hud-mobile #dashboard .dash-left,
+    body.hud-mobile #dashboard .dash-right{min-height:38px;padding:2px 3px;border-radius:10px;gap:1px 3px}
+    body.hud-mobile #dashboard .dash-left .speed-gauge{width:32px;height:32px}
+    body.hud-mobile #dashboard #vehicleName{font-size:7px;letter-spacing:0}
+    body.hud-mobile #dashboard #speed{font-size:14px}
+    body.hud-mobile #dashboard #speedUnit{font-size:6px;margin-top:1px}
+    body.hud-mobile #dashboard #boostStatus{padding:1px 3px;font-size:6px}
+    body.hud-mobile #dashboard .dash-center{grid-template-rows:13px 26px;gap:1px}
+    body.hud-mobile #dashboard #activity{height:13px;padding:0 3px;gap:3px}
+    body.hud-mobile #dashboard #activityIcon{font-size:9px}
+    body.hud-mobile #dashboard #activityText{font-size:7px}
+    body.hud-mobile #dashboard #activitySkip{padding:2px 3px;font-size:6px}
+    body.hud-mobile #dashboard #mapbox{height:26px;padding:2px}
+    body.hud-mobile #dashboard .cash-label{font-size:6px}
+    body.hud-mobile #dashboard #cash{font-size:12px;padding:1px 3px}
+    body.hud-mobile #dashboard #profileToggle{min-height:20px;padding:3px 4px;font-size:7px}
+    body.hud-mobile #message{top:auto;bottom:100px}
+  }
+  @media(max-width:420px){
+    body.hud-mobile #dashboard{grid-template-columns:minmax(46px,.8fr) minmax(90px,1.45fr) minmax(52px,.8fr)}
+  }
+
 </style>
 </head>
 <body>
@@ -173,13 +304,15 @@
     <div class="speed-gauge" id="speedGauge" aria-label="Vehicle speed"><div class="speed-readout"><div id="speed">0</div><span id="speedUnit">MPH</span></div></div>
     <div id="boostStatus" aria-live="polite">BOOST READY</div>
   </div>
-  <div id="mapbox" aria-label="Fixed-orientation objective map with a rotating vehicle marker"><canvas id="map" width="360" height="216"></canvas></div>
+  <div class="dash-center">
+    <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
+    <div id="mapbox" aria-label="Fixed-orientation objective map with a rotating vehicle marker"><canvas id="map" width="360" height="216"></canvas></div>
+  </div>
   <div class="dash-side dash-right">
     <div class="cash-label">CASH</div><div id="cash">$0</div>
     <button id="profileToggle" type="button" aria-label="HUD layout: automatic. Change layout">AUTO</button>
   </div>
 </div>
-<div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
 <div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
@@ -227,7 +360,7 @@
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
   const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
-   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.2";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
+   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.3";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;
   }
  } catch(error) {
