@@ -105,6 +105,7 @@ function updateDebris(dt) {
 }
 function updatePhysics(dt) {
   currentCrashContacts = new Set();
+  beginPropCollisionFrame();
   if (onFoot) updateFoot(dt);
   for (const v of vehicles) updateVehicle(v, dt);
   // Semi-trailers update as separate heavy bodies, then collide with buildings, traffic and props.
@@ -120,6 +121,7 @@ function updatePhysics(dt) {
     for (let j = i + 1; j < vehicles.length; j++) resolveVehiclePair(vehicles[i], vehicles[j]);
   updateProps(dt);
   updateDebris(dt);
+  finishPropCollisionFrame();
   previousCrashContacts = currentCrashContacts;
   currentCrashContacts = null;
 }
