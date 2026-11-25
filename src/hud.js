@@ -56,8 +56,8 @@ function updateUI() {
   if (performance.now() > messageUntil) messageEl.classList.remove("show");
 }
 
-// World-up map: the road grid stays in the same screen orientation. The vehicle arrow
-// rotates with the car, so left/right turns match what the player sees in the world.
+// Fixed-world map: roads stay in place while the vehicle arrow turns. Map left/right
+// is aligned to the chase-camera view so directions match what the player sees.
 function mapProjectPoint(x, z, origin, scale, width, height) {
   return [
     width * 0.5 - (x - origin.x) * scale,
@@ -66,8 +66,8 @@ function mapProjectPoint(x, z, origin, scale, width, height) {
 }
 
 function mapHeadingScreenAngle(yaw) {
-  // The legacy city map has +X to the right and +Z upward; positive vehicle yaw
-  // turns toward screen-left, so the map arrow rotates by the negative yaw.
+  // The chase camera presents +X toward screen-left and +Z upward; positive vehicle
+  // yaw turns toward +X, so the screen-space arrow rotates by the negative yaw.
   return -yaw;
 }
 
