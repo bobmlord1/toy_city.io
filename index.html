@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.16.4</title>
+<title>Free Roam Car Playground · v0.16.5</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -389,7 +389,7 @@
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
   const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
-   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.4";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
+   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.5";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;
   }
  } catch(error) {
