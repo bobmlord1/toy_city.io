@@ -139,8 +139,10 @@ if (!dashboard || !dashCenter || !activityPanel || !mapBox || !dashboard.contain
 if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== activityPanel || dashCenter.children[1] !== mapBox)
   failures.push("HUD: objective controls must sit directly above the minimap");
 const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
-if (!/grid-template-rows:\\s*15px\\s+32px/.test(hudStyles) || !/grid-template-rows:\\s*13px\\s+26px/.test(hudStyles))
+if (!hudStyles.includes("grid-template-rows:15px 32px;") || !hudStyles.includes("grid-template-rows:13px 26px;"))
   failures.push("HUD: compact dashboard dimensions or mobile override are missing");
+if (!hudStyles.includes("#dashboard #activity.show{display:flex}"))
+  failures.push("HUD: active objective row is not restored when an activity is available");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
