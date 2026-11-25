@@ -101,17 +101,26 @@ const smashRegression = JSON.parse(run(`(() => {
   registerPropImpact(p,rammer,8);
   finishPropCollisionFrame();
   const afterSustainedContact = p.hp;
-  beginPropCollisionFrame(); // one frame with no contact: the car has backed away
-  finishPropCollisionFrame();
+  // A brief gap is still part of the same shove; require a real disengagement.
+  for (let i = 0; i < 10; i++) {
+    beginPropCollisionFrame();
+    finishPropCollisionFrame(1/60);
+  }
+  const afterBriefSeparation = p.hp;
+  for (let i = 0; i < 20; i++) {
+    beginPropCollisionFrame();
+    finishPropCollisionFrame(1/60);
+  }
   beginPropCollisionFrame();
   registerPropImpact(p,rammer,8);
-  finishPropCollisionFrame();
+  finishPropCollisionFrame(1/60);
   const result = {afterFirstHit,afterSustainedContact,broken:p.broken};
   props.splice(props.indexOf(p),1);
   return result;
 })()`, "smashable-prop-regression"));
 if (!(smashRegression.afterFirstHit < 5 &&
       smashRegression.afterSustainedContact === smashRegression.afterFirstHit &&
+      smashRegression.afterBriefSeparation === smashRegression.afterFirstHit &&
       smashRegression.broken))
   failures.push("Smashable props: sustained pushing applied repeated damage or a fresh impact failed to break the barrel");
 
