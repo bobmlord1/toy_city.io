@@ -18,8 +18,9 @@ function updateFoot(dt) {
   // Keep the on-foot character out of buildings.
   for (const box of buildingColliders) {
     const dx = player.x - box.x,
-      dz = player.z - box.z,
-      cx = clamp(dx, -box.hw, box.hw),
+      dz = player.z - box.z;
+    if (Math.abs(dx) > box.hw + 0.65 || Math.abs(dz) > box.hl + 0.65) continue;
+    const cx = clamp(dx, -box.hw, box.hw),
       cz = clamp(dz, -box.hl, box.hl);
     let nx = dx - cx,
       nz = dz - cz,
@@ -53,13 +54,20 @@ function updateProps(dt) {
     p.z += p.vz * dt;
     p.vx *= Math.exp(-2.35 * dt);
     p.vz *= Math.exp(-2.35 * dt);
-    p.y = driveSurfaceH(p.x, p.z);
+    // Props at rest do not move, so their ground height does not change either.
+    if (p.surfaceX !== p.x || p.surfaceZ !== p.z) {
+      p.y = driveSurfaceH(p.x, p.z);
+      p.surfaceX = p.x;
+      p.surfaceZ = p.z;
+    }
     p.yaw += p.roll * dt;
     p.roll *= Math.exp(-2.0 * dt);
     for (const box of buildingColliders) {
       const dx = p.x - box.x,
-        dz = p.z - box.z,
-        cx = clamp(dx, -box.hw, box.hw),
+        dz = p.z - box.z;
+      // Farther than the prop radius from the box edge means no contact.
+      if (Math.abs(dx) > box.hw + p.radius || Math.abs(dz) > box.hl + p.radius) continue;
+      const cx = clamp(dx, -box.hw, box.hw),
         cz = clamp(dz, -box.hl, box.hl),
         nx = dx - cx,
         nz = dz - cz,

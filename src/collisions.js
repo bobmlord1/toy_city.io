@@ -48,8 +48,16 @@ function satOBB(a, b) {
   }
   return { overlap: min, nx, nz };
 }
+// Cheap broad phase. Two oriented boxes can only touch if their centers are closer than the sum of
+// their half-diagonals, and (half width + half length) is never smaller than a half-diagonal. This
+// only skips pairs that cannot overlap, so results are identical to testing every pair.
+function farApart(ax, az, aReach, bx, bz, bReach) {
+  const reach = aReach + bReach + 0.5;
+  return Math.abs(ax - bx) > reach || Math.abs(az - bz) > reach;
+}
 function resolveVehicleBuilding(v, box) {
   if (box.topY !== undefined && Number.isFinite(v.y) && v.y > box.topY + 0.2) return;
+  if (farApart(v.x, v.z, v.width / 2 + v.length / 2, box.x, box.z, box.hw + box.hl)) return;
   const a = obbInfo(v),
     b = { x: box.x, z: box.z, hw: box.hw, hl: box.hl, rx: 1, rz: 0, fx: 0, fz: 1 };
   const hit = satOBB(a, b);
@@ -104,6 +112,7 @@ function damageProp(p, impact, rammer) {
 function resolveVehicleProp(v, p, propIndex) {
   if (!p || p.broken) return;
   if (v.grounded === false && Number.isFinite(v.y) && v.y > p.y + 1.35) return;
+  if (farApart(v.x, v.z, v.width / 2 + v.length / 2, p.x, p.z, p.radius)) return;
   const a = obbInfo(v),
     dx = p.x - a.x,
     dz = p.z - a.z;
@@ -150,6 +159,7 @@ function addCollisionBodyReaction(v, impact, nx, nz) {
   v.pitchVelocity += clamp(fore * impact * 0.004, -0.12, 0.12);
 }
 function resolveVehiclePair(a, b) {
+  if (farApart(a.x, a.z, a.width / 2 + a.length / 2, b.x, b.z, b.width / 2 + b.length / 2)) return;
   const hit = satOBB(obbInfo(a), obbInfo(b));
   if (!hit) return;
   const { nx, nz, overlap } = hit;
@@ -240,6 +250,7 @@ function updateSemiTrailer(semi, dt) {
 function resolveTrailerBuilding(semi, box) {
   const t = semi.trailer;
   if (!t || t.y > box.topY + 0.2) return;
+  if (farApart(t.x, t.z, t.width / 2 + t.length / 2, box.x, box.z, box.hw + box.hl)) return;
   const hit = satOBB(trailerObb(t), {
     x: box.x,
     z: box.z,

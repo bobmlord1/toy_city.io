@@ -66,6 +66,8 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 - **Streets and their colliders come from the same placement code** (`placeStreetUnit`). Never add road geometry that has no matching collider, or the reverse.
 - **No `Math.random` in static world building** unless seeded. The world should look the same every load.
 - **Shadows follow the surface.** `shadowSurfaceH()` in `shadows.js` is the height every shadow vertex uses. Anything new that sits above the ground on a ramp (like the gold pad, see `upgradePad` in `world_config.js`) must be added there, or shadows will vanish under it. Near ramps, shadow triangles are subdivided so they follow the slope.
+- **Cheap checks first.** Any collision test that loops over many boxes (buildings, rocks, props, other vehicles) must run the `farApart()` broad phase in `collisions.js` before building an oriented box or running SAT. It only skips pairs that cannot overlap, so it never changes results.
+- **Write the HUD only when it changes.** DOM writes cost real time on phones. Compare with the last written value first (see `updateUI()` in `hud.js`).
 - **Keep the world flat for now.** Hills were removed on purpose until the street kit is stable.
 
 ## Traffic navigation
@@ -73,6 +75,16 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 The 24 persistent AI traffic vehicles use the full street grid, not closed loops: 12 compact cars and 12 pickup trucks. `streetLines` supplies the eight north-south/east-west road centerlines. `trafficBuildLeg()` plans one road segment to the next intersection and chooses a legal straight, left or right exit (weighted 56% / 22% / 22%, renormalized at city edges). Both types follow the same sampled lane-center path; turns use a short cubic curve within the intersection. Pickup traffic reuses the existing pickup mesh in four paint variants, with a 5-by-2-unit collision footprint and slightly lower cruising speeds. The intersection curve and road width accommodate that footprint; the smoke test checks all four oriented body corners at every sampled point rather than testing only the route centerline.
 
 Starting road edges are shuffled with a fixed layout seed, so all 24 vehicles begin on distinct, varied street segments across the full grid while remaining reproducible. Each vehicle has its own deterministic decision seed. The AI stores its current grid node, heading, leg progress and visited-region mask for validation. Traffic remains persistent, and `aiKnockTime` still reduces the lane-recovery spring after collisions knock vehicles off their lanes. The player semi and trailer continue using the separate articulation and collision simulation; moving AI semis are deferred until route planning accounts for the combined tractor-trailer swept footprint at turns.
+
+### Following behavior
+
+A traffic car slows to the speed of the nearest traffic car ahead of it in the same lane, heading roughly the same way, and keeps a gap of about 2.5 units plus 0.7 seconds of that car's speed (`trafficFollowLimit()` in `vehicles.js`, constants `TRAFFIC_*`). `updateVehicle()` turns that limit into a smoothed `trafficCruise` speed: it brakes at up to 9 units per second squared and recovers at 3.5. The route progresses at the cruise speed, so a slowed car stays on its path. With a clear road ahead there is no limit, so free-flowing traffic is unchanged. Only other traffic counts as a leader, so the player can still catch up with and crash into traffic. It does not handle right of way at intersections, so crossing and oncoming contacts can still happen.
+
+### Speed variation and routing while held back
+
+Each traffic car's `maxSpeed` is its type's base speed (`trafficBaseSpeed`) plus a random offset of up to 5 mph either way (`TRAFFIC_SPEED_VARIATION_MPH` in `vehicles.js`), chosen once at startup with `Math.random`, so it differs on every page load. Routes stay seeded and repeatable, and the test tools seed `Math.random`, so their runs repeat. Pickups are still slower than compacts on average, but individual cars can overlap.
+
+When a car is being held below its top speed by a slower car ahead, `trafficFollowLimit()` records that car in `v.trafficLeader`. `trafficChooseNextHeading()` then compares the leader's planned exit at the same intersection with the follower's options and halves the weight of that exit, halving again at each further intersection reached while still held back (`v.trafficFollowStreak`: 1/2, 1/4, 1/8). The weights stay 0.56 straight, 0.22 left, 0.22 right otherwise, and the streak resets as soon as the car is not held back at a decision.
 
 ## Activities
 
@@ -96,10 +108,11 @@ Starting road edges are shuffled with a fixed layout seed, so all 24 vehicles be
 ## Testing
 
 - `node tools/smoke_test.js` (after `npm install jsdom`). Boots the game headless, drives for 400 frames, checks the 24-vehicle mixed grid fleet (12 compact cars and 12 pickups), unique seeded starts across the four quadrants, legal intersection decisions, full-body pickup clearance through sampled turns, two minutes of turning/cross-district travel, and collision recovery, plays a full delivery (pickup, carry, drop-off, single payout, skip, next offer), checks activity locations against buildings and ramps, checks that ramp side walls match their decks and that shadows stay above ramp surfaces, and fails on exceptions or NaN. It cannot judge visuals, so a human still needs to look at changes.
+- `node tools/traffic_report.js [minutes]` simulates the AI traffic with no player and reports collision incidents (grouped, not per frame), their kinds, and how often and how long cars leave the road. Run it before and after changing traffic code. It is a measurement, not a pass/fail test.
 - Visual and feel changes need a real browser check. Say so in `agent_comments.md` when you could not do one.
 
 ## Known technical debt
 
-- Large functions: `updateVehicle()` in `vehicle_update.js` is about 200 lines.
+- Large functions: `updateVehicle()` in `vehicle_update.js` is about 170 lines.
 - Shared global state makes the dependency graph implicit. Converting to ES modules is possible later but needs explicit exports for all shared state. Not worth doing until it hurts.
 - `README.txt` mentions `run_game.py` and `start_game_linux.sh`, which are not in the repo.

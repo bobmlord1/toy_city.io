@@ -247,3 +247,77 @@ Next agent should: review PR #7 and run the full smoke test. After merge/deploy,
 ### 2026-11-24 | Project Owner -> All | T-008 SUBJECTIVE PERFORMANCE PLAYTEST
 Status: observed; not an FPS benchmark
 Body: The owner reports no major perceived performance regression on either phone or laptop after the traffic increase. They note that they are not very frame-rate-sensitive and may not notice a problem until performance drops well into the 20s; no objective FPS measurement is currently running. Treat this as a pass for no obvious slowdown on the tested devices, not as measured frame-rate validation or proof of performance headroom. Visual truck-turn clearance and congestion remain separate playtest checks.
+
+### 2026-11-24 | Claude -> All | REVIEW T-006, T-007, T-008 (traffic) and full smoke test
+Status: answered
+Body:
+Verified:
+- `node --check` passes on every file in `src/` and `tools/`. The full `node tools/smoke_test.js` passes on current `main` (v0.15.0, 27 vehicles: 24 traffic plus the player's three). This was the check ChatGPT could not run.
+- Code review of the grid controller (`vehicles.js`) and its steering (`vehicle_update.js`): the logic is sound. Cars never choose an out-of-grid exit, turns are lane-aware Bezier legs, per-vehicle seeds make runs repeatable, and `dt` is capped at 0.04 so a backgrounded tab cannot cause a huge step.
+- Cost, measured headless with stubbed WebGL (so CPU and draw-call counts only, no GPU time): physics 0.38 to 0.54 ms per frame, draw calls 117 to 177 per frame, comparing the commit before T-006 with `main`. About 5 draw calls per added vehicle. This is cheap on the CPU. Real GPU cost on phones is still unmeasured.
+- 10 simulated minutes of traffic with no player (`tools/traffic_report.js`, new): no non-finite values, no stuck cars, and all 24 cars back on the road at full speed at the end. Recovery works.
+Findings (all by simulation, none seen on screen):
+1. **Rear-end collisions between traffic cars.** 52 distinct incidents in 10 minutes, about 5 per minute fleet-wide, 25 of them same-direction rear-ends. Mostly compact cars (10.5 to 12.75 speed) catching pickups (8.8 to 10.3) in the same lane, and pickups of different speeds catching each other. Cars have no following behavior, only a lane spring. Total contact time is small (13.5 s fleet-wide in 10 minutes).
+2. **Cars regularly drive onto the lawn.** 89 excursions in 10 minutes (about 9 per minute). Severity: 18 mild (under 10 units from the street center), 43 moderate, 28 severe (over 20 units, up to 47). Median 3 s, 90th percentile 8.5 s, longest 11 s. About half start within 4 s of a knock. The rest are mostly the fastest compacts (12.0 and 12.8), which fits the turn limit: a 5.7-unit turn radius at speed 12 needs about 2.1 rad/s, but steering is capped at 1.55 rad/s in `updateVehicle()`. This is a hypothesis and I have not tested it.
+3. Intersections: 22 of the 52 incidents happened in intersections. Crossing and head-on contacts are rare (12 and 15 in 10 minutes).
+4. Dead code: the `route === "z"` and `"x"` branches in `updateVehicle()` and the `routeLaneX/routeLaneZ/routeDir` fields are unused since T-006. `loopPoint()` is already gone.
+Not verified: how any of this looks on screen, real GPU frame rate, and the owner's truck-clearance and congestion checks.
+Recommendations (nothing coded, nothing claimed):
+- Proposed T-009: speed matching to the car ahead in the same lane. Small and local to the AI branch. It should remove most of finding 1 and shrink finding 2.
+- If lawn excursions still look wrong after that, test raising the AI steering cap or slowing cars before turns. That is a design call for the owner.
+- Add `tools/traffic_report.js` to any traffic change's checks. Re-run it after T-009.
+Files changed: `tools/traffic_report.js` (new), `TASKS.md` (T-008 status, two proposed items under Later), `ARCHITECTURE.md` (one line on the new tool), `agent_comments.md` (this entry). No game code changed.
+Next agent should: wait for the owner to approve or reject T-009. T-002, T-004 and T-005 are still waiting on the owner's visual confirmation before they can move to Done.
+
+### 2026-11-24 | Claude -> All | CLAIM T-009 and T-010
+Status: open
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `src/collisions.js`, `src/physics.js`, `src/hud.js`, `tools/smoke_test.js`, `tools/traffic_report.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: do the behavior-preserving cleanup and speedups first and prove them exact, then add following behavior as a separate, intentional change. The project owner approved both and asked for a general code once-over.
+
+### 2026-11-24 | Claude -> ChatGPT | HANDOFF T-009 and T-010
+Status: partial (code complete, needs owner playtest)
+Done:
+- T-010, behavior-preserving. I profiled a headless run first. `updateProps` was 18% of game CPU: every prop was tested against all 195 building and rock colliders every frame, and every vehicle ran a full oriented-box test against all 195 as well (about 11,000 tests per frame). Added an exact broad phase, `farApart()` in `collisions.js`, used for vehicle vs building, vehicle vs prop, vehicle vs vehicle and trailer vs building. Props and the on-foot player skip far boxes with a plain bounds check. Props at rest reuse their ground height. The HUD now writes speed, boost and vehicle name only when they change (`innerHTML` every frame was the worst of these). Removed the unused `"z"` and `"x"` route branches, `targetSpeed`, and the fields `routeDir`, `routeLane`, `routeLaneX`, `routeLaneZ`.
+- T-009: `trafficFollowLimit()` in `vehicles.js` finds the nearest traffic car ahead in the same lane heading the same way and limits speed to hold a gap (2.5 plus 0.7 s of leader speed). `updateVehicle()` smooths that into `trafficCruise` (brakes at 9, recovers at 3.5) and the route progresses at that speed. Cars with a clear road behave exactly as before. Only traffic counts as a leader, so the player's crash interactions are unchanged.
+- Version is 0.15.1.
+Measured (all headless, from `tools/traffic_report.js` and a profiler):
+- T-010 exactness: a hash of every vehicle's position and velocity, cash, props and debris after 4,000 scripted frames is identical before and after (68acd2e1ea8c8707). The HUD text and colors are identical across 429 snapshots including boost and exiting the vehicle.
+- Physics cost per frame 0.46 ms to 0.15 ms (headless, CPU only). Draw calls are unchanged at 177 per frame.
+- T-009, 10 simulated minutes, before to after: rear-end incidents 25 to 5, total incidents 52 to 39, total contact time 13.5 s to 0.8 s, lawn excursions 89 to 76, severe excursions (over 20 units off the street) 28 to 23. No stuck cars, no bad values, all cars back on the road at the end.
+- The new smoke test scenario (fastest car 14 units behind slowest car, 7.5 s) failed before the change (the follower hit the leader) and passes now.
+Experiment, not applied: raising the AI steering cap from 1.55 to 2.6 rad/s in a scratch copy cut moderate excursions from 39 to 21 but left severe ones about the same (26). The remaining severe ones probably come from crossing and oncoming collisions at intersections (34 of the 39 incidents after T-009), which following behavior does not address.
+Once-over findings I did not change (listed under Later in `TASKS.md`): the minimap redraws every building each frame, `draw()` rebinds buffers on every call, the matrix helpers allocate on every call, and intersections have no right-of-way rules.
+Remaining: owner playtest. Watch for traffic bunching into slow platoons behind pickups, cars waiting oddly at intersections, and anything that looks different from before.
+Files changed: `src/collisions.js`, `src/physics.js`, `src/vehicle_update.js`, `src/vehicles.js`, `src/hud.js`, `tools/smoke_test.js`, `tools/traffic_report.js` (new), `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Verified: `node tools/smoke_test.js` passes. All files pass `node --check`.
+Not verified: how traffic looks on screen, real GPU frame rate, and the HUD in a real browser (only checked in a simulated page).
+Next agent should: nothing is blocked. ChatGPT can review T-009 and T-010 against `TASKS.md`. The owner decides whether to try the steering experiment or intersection yielding.
+
+### 2026-11-25 | Claude -> All | CLAIM T-011
+Status: open
+Files: `src/vehicles.js`, `tools/smoke_test.js`, `tools/traffic_report.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: add a startup speed offset of up to 5 mph either way per traffic car, and halve the route weight of a slower leader's exit at each intersection a car is held back behind it.
+
+### 2026-11-25 | Claude -> ChatGPT | HANDOFF T-011
+Status: partial (code complete, needs owner playtest)
+Done:
+- Speed variation: `maxSpeed = base + offset`, offset uniform in plus or minus 5 mph, drawn once at spawn with `Math.random` (different every page load). `trafficBaseSpeed` keeps the base. The route RNG is untouched, so routes are still seeded.
+- Weighted routing: `trafficFollowLimit()` now records `v.trafficLeader` when a car is held more than 0.3 below its top speed. In `trafficChooseNextHeading()`, if that leader's planned exit is at the same intersection, the weight of that exit is multiplied by 0.5 to the power of the streak (`v.trafficFollowStreak`, +1 at each such decision, reset to 0 otherwise).
+- Existing test "pickups slower than compacts" would have failed with overlapping speeds, so it now checks base speeds and averages. New tests: offsets are within 5 mph and varied, and the weighting gives the exact expected straight shares (0.56 free, then 0.39, 0.24, 0.14 for streaks 1, 2, 3), ignores a leader headed to a different intersection, makes straight more likely when the leader turns, and resets and counts the streak correctly.
+- `tools/traffic_report.js` now takes a seed (`node tools/traffic_report.js 6 3`) and reports time held back and the longest streak.
+- Version is 0.15.2.
+Measured (headless): I broke each new behavior on purpose and the matching test failed each time. Over six random speed draws of 6 simulated minutes: variation on with weighting vs without weighting, time held back 2.4% vs 3.4% of car time, longest streak 3 vs 6 intersections, incidents 14.5 vs 14.8, lawn excursions 29.5 vs 30.0. Variation off (v0.15.1) averaged 23 incidents and 48 excursions in the same time, so variation did not make traffic worse. I expected faster cars to overshoot turns more and it did not show up in aggregate.
+Judgement call to confirm: I read "weight" as the route-choice weights and applied the halving to whichever exit the slower car takes. If the owner meant something else, for example weakening the speed matching itself, say so and I will change it.
+Remaining: owner playtest. Watch for whether traffic spreads out more and whether any very slow or very fast car looks odd.
+Files changed: `src/vehicles.js`, `tools/smoke_test.js`, `tools/traffic_report.js`, `index.html`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`. This builds on v0.15.1, which is not in the repo yet, so these files include it.
+Verified: `node tools/smoke_test.js` passes and every file passes `node --check`.
+Not verified: how it looks on screen.
+Next agent should: nothing is blocked.
+
+### 2026-11-25 | Claude -> All | Owner confirmations logged (T-004, T-005, T-011 interpretation)
+Status: resolved
+Body:
+- The project owner reported that the visual checks for T-004 (upgrade ramp side wall) and T-005 (shadows on ramps) passed in a real browser. Both are moved to Done in `TASKS.md`.
+- The owner confirmed that for T-011 "weight" meant the route-choice weights and that the reduction applies as implemented. The judgement call in the T-011 handoff is settled.
+- Still open: T-002 (activity system) is waiting for ChatGPT's review. T-009, T-010 and T-011 are waiting for an owner playtest of v0.15.2.
+

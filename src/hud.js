@@ -5,26 +5,47 @@
 // updateUI() and drawMap() run every frame.
 // =============================================================================
 
+// DOM writes are expensive on phones, so each HUD field is only written when its value changes.
+const boostEl = $("boostStatus");
+let lastVehicleName = "",
+  lastSpeedHtml = "",
+  lastBoostText = "",
+  lastBoostColor = "";
+function setHudText(el, text, last) {
+  if (text !== last) el.textContent = text;
+  return text;
+}
+function setBoostHud(text, color) {
+  if (text !== lastBoostText) {
+    boostEl.textContent = text;
+    lastBoostText = text;
+  }
+  if (color !== lastBoostColor) {
+    boostEl.style.color = color;
+    lastBoostColor = color;
+  }
+}
 function updateUI() {
-  const boostEl = $("boostStatus");
+  let name, speedHtml;
   if (onFoot) {
-    boostEl.textContent = "BOOST · IN VEHICLE";
-    boostEl.style.color = "#a8efff";
-    vehicleNameEl.textContent = "On Foot";
-    speedEl.innerHTML = "WALK <small>MODE</small>";
+    setBoostHud("BOOST · IN VEHICLE", "#a8efff");
+    name = "On Foot";
+    speedHtml = "WALK <small>MODE</small>";
   } else {
-    vehicleNameEl.textContent = controlled.name;
-    speedEl.innerHTML = Math.round(currentSpeed()) + " <small>MPH</small>";
+    name = controlled.name;
+    speedHtml = Math.round(currentSpeed()) + " <small>MPH</small>";
     if (controlled.boostTime > 0) {
-      boostEl.textContent = "BOOST ACTIVE · " + controlled.boostTime.toFixed(1) + "s";
-      boostEl.style.color = "#ffe17c";
+      setBoostHud("BOOST ACTIVE · " + controlled.boostTime.toFixed(1) + "s", "#ffe17c");
     } else if (controlled.boostCooldown > 0) {
-      boostEl.textContent = "BOOST RECHARGE · " + controlled.boostCooldown.toFixed(1) + "s";
-      boostEl.style.color = "#c4d0d5";
+      setBoostHud("BOOST RECHARGE · " + controlled.boostCooldown.toFixed(1) + "s", "#c4d0d5");
     } else {
-      boostEl.textContent = "BOOST READY · SHIFT";
-      boostEl.style.color = "#a8efff";
+      setBoostHud("BOOST READY · SHIFT", "#a8efff");
     }
+  }
+  lastVehicleName = setHudText(vehicleNameEl, name, lastVehicleName);
+  if (speedHtml !== lastSpeedHtml) {
+    speedEl.innerHTML = speedHtml;
+    lastSpeedHtml = speedHtml;
   }
   let hint =
     "Explore a glossy, brick-built toy town on a flat city baseplate with an industrial yard.";

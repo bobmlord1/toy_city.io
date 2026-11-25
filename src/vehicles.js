@@ -188,10 +188,8 @@ function vehicle(id, type, name, x, z, yaw, opts = {}) {
     ai: !!opts.ai,
     parked: !!opts.parked,
     route: opts.route || null,
-    routeDir: opts.routeDir || 1,
     routeIndex: opts.routeIndex ?? -1,
     routeS: opts.routeS ?? 0,
-    routeLane: opts.routeLane ?? 0,
     trafficNodeXIndex: opts.trafficNodeXIndex ?? -1,
     trafficNodeZIndex: opts.trafficNodeZIndex ?? -1,
     trafficHeading: opts.trafficHeading ?? 0,
@@ -209,8 +207,6 @@ function vehicle(id, type, name, x, z, yaw, opts = {}) {
     trafficMinNodeZ: 0,
     trafficMaxNodeZ: 0,
     trafficStartEdgeKey: "",
-    routeLaneX: x,
-    routeLaneZ: z,
     aiKnockTime: 0,
     interactRadius: opts.interactRadius || 5,
     airTime: 0,
@@ -285,6 +281,47 @@ const TRAFFIC_HEADINGS = [
   { dx: -1, dz: 0, yaw: -Math.PI / 2 }, // west / -X
 ];
 
+// Following behavior. A traffic car slows to the speed of the nearest traffic car ahead of it in
+// the same lane (heading roughly the same way) and keeps a gap that grows with that car's speed.
+// With a clear road ahead there is no limit, so free-flowing traffic behaves exactly as before.
+// Only other traffic is considered, so the player can still catch up with and crash into traffic.
+const TRAFFIC_STANDSTILL_GAP = 2.5; // bumper-to-bumper distance to hold when stopped
+const TRAFFIC_TIME_HEADWAY = 0.7; // extra gap per unit of leader speed
+const TRAFFIC_FOLLOW_GAIN = 0.9; // how strongly the speed limit tracks the gap
+const TRAFFIC_BRAKE = 9; // fastest the cruise speed may drop (units per second squared)
+const TRAFFIC_ACCEL = 3.5; // fastest it may recover
+function trafficFollowLimit(v) {
+  const fx = Math.sin(v.yaw),
+    fz = Math.cos(v.yaw);
+  const look = 10 + v.maxSpeed * 1.2;
+  let leader = null,
+    leaderGap = Infinity;
+  for (const o of trafficFleet) {
+    if (o === v) continue;
+    const dx = o.x - v.x,
+      dz = o.z - v.z;
+    if (Math.abs(dx) > look + 3 || Math.abs(dz) > look + 3) continue;
+    const ahead = dx * fx + dz * fz;
+    if (ahead <= 0) continue;
+    if (Math.abs(dx * fz - dz * fx) > (v.width + o.width) / 2 + 0.45) continue;
+    if (fx * Math.sin(o.yaw) + fz * Math.cos(o.yaw) < 0.6) continue;
+    const gap = ahead - (v.length + o.length) / 2;
+    if (gap < leaderGap) {
+      leader = o;
+      leaderGap = gap;
+    }
+  }
+  if (!leader || leaderGap > look) {
+    v.trafficLeader = null;
+    return Infinity;
+  }
+  const leaderSpeed = Math.max(0, leader.vx * fx + leader.vz * fz);
+  const wantedGap = TRAFFIC_STANDSTILL_GAP + TRAFFIC_TIME_HEADWAY * leaderSpeed;
+  const limit = Math.max(0, leaderSpeed + (leaderGap - wantedGap) * TRAFFIC_FOLLOW_GAIN);
+  // Remember who is holding this car back. Route choice uses it (see trafficChooseNextHeading).
+  v.trafficLeader = limit < v.maxSpeed - 0.3 ? leader : null;
+  return limit;
+}
 function trafficRandom(v) {
   v.trafficSeed = (Math.imul(v.trafficSeed, 1664525) + 1013904223) >>> 0;
   return v.trafficSeed / 4294967296;
@@ -314,6 +351,17 @@ function trafficChooseNextHeading(v, heading, nodeXIndex, nodeZIndex) {
     return x >= 0 && x < streetLines.length && z >= 0 && z < streetLines.length;
   });
   if (!options.length) throw new Error("Traffic reached a grid node with no legal exit");
+  // A driver stuck behind a slower car tends to look for a way out. If the car holding this one
+  // back is about to take a given exit at this same intersection, that exit's weight is halved,
+  // and halved again for every further intersection reached while still held back (1/2, 1/4...).
+  // The streak resets as soon as the car is not being held back at a decision.
+  const slower = v.trafficLeader;
+  const leg = slower && slower.trafficLeg;
+  if (leg && leg.nextXIndex === nodeXIndex && leg.nextZIndex === nodeZIndex) {
+    v.trafficFollowStreak = (v.trafficFollowStreak || 0) + 1;
+    const factor = Math.pow(0.5, v.trafficFollowStreak);
+    for (const option of options) if (option.heading === leg.nextHeading) option.weight *= factor;
+  } else v.trafficFollowStreak = 0;
   const total = options.reduce((sum, option) => sum + option.weight, 0);
   let choice = trafficRandom(v) * total;
   for (const option of options) {
@@ -461,6 +509,10 @@ for (let i = trafficStartEdges.length - 1; i > 0; i--) {
   [trafficStartEdges[i], trafficStartEdges[j]] = [trafficStartEdges[j], trafficStartEdges[i]];
 }
 
+// Each traffic car's top speed is its type's base speed plus a random offset of up to this many mph
+// either way, chosen once at startup. Uses Math.random so it differs on every page load. (Routes
+// stay seeded and repeatable. The test tools seed Math.random, so their runs repeat too.)
+const TRAFFIC_SPEED_VARIATION_MPH = 5;
 const TRAFFIC_COMPACT_COUNT = 12;
 const TRAFFIC_PICKUP_COUNT = 12;
 for (let i = 0; i < TRAFFIC_COMPACT_COUNT + TRAFFIC_PICKUP_COUNT; i++) {
@@ -480,6 +532,8 @@ for (let i = 0; i < TRAFFIC_COMPACT_COUNT + TRAFFIC_PICKUP_COUNT; i++) {
   const seed = (0x51f15e5d ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0;
   const p = trafficGridPosition(nodeXIndex, nodeZIndex, heading, lane);
   const fleetIndex = i;
+  const baseSpeed = isPickup ? 8.8 + (pickupIndex % 4) * 0.5 : 10.5 + (fleetIndex % 4) * 0.75;
+  const speedOffset = ((Math.random() * 2 - 1) * TRAFFIC_SPEED_VARIATION_MPH) / MPH_PER_MS;
   const v = vehicle(
     "traffic-grid-" + String(i + 1).padStart(2, "0"),
     isPickup ? "pickup" : ["trafficA", "trafficB", "trafficC"][fleetIndex % 3],
@@ -494,9 +548,7 @@ for (let i = 0; i < TRAFFIC_COMPACT_COUNT + TRAFFIC_PICKUP_COUNT; i++) {
       length: isPickup ? 5.0 : 4.2,
       mass: isPickup ? 1750 : 1000,
       accel: 0,
-      maxSpeed: isPickup
-        ? 8.8 + (pickupIndex % 4) * 0.5
-        : 10.5 + (fleetIndex % 4) * 0.75,
+      maxSpeed: baseSpeed + speedOffset,
       steerRate: 0,
       ai: true,
       route: "grid",
@@ -508,6 +560,9 @@ for (let i = 0; i < TRAFFIC_COMPACT_COUNT + TRAFFIC_PICKUP_COUNT; i++) {
       trafficSeed: seed,
     },
   );
+  v.trafficBaseSpeed = baseSpeed;
+  v.trafficLeader = null;
+  v.trafficFollowStreak = 0;
   v.trafficStartEdgeKey = edge.x + "," + edge.z + "," + edge.heading;
   v.trafficStartXIndex = nodeXIndex;
   v.trafficStartZIndex = nodeZIndex;

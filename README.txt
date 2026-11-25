@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.15.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.15.2
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -46,3 +46,13 @@ Version 0.15.0 changes:
 - Pickup traffic uses four body paint variants, a larger collision footprint and slightly lower cruising speeds.
 - All 24 vehicles share the seeded intersection-grid navigation, varied starting locations and collision recovery.
 - Moving AI semis are deferred until the route controller can account for the combined tractor-trailer footprint through turns.
+
+Version 0.15.1 changes:
+- Traffic cars now slow down for a slower car ahead in the same lane instead of ramming it.
+- Performance: collision checks skip far-away objects (physics cost per frame is about 3x lower) and the HUD only updates text when it changes.
+- Removed unused old traffic loop code.
+
+Version 0.15.2 changes:
+- Traffic top speeds now vary by up to 5 mph either way, chosen at random each time the game loads.
+- A car stuck behind a slower car is less likely to take the same exit at the next intersection, and less likely again at each following one.
+

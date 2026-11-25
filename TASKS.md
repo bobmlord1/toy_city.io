@@ -34,21 +34,6 @@ Notes:
 - Ramp launches do not currently identify a specific ramp; add a stable ramp identity if choosing stunt jump.
 - Centralize activity payouts through a small economy helper if practical; do not refactor the entire existing crash reward economy.
 
-### T-004 Fix upgrade ramp side wall geometry
-Assigned to: Claude (engineering).
-Status: implemented (v0.12.1). Waiting for an owner visual check in a real browser.
-Files: `src/world_city.js`.
-Why: The upgrade ramp's right side wall used a wrong vertex, leaving a fin above the up-slope and a gap along the down-slope.
-Done when: both side walls of every ramp match their decks (checked by `tools/smoke_test.js`), and the owner confirms the ramp looks right.
-
-### T-005 Fix shadows clipping through ramps
-Assigned to: Claude (engineering).
-Status: implemented (v0.12.1). Waiting for an owner visual check in a real browser.
-Files: `src/shadows.js`, `src/world_config.js` (new `upgradePad` constants), `src/world_city.js` (uses them), `tools/smoke_test.js`.
-Why: Shadows were flat triangles stretched across ramp slope changes and sat too close to the deck, so they cut through ramps and were buried under the tuning pad.
-Done when: shadows stay above ramp decks and the tuning pad (checked by `tools/smoke_test.js`), flat-ground shadows are unchanged, and the owner confirms they look right on ramps.
-Notes: Known limit: a shadow straddling a ramp's vertical side wall can still look slightly off in a thin band. Not worth fixing.
-
 ### T-003 Confirm the child's primary input device
 Assigned to: project owner.
 Why: Keyboard, touch or controller changes activity controls and HUD decisions.
@@ -90,7 +75,7 @@ Notes:
 
 ### T-008 Add a dedicated pickup-truck traffic fleet
 Assigned to: ChatGPT.
-Status: merged to main as v0.15.0 (PR #7). Owner reports no major perceived slowdown on phone/laptop, but has no objective FPS measurement. Full smoke test and truck appearance/congestion checks remain pending.
+Status: merged to main as v0.15.0 (PR #7). Owner reports no major perceived slowdown on phone/laptop, but has no objective FPS measurement. Full smoke test passed on `main` (Claude, 2026-11-24). Truck appearance and congestion in a real browser remain owner checks. Headless traffic measurements are in the Claude REVIEW entry in `agent_comments.md`.
 Files: `src/vehicles.js`, `tools/smoke_test.js`, `index.html`, `DESIGN.md`, `ARCHITECTURE.md`, `TASKS.md`, `README.txt`, `agent_comments.md`.
 Why: The owner reports that the city still feels empty and lacks vehicle variety after T-007; more traffic types should make free-roam feel busier without changing the route system.
 Done when:
@@ -103,7 +88,36 @@ Notes:
 - The owner also asked for six semis. Defer moving AI semis in this task: the trailer articulation simulation already runs for AI vehicles, but the existing compact-car turn path does not account for a tractor-trailer swept footprint. Do not add six semis as untested moving traffic; a later task should add trailer-aware path planning, turn clearance and speed control.
 - No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
  
+### T-009 Traffic following behavior
+Assigned to: Claude (engineering). Approved by the project owner on 2026-11-24.
+Status: implemented (v0.15.1). Waiting for an owner playtest in a real browser.
+Files: `src/vehicles.js`, `src/vehicle_update.js`, `tools/smoke_test.js`.
+Why: Traffic cars caught slower cars in the same lane and rear-ended them (25 of 52 incidents in 10 simulated minutes), which triggered knockback and trips onto the lawn.
+Done when: a fast car behind a slow car does not hit it (checked by `tools/smoke_test.js`), free-flowing traffic is unchanged, and the owner sees calmer traffic.
+Notes: Measured with `node tools/traffic_report.js 10`: rear-end incidents 25 to 5, contact time 13.5 s to 0.8 s, lawn excursions 89 to 76. See the HANDOFF in `agent_comments.md`.
+
+### T-010 Dead code cleanup and performance once-over
+Assigned to: Claude (engineering). Approved by the project owner on 2026-11-24.
+Status: implemented (v0.15.1). Behavior-preserving, verified exact.
+Files: `src/collisions.js`, `src/physics.js`, `src/vehicle_update.js`, `src/vehicles.js`, `src/hud.js`.
+Why: Remove unused code and fix obvious waste found by profiling.
+Done when: the simulation is identical before and after (same state fingerprint over 4,000 frames), physics cost drops, and the smoke test passes.
+Notes: Physics CPU per frame fell from 0.46 to 0.15 ms in headless measurement. Removed the unused `"z"` and `"x"` route branches and fields. Skipped idle props and far colliders, and cached HUD writes.
+
+### T-011 Traffic speed variation and weighted routing behind slower cars
+Assigned to: Claude (engineering). Requested by the project owner on 2026-11-25.
+Status: implemented (v0.15.2). Waiting for an owner playtest in a real browser.
+Files: `src/vehicles.js`, `tools/smoke_test.js`, `tools/traffic_report.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`.
+Why: Real traffic is not all the same speed, and a driver stuck behind a slower car tends to take a different road.
+Done when: traffic top speeds vary by up to 5 mph either way and differ on each page load; a car held back by a slower car has the weight of that car's exit halved at the shared intersection, and halved again at each further intersection (checked by `tools/smoke_test.js`); and the owner sees more varied traffic that spreads out.
+Notes: Interpretation confirmed by the owner on 2026-11-25: "weight" means the route-choice weights (0.56 straight, 0.22 left, 0.22 right). The reduction applies to whichever exit the slower car takes, not only straight. Measured over six random speed draws of 6 simulated minutes: time held back behind a slower car 3.4% to 2.4%, longest run of intersections while held back 6 to 3, incidents and lawn trips about unchanged.
+
 ## Later: proposed order, not yet authorized as coding tasks
+
+- Minimap static layer: `drawMap()` redraws every building and rock rectangle each frame. Draw them once into an offscreen canvas and copy it each frame. Fold this into the UI polish pass, since the minimap needs rework anyway.
+- Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
+- Optional traffic experiment: raising the AI steering cap from 1.55 to 2.6 rad/s halved moderate lawn excursions in simulation (39 to 21 in 10 minutes) but left severe ones unchanged. It makes turns tighter, which is a visual call for the owner.
+- Intersection yielding: remaining traffic incidents are crossing and oncoming contacts at intersections. Fixing them needs right-of-way rules, which is a design decision before it is a coding task.
 
 - Add the other two approved activity types after T-002 proves the activity framework.
 - After the owner playtests T-008, reassess whether 24 mixed traffic vehicles feel busy enough and whether desktop/mobile performance remains comfortable; do not add more traffic until that check.
@@ -121,4 +135,6 @@ Notes:
 
 ## Done
 
+- 2026-11-25 T-004 Fixed the upgrade ramp's right side wall (one wrong vertex left a fin above the up-slope and a gap on the down-slope). Owner confirmed in a real browser that the ramp looks right.
+- 2026-11-25 T-005 Fixed shadows clipping through ramps and the tuning pad (shadows now follow the ramp surface and clear the pad). Owner confirmed in a real browser that shadows look right on the ramps. Known limit: a shadow straddling a ramp's vertical side wall can still look slightly off in a thin band.
 - 2026-11-23 Refactor: split the single 2,971-line `game.js` into 18 files in `src/`, formatted the code, added `tools/smoke_test.js`, and added the project docs. Gameplay is unchanged. Claude reports identical old/new 400-frame headless simulations; browser/touch playtesting remains outstanding.

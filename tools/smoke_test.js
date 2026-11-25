@@ -123,9 +123,19 @@ const trafficProblems = get(`(() => {
   if (new Set(pickupTraffic.map((v) => v.name)).size < 4 ||
       new Set(pickupTraffic.map((v) => v.model)).size < 4)
     problems.push("Pickup traffic does not use all four paint/model variants");
-  if (Math.max(...pickupTraffic.map((v) => v.maxSpeed)) >=
-      Math.min(...compactTraffic.map((v) => v.maxSpeed)))
-    problems.push("Pickup traffic is not slower than compact-car traffic");
+  // Top speeds are a base speed per type plus a random offset of up to 5 mph either way.
+  if (Math.max(...pickupTraffic.map((v) => v.trafficBaseSpeed)) >=
+      Math.min(...compactTraffic.map((v) => v.trafficBaseSpeed)))
+    problems.push("Pickup traffic base speeds are not slower than compact-car base speeds");
+  const avgSpeed = (list) => list.reduce((sum, v) => sum + v.maxSpeed, 0) / list.length;
+  if (avgSpeed(pickupTraffic) >= avgSpeed(compactTraffic))
+    problems.push("Pickup traffic is not slower on average than compact-car traffic");
+  const speedLimit = 5 / MPH_PER_MS + 1e-9;
+  for (const v of trafficFleet)
+    if (Math.abs(v.maxSpeed - v.trafficBaseSpeed) > speedLimit)
+      problems.push(v.id + ": top speed is more than 5 mph away from its base speed");
+  if (trafficFleet.filter((v) => Math.abs(v.maxSpeed - v.trafficBaseSpeed) > 0.05).length < 22)
+    problems.push("Traffic top speeds are not varied");
   const validIndex = (i) => Number.isInteger(i) && i >= 0 && i < streetLines.length;
   for (const v of trafficFleet) {
     if (!validIndex(v.trafficStartXIndex) || !validIndex(v.trafficStartZIndex))
@@ -301,9 +311,13 @@ for (let i = 0; i < trafficAfter.length; i++) {
     failures.push("Traffic runtime: " + car.id + " planned a path outside the road footprint");
 }
 if (regionalCrossers < 16)
-  failures.push("Traffic runtime: only " + regionalCrossers + " vehicles crossed into another city quadrant");
+  failures.push(
+    "Traffic runtime: only " + regionalCrossers + " vehicles crossed into another city quadrant",
+  );
 if (totalTrafficTurns < 48)
-  failures.push("Traffic runtime: too few intersection turns were made (" + totalTrafficTurns + ")");
+  failures.push(
+    "Traffic runtime: too few intersection turns were made (" + totalTrafficTurns + ")",
+  );
 
 // Simulate a collision knockback for both classes and verify the shared soft recovery.
 const recoverySetup = get(`(() => {
@@ -320,15 +334,22 @@ const recoverySetup = get(`(() => {
   });
 })()`);
 step(240);
-const recoveryLateralErrors = get(`[trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")].map((v) => {
+const recoveryLateralErrors =
+  get(`[trafficFleet[0], trafficFleet.find((v) => v.type === "pickup")].map((v) => {
   const p = trafficLegPoint(v.trafficLeg, Math.min(v.trafficProgress, v.trafficLeg.length));
   const rightX = Math.cos(p.yaw), rightZ = -Math.sin(p.yaw);
   return Math.abs((v.x - p.x) * rightX + (v.z - p.z) * rightZ);
 })`);
 for (let i = 0; i < recoverySetup.length; i++) {
-  if (!Number.isFinite(recoveryLateralErrors[i]) ||
-      recoveryLateralErrors[i] > recoverySetup[i].initialOffset * 0.5)
-    failures.push("Traffic recovery: " + recoverySetup[i].id + " did not return toward its lane after knockback");
+  if (
+    !Number.isFinite(recoveryLateralErrors[i]) ||
+    recoveryLateralErrors[i] > recoverySetup[i].initialOffset * 0.5
+  )
+    failures.push(
+      "Traffic recovery: " +
+        recoverySetup[i].id +
+        " did not return toward its lane after knockback",
+    );
 }
 
 // ---- Ramp geometry and ramp shadow checks ----
@@ -397,6 +418,104 @@ const geometryProblems = get(`(() => {
   return problems;
 })()`);
 for (const problem of geometryProblems) failures.push("Geometry: " + problem);
+
+// ---- Traffic following check: a fast car behind a slow car must not run into it ----
+const followResult = get(`(() => {
+  const fleet = trafficFleet;
+  const leader = fleet.reduce((a, b) => (b.maxSpeed < a.maxSpeed ? b : a));
+  const follower = fleet.reduce((a, b) => (b.maxSpeed > a.maxSpeed ? b : a));
+  // Let the leader run until it is early on a long leg, so nothing odd happens in the next 8 s.
+  let guard = 0;
+  while ((leader.trafficProgress < 12 || leader.trafficProgress > 20) && guard++ < 40000) updatePhysics(1 / 60);
+  if (guard >= 40000) return { error: "leader never reached the test window" };
+  // Copy the leader's route state onto the follower, 14 units behind, same lane, same speed as leader.
+  for (const key of Object.keys(leader)) if (key.startsWith("traffic")) follower[key] = leader[key];
+  follower.trafficProgress = leader.trafficProgress - 14;
+  const point = trafficLegPoint(follower.trafficLeg, follower.trafficProgress);
+  follower.x = point.x;
+  follower.z = point.z;
+  follower.yaw = leader.yaw;
+  follower.vx = leader.vx;
+  follower.vz = leader.vz;
+  follower.aiKnockTime = 0;
+  let minGap = 1e9, knocked = false;
+  for (let i = 0; i < 450; i++) {
+    updatePhysics(1 / 60);
+    const fx = Math.sin(leader.yaw), fz = Math.cos(leader.yaw);
+    const gap = (leader.x - follower.x) * fx + (leader.z - follower.z) * fz - (leader.length + follower.length) / 2;
+    minGap = Math.min(minGap, gap);
+    if (leader.aiKnockTime > 0 || follower.aiKnockTime > 0) knocked = true;
+  }
+  return {
+    minGap: +minGap.toFixed(2),
+    knocked,
+    leaderSpeed: +Math.hypot(leader.vx, leader.vz).toFixed(2),
+    followerSpeed: +Math.hypot(follower.vx, follower.vz).toFixed(2),
+    followerMax: follower.maxSpeed,
+    leaderMax: leader.maxSpeed,
+  };
+})()`);
+if (followResult.error) failures.push("Traffic following: " + followResult.error);
+else {
+  if (followResult.knocked)
+    failures.push(
+      "Traffic following: the follower hit the leader (" + JSON.stringify(followResult) + ")",
+    );
+  if (followResult.minGap < 0.4)
+    failures.push("Traffic following: bumper gap fell to " + followResult.minGap);
+  if (followResult.followerSpeed > followResult.leaderMax + 1.2)
+    failures.push(
+      "Traffic following: follower is still speeding behind the leader (" +
+        followResult.followerSpeed +
+        ")",
+    );
+  if (followResult.followerSpeed < followResult.leaderSpeed - 2)
+    failures.push(
+      "Traffic following: follower stopped far behind the leader (" +
+        followResult.followerSpeed +
+        ")",
+    );
+}
+
+
+// ---- Route weighting: a car held back by a slower car is less likely to take the same exit ----
+const weightResult = get(`(() => {
+  const share = (leaderLeg, streakBefore) => {
+    // Share of "straight" exits chosen at an interior intersection (all three exits are legal).
+    const f = { trafficSeed: 987654321, trafficLeader: leaderLeg ? { trafficLeg: leaderLeg } : null, trafficFollowStreak: streakBefore };
+    let straight = 0;
+    const N = 6000;
+    for (let i = 0; i < N; i++) {
+      f.trafficFollowStreak = streakBefore;
+      if (trafficChooseNextHeading(f, 0, 3, 3) === 0) straight++;
+    }
+    return { share: straight / N, streak: f.trafficFollowStreak };
+  };
+  const straightLeg = { nextXIndex: 3, nextZIndex: 3, nextHeading: 0 };
+  const otherNode = { nextXIndex: 4, nextZIndex: 3, nextHeading: 0 };
+  const turnLeg = { nextXIndex: 3, nextZIndex: 3, nextHeading: 1 };
+  return {
+    free: share(null, 0).share,
+    k1: share(straightLeg, 0).share,
+    k2: share(straightLeg, 1).share,
+    k3: share(straightLeg, 2).share,
+    elsewhere: share(otherNode, 0),
+    leaderTurns: share(turnLeg, 0).share,
+    resetStreak: share(null, 4).streak,
+    countedStreak: share(straightLeg, 4).streak,
+  };
+})()`);
+const near = (a, b, tol) => Math.abs(a - b) <= tol;
+// Expected straight shares with weights 0.56 / 0.22 / 0.22: free 0.56, then 0.28, 0.14, 0.07 for the straight exit.
+if (!near(weightResult.free, 0.56, 0.03)) failures.push("Route weights: free straight share is " + weightResult.free);
+if (!near(weightResult.k1, 0.28 / 0.72, 0.03)) failures.push("Route weights: 1st intersection behind a slower car gave " + weightResult.k1);
+if (!near(weightResult.k2, 0.14 / 0.58, 0.03)) failures.push("Route weights: 2nd intersection gave " + weightResult.k2);
+if (!near(weightResult.k3, 0.07 / 0.51, 0.03)) failures.push("Route weights: 3rd intersection gave " + weightResult.k3);
+if (!near(weightResult.elsewhere.share, 0.56, 0.03) || weightResult.elsewhere.streak !== 0)
+  failures.push("Route weights: a leader heading to a different intersection changed the choice");
+if (weightResult.leaderTurns < 0.56 + 0.05) failures.push("Route weights: straight should become MORE likely when the leader turns (" + weightResult.leaderTurns + ")");
+if (weightResult.resetStreak !== 0) failures.push("Route weights: the streak did not reset when no car was in front");
+if (weightResult.countedStreak !== 5) failures.push("Route weights: the streak did not count up behind a slower car");
 
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));

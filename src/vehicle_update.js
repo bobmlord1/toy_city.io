@@ -14,10 +14,16 @@ function updateVehicle(v, dt) {
     // shove it well off its lane; it drifts back over time instead of snapping into place.
     const recovery = v.aiKnockTime > 0 ? 0.22 : 1.0;
     v.aiKnockTime = Math.max(0, v.aiKnockTime - dt);
-    const targetSpeed = v.maxSpeed * (v.routeDir || 1);
     if (v.route === "grid") {
       if (!v.trafficLeg) throw new Error("Traffic vehicle has no active grid leg: " + v.id);
-      v.trafficProgress += v.maxSpeed * dt;
+      // Cruise speed is the speed the car is trying to hold. It brakes hard for a slower car ahead
+      // and recovers gently once the road is clear. The route progresses at this speed.
+      if (v.trafficCruise === undefined) v.trafficCruise = v.maxSpeed;
+      const wanted = Math.min(v.maxSpeed, trafficFollowLimit(v));
+      if (wanted < v.trafficCruise)
+        v.trafficCruise = Math.max(wanted, v.trafficCruise - TRAFFIC_BRAKE * dt);
+      else v.trafficCruise = Math.min(wanted, v.trafficCruise + TRAFFIC_ACCEL * dt);
+      v.trafficProgress += v.trafficCruise * dt;
       while (v.trafficProgress >= v.trafficLeg.length) {
         v.trafficProgress -= v.trafficLeg.length;
         const completed = v.trafficLeg;
@@ -53,45 +59,16 @@ function updateVehicle(v, dt) {
         laneErrorZ = target.z - v.z;
       const sideCorrection =
         clamp((laneErrorX * right[0] + laneErrorZ * right[1]) * 0.55, -3.0, 3.0) * recovery;
-      const nextForward = lerp(currentForward, v.maxSpeed, 1 - Math.exp(-dt * 1.8));
+      const speedRate = v.trafficCruise < currentForward ? 4.0 : 1.8; // brake faster than accelerating
+      const nextForward = lerp(currentForward, v.trafficCruise, 1 - Math.exp(-dt * speedRate));
       const nextSide = lerp(currentSide, sideCorrection, 1 - Math.exp(-dt * 3.5));
       v.vx = f[0] * nextForward + right[0] * nextSide;
       v.vz = f[1] * nextForward + right[1] * nextSide;
       v.x += v.vx * dt;
       v.z += v.vz * dt;
       v.yaw = Math.atan2(v.vx, v.vz);
-    } else if (v.route === "z") {
-      const laneError = v.routeLaneX - v.x;
-      const lateralAccel = clamp(laneError * 2.3 - v.vx * 1.65, -6, 6) * recovery;
-      v.vx += lateralAccel * dt;
-      v.vz += clamp(targetSpeed - v.vz, -3.2 * dt, 3.2 * dt);
-      v.x += v.vx * dt;
-      v.z += v.vz * dt;
-      v.yaw = Math.atan2(v.vx, v.vz);
-      if (v.z > 112) {
-        v.z = -112;
-        v.vz = Math.max(1, v.maxSpeed * 0.65);
-      }
-      if (v.z < -112) {
-        v.z = 112;
-        v.vz = -Math.max(1, v.maxSpeed * 0.65);
-      }
     } else {
-      const laneError = v.routeLaneZ - v.z;
-      const lateralAccel = clamp(laneError * 2.3 - v.vz * 1.65, -6, 6) * recovery;
-      v.vz += lateralAccel * dt;
-      v.vx += clamp(targetSpeed - v.vx, -3.2 * dt, 3.2 * dt);
-      v.x += v.vx * dt;
-      v.z += v.vz * dt;
-      v.yaw = Math.atan2(v.vx, v.vz);
-      if (v.x > 112) {
-        v.x = -112;
-        v.vx = Math.max(1, v.maxSpeed * 0.65);
-      }
-      if (v.x < -112) {
-        v.x = 112;
-        v.vx = -Math.max(1, v.maxSpeed * 0.65);
-      }
+      throw new Error("Unknown traffic route \"" + v.route + "\" for " + v.id);
     }
     v.y = driveSurfaceH(v.x, v.z) + 0.04;
     v.grounded = true;
