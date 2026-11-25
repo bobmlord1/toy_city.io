@@ -172,7 +172,6 @@ function resolveVehicleProp(v, p, propIndex) {
     p.z += nz * overlap;
     const rel = (p.vx - v.vx) * nx + (p.vz - v.vz) * nz;
     const impact = Math.max(0, -rel);
-    if (v === controlled) registerCrashReward("prop:" + v.id + ":" + propIndex, impact);
     registerPropImpact(p, v, impact);
     const ramPower = v === controlled ? v.impactMultiplier || 1 : 1;
     const kick = clamp((impact * 1.25 + 1.5) * ramPower, 1.5, 24);
@@ -371,7 +370,6 @@ function resolveTrailerProp(semi, p, index) {
   p.z += nz * overlap;
   const rel = (p.vx - t.vx) * nx + (p.vz - t.vz) * nz,
     impact = Math.max(0, -rel);
-  if (semi === controlled) registerCrashReward("trailer-prop:" + index, impact);
   registerPropImpact(p, semi, impact, true);
   const ramPower = semi === controlled ? semi.impactMultiplier || 1 : 1;
   const kick = clamp((impact * 1.15 + 1.0) * ramPower, 1.0, 20);
