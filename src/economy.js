@@ -31,7 +31,7 @@ function nextUpgradeCost(v, tier = "speed") {
   );
 }
 function updateCashUI() {
-  $("cash").textContent = "CASH  $" + cash.toLocaleString("en-US");
+  $("cash").textContent = "$" + Math.floor(cash).toLocaleString("en-US");
 }
 // Single entry point for cash that does not come from crashes (activities use this).
 function awardCash(amount) {

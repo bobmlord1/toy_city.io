@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.15.2
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.4 (HUD refinement branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -56,3 +56,29 @@ Version 0.15.2 changes:
 - Traffic top speeds now vary by up to 5 mph either way, chosen at random each time the game loads.
 - A car stuck behind a slower car is less likely to take the same exit at the next intersection, and less likely again at each following one.
 
+
+Version 0.16.0 (T-012 first HUD pass):
+- Added the top-center molded dashboard, integrated objective map, Auto / Desktop / Mobile profiles and invisible mobile swipe controls.
+
+Version 0.16.1 (T-012 HUD refinement branch):
+- Replaced the counter-rotating heading-up map with a fixed world-oriented map and a vehicle marker that rotates with the car.
+- Added a circular digital speed gauge and strengthened the approved aqua, yellow, coral and green accents across the molded-plastic interface.
+- Moved the PBR lighting selector to the startup screen; it is no longer part of the driving HUD.
+- Added smoke-test coverage for map orientation, speed-gauge markup and startup-only lighting placement.
+- Automated smoke testing and real browser/touch playtesting are still required.
+
+Version 0.16.2:
+- Made the speed gauge optional at runtime; older/cached page markup falls back to a numeric MPH readout instead of stopping the game loop.
+- Versioned dynamic game-script URLs to reduce stale HTML/script combinations.
+
+
+Version 0.16.3 (T-013 compact dashboard):
+- Cut the dashboard's vertical footprint to roughly half by arranging vehicle and cash telemetry in compact side panels.
+- Moved the active delivery instruction, distance and SKIP action into a reserved strip immediately above the minimap.
+- Kept the objective strip's space reserved so the dashboard does not jump when an activity appears or clears.
+
+
+Version 0.16.4 (T-014 side-by-side map/objective layout):
+- Placed the integrated minimap beside the objective information and SKIP control instead of stacking the objective above a very short map.
+- Enlarged the minimap while keeping the compact top dashboard; desktop and mobile have separate map/objective column sizing.
+- The objective panel keeps its column reserved when hidden, so the dashboard does not shift when an activity starts or ends.

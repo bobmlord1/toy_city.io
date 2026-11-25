@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.15.2</title>
+<title>Free Roam Car Playground · v0.16.4</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -84,34 +84,273 @@
     #activityIcon { font-size:20px; }
     #interact { display:block; bottom:92px; }
   }
+
+  /* T-012 Molded Dashboard */
+  :root { color-scheme:dark; --petrol:#152A34; --teal:#203D48; --ivory:#F4F1E8; --muted:#AFC2C8; --aqua:#72D2DC; --yellow:#F4CF59; --coral:#F28F73; --green:#8BC99B; }
+  #dashboard { position:fixed; z-index:4; top:max(10px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%); width:min(620px,calc(100vw - 28px)); min-height:112px; display:grid; grid-template-columns:minmax(108px,1fr) 240px minmax(108px,1fr); align-items:center; gap:10px; padding:10px 14px; border-radius:18px; background:rgba(21,42,52,.96); border:1px solid rgba(244,241,232,.26); box-shadow:0 5px 18px rgba(0,0,0,.18); color:var(--ivory); }
+  .dash-side { min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; }
+  #vehicleName { color:var(--muted); font-size:11px; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }
+  #speed { color:var(--ivory); font-size:29px; line-height:1; font-weight:900; font-variant-numeric:tabular-nums; }
+  #speed small { font-size:10px; color:var(--muted); }
+  #boostStatus { color:var(--aqua); font-size:9px; font-weight:850; letter-spacing:.04em; }
+  #mapbox { position:relative; top:auto; right:auto; pointer-events:auto; width:100%; height:94px; padding:4px; border-radius:14px; background:var(--teal); border:1px solid rgba(244,241,232,.18); overflow:hidden; }
+  #map { display:block; width:100%; height:100%; border-radius:10px; }
+  .dash-right { gap:2px; }
+  .cash-label { color:var(--muted); font-size:9px; font-weight:850; letter-spacing:.1em; }
+  #cash { min-width:0; padding:0; color:var(--yellow); font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
+  #profileToggle,#lightingToggle { pointer-events:auto; min-height:28px; border:1px solid rgba(244,241,232,.2); border-radius:9px; padding:5px 8px; background:#294955; color:var(--ivory); font:800 9px system-ui; cursor:pointer; white-space:nowrap; }
+  #lightingToggle { max-width:none; }
+  #activity { top:132px; left:50%; transform:translateX(-50%); max-width:min(360px,calc(100vw - 24px)); padding:7px 10px; border-radius:12px; background:rgba(21,42,52,.94); font-size:12px; }
+  #message { top:132px; background:rgba(21,42,52,.96); border-radius:12px; }
+  #hint,#help,#brand,#topbar { display:none !important; }
+  #touchActions { display:none; }
+  .actionbtn { width:58px; height:58px; border:1px solid rgba(244,241,232,.36); border-radius:18px; background:rgba(21,42,52,.94); color:var(--ivory); font-size:23px; font-weight:900; box-shadow:0 4px 12px rgba(0,0,0,.22); touch-action:none; user-select:none; -webkit-user-select:none; }
+  .actionbtn:active,.actionbtn.active { background:var(--teal); transform:scale(.96); }
+  .actionbtn.boost { color:var(--yellow); }
+  .actionbtn.interact { color:var(--aqua); }
+  #swipeCue { display:none; position:fixed; left:24px; bottom:26px; color:rgba(244,241,232,.72); font-size:10px; letter-spacing:.12em; pointer-events:none; }
+  #upgradePanel { background:rgba(21,42,52,.97); border:1px solid rgba(244,241,232,.22); border-radius:18px; }
+  #upgradePanel .eyebrow { color:var(--yellow); }
+  #upgradeButton,#accelerationButton,#impactButton { border-radius:12px; }
+  body.hud-mobile #dashboard { width:calc(100vw - 18px); min-height:88px; grid-template-columns:minmax(64px,.8fr) minmax(120px,1.45fr) minmax(64px,.8fr); gap:5px; padding:7px 8px; border-radius:16px; }
+  body.hud-mobile #mapbox { height:72px; padding:3px; }
+  body.hud-mobile #speed { font-size:23px; }
+  body.hud-mobile #vehicleName { font-size:9px; }
+  body.hud-mobile #boostStatus { font-size:8px; }
+  body.hud-mobile #cash { font-size:17px; }
+  body.hud-mobile #profileToggle,body.hud-mobile #lightingToggle { min-height:30px; padding:5px 6px; font-size:9px; }
+  body.hud-mobile #vehicleName { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.hud-mobile #cash { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; }
+  body.hud-mobile #activity { top:calc(max(10px, env(safe-area-inset-top)) + 112px); }
+  body.hud-mobile #message { top:auto; bottom:100px; font-size:12px; }
+  body.hud-mobile #touchActions { display:flex; position:fixed; right:14px; bottom:max(16px,env(safe-area-inset-bottom)); flex-direction:column; gap:10px; z-index:5; pointer-events:auto; }
+  body.hud-mobile .actionbtn { width:62px; height:62px; border-radius:19px; }
+  body.hud-mobile #interact:not([hidden]) { display:block; position:static; width:62px; height:62px; border:0; }
+  #interact[hidden] { display:none !important; }
+  body.hud-mobile #swipeCue { display:block; }
+  body.hud-mobile #upgradePanel { right:88px; bottom:16px; width:min(235px,calc(100vw - 110px)); }
+  body.hud-desktop #dashboard { grid-template-columns:minmax(120px,1fr) 260px minmax(120px,1fr); }
+  body.hud-desktop #touchActions,body.hud-desktop #swipeCue { display:none !important; }
+  @media (max-width:420px) { body.hud-mobile #dashboard { grid-template-columns:58px minmax(110px,1fr) 64px; } body.hud-mobile #mapbox { height:66px; } }
+
+
+/* Toy-playset polish: stronger approved colors, molded depth, clear instrument hierarchy. */
+#dashboard{background:linear-gradient(180deg,#294D58,#152A34);border:2px solid #F4CF59;border-radius:22px;box-shadow:0 6px 0 rgba(9,26,33,.72),0 8px 20px #0005,inset 0 2px 0 #F4F1E83D}
+.dash-left,.dash-right{min-height:92px;padding:5px 4px;border-radius:16px;box-shadow:inset 0 2px 0 #F4F1E826}
+.dash-left{background:linear-gradient(150deg,#72D2DC40,#203D48);border:1px solid #72D2DC}
+.dash-right{background:linear-gradient(150deg,#F4CF5938,#203D48);border:1px solid #F4CF59;gap:4px}
+#vehicleName{max-width:100%;color:#F4F1E8;font-size:11px;font-weight:950;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.speed-gauge{--speed-sweep:0deg;position:relative;width:68px;height:68px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(from 225deg,#72D2DC 0deg var(--speed-sweep),#AFC2C847 var(--speed-sweep) 270deg,transparent 270deg)}
+.speed-gauge:before{content:"";position:absolute;inset:5px;border-radius:50%;background:#152A34;border:2px solid #3B6672;box-shadow:inset 0 2px 4px #0008}
+.speed-readout{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;line-height:1}
+#speed{margin:0;color:#F4F1E8;font-size:24px;font-weight:950;font-variant-numeric:tabular-nums}
+#speedUnit{margin-top:3px;color:#72D2DC;font-size:8px;font-weight:950;letter-spacing:.12em}
+#boostStatus{padding:3px 8px;border:1px solid #72D2DC99;border-radius:99px;background:#152A34;color:#72D2DC;font-size:8px;font-weight:950}
+#mapbox{background:#173E49;border:2px solid #72D2DC;border-radius:16px;box-shadow:inset 0 2px 8px #0006}
+.cash-label{color:#F4F1E8;font-weight:950;letter-spacing:.14em}
+#cash{padding:2px 5px;border-radius:8px;background:#F4CF592E;border:1px solid #F4CF5980;color:#F4CF59;font-weight:950}
+#profileToggle{min-height:32px;border:2px solid #F4F1E8;border-radius:10px;padding:5px 9px;background:#F28F73;color:#152A34;font:950 10px system-ui;box-shadow:0 2px 0 #0005}
+#activity{border:1px solid #8BC99B;border-left:4px solid #8BC99B;background:#152A34F7}
+#message{border:1px solid #72D2DC;background:#152A34FA}
+.actionbtn{border:2px solid #F4F1E8;box-shadow:0 4px 0 #0006,0 5px 12px #0004}
+.actionbtn.brake{background:#F28F73;color:#152A34}.actionbtn.boost{background:#F4CF59;color:#152A34}.actionbtn.interact{background:#72D2DC;color:#152A34}
+#upgradePanel{background:linear-gradient(160deg,#294D58,#152A34);border:2px solid #F4CF59;box-shadow:0 6px 0 #091A21A0,0 8px 20px #0004}
+#upgradePanel .eyebrow{color:#F4CF59}
+#upgradeButton,#accelerationButton,#impactButton{border:2px solid #152A3461;border-radius:12px}
+#startcard #lightingToggle{display:block;width:min(250px,100%);min-height:42px;margin:10px auto 4px;padding:9px 14px;border:2px solid #F4CF59;border-radius:12px;background:#203D48;color:#F4F1E8;font:950 12px system-ui;letter-spacing:.04em;white-space:normal;max-width:none;align-self:center;box-shadow:0 3px 0 #0006;cursor:pointer}
+#startcard #lightingToggle[data-mode="advanced"]{background:#72D2DC;color:#152A34;border-color:#F4F1E8}
+@media(max-width:760px){.dash-left,.dash-right{min-height:78px;padding:3px 2px;gap:3px;border-radius:13px}.speed-gauge{width:50px;height:50px}.speed-gauge:before{inset:4px;border-width:1.5px}#speed{font-size:19px}#speedUnit{font-size:7px;margin-top:2px}#vehicleName{font-size:8px;letter-spacing:.04em}#boostStatus{padding:2px 4px;font-size:7px;letter-spacing:0}#cash{font-size:14px;padding:2px}#profileToggle{min-height:28px;padding:4px 6px;font-size:8px}#activity{top:calc(max(10px,env(safe-area-inset-top)) + 100px)}}
+@media(max-width:420px){.speed-gauge{width:48px;height:48px}}
+
+  
+  /* T-013: compact overhead dashboard with objective details in a reserved map header. */
+  #dashboard{
+    min-height:0;
+    grid-template-columns:minmax(110px,1fr) minmax(130px,240px) minmax(110px,1fr);
+    align-items:center;
+    gap:7px;
+    padding:5px 9px;
+    border-radius:16px;
+  }
+  .dash-left,.dash-right{min-height:44px;padding:3px 6px;border-radius:12px}
+  .dash-left{
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr);
+    grid-template-rows:1fr 1fr;
+    grid-template-areas:"gauge name" "gauge boost";
+    align-items:center;
+    justify-items:start;
+    gap:2px 5px;
+    text-align:left;
+  }
+  .dash-left .speed-gauge{grid-area:gauge;width:38px;height:38px}
+  #dashboard #vehicleName{grid-area:name;align-self:end;justify-self:start;width:100%;font-size:8px;letter-spacing:.04em}
+  #dashboard #boostStatus{
+    grid-area:boost;
+    align-self:start;
+    justify-self:start;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    padding:2px 5px;
+    font-size:7px;
+    letter-spacing:0;
+  }
+  #dashboard #speed{font-size:16px}
+  #dashboard #speedUnit{font-size:6px}
+  .dash-center{
+    min-width:0;
+    width:100%;
+    display:grid;
+    grid-template-columns:minmax(96px,.9fr) minmax(120px,1.1fr);
+    grid-template-rows:54px;
+    gap:6px;
+    align-content:center;
+    align-items:stretch;
+  }
+  #dashboard #mapbox{
+    position:relative;
+    top:auto;
+    right:auto;
+    width:100%;
+    max-width:none;
+    height:54px;
+    min-height:0;
+    padding:3px;
+    border-radius:10px;
+    align-self:stretch;
+  }
+  #dashboard #map{width:100%;height:100%;min-height:0;border-radius:6px}
+  #dashboard #activity{
+    position:static;
+    inset:auto;
+    transform:none;
+    display:none;
+    width:100%;
+    max-width:none;
+    min-width:0;
+    height:54px;
+    padding:4px 6px;
+    border:1px solid #8BC99B;
+    border-left:3px solid #8BC99B;
+    border-radius:9px;
+    background:#152A34F7;
+    box-shadow:none;
+    backdrop-filter:none;
+    grid-template-columns:14px minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto;
+    align-items:center;
+    gap:3px 5px;
+    font-size:9px;
+    line-height:1.1;
+    z-index:auto;
+    pointer-events:auto;
+  }
+  #dashboard #activity.show{display:grid}
+  #dashboard #activityIcon{grid-column:1;grid-row:1;justify-self:center;font-size:11px;line-height:1}
+  #dashboard #activityText{
+    grid-column:2;grid-row:1;
+    min-width:0;
+    max-height:2.3em;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    line-clamp:2;
+    text-overflow:ellipsis;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:9px;
+    line-height:1.15;
+  }
+  #dashboard #activitySkip{
+    grid-column:1 / -1;
+    justify-self:end;
+    align-self:end;
+    min-height:19px;
+    padding:3px 7px;
+    border-radius:6px;
+    font:900 8px/1 system-ui,sans-serif;
+    letter-spacing:0;
+    white-space:nowrap;
+  }
+  .dash-right{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-rows:1fr 1fr;
+    grid-template-areas:"label profile" "cash profile";
+    align-items:center;
+    justify-items:start;
+    gap:1px 5px;
+    text-align:left;
+  }
+  #dashboard .cash-label{grid-area:label;align-self:end;font-size:7px;letter-spacing:.1em}
+  #dashboard #cash{grid-area:cash;align-self:start;font-size:15px;padding:1px 4px}
+  #dashboard #profileToggle{grid-area:profile;align-self:center;min-height:24px;padding:4px 7px;font-size:8px}
+  #message{top:76px}
+
+  @media(max-width:760px){
+    body.hud-mobile #dashboard{
+      width:calc(100vw - 18px);
+      min-height:0;
+      grid-template-columns:minmax(49px,.8fr) minmax(100px,1.45fr) minmax(55px,.8fr);
+      gap:4px;
+      padding:3px 5px;
+      border-radius:14px;
+    }
+    body.hud-mobile #dashboard .dash-left,
+    body.hud-mobile #dashboard .dash-right{min-height:38px;padding:2px 3px;border-radius:10px;gap:1px 3px}
+    body.hud-mobile #dashboard .dash-left .speed-gauge{width:32px;height:32px}
+    body.hud-mobile #dashboard #vehicleName{font-size:7px;letter-spacing:0}
+    body.hud-mobile #dashboard #speed{font-size:12px}
+    body.hud-mobile #dashboard #speedUnit{font-size:6px;margin-top:1px}
+    body.hud-mobile #dashboard #boostStatus{padding:1px 3px;font-size:7px}
+    body.hud-mobile #dashboard{grid-template-columns:minmax(42px,.75fr) minmax(156px,2fr) minmax(48px,.85fr)}
+    body.hud-mobile #dashboard .dash-center{grid-template-columns:minmax(64px,.9fr) minmax(88px,1.1fr);grid-template-rows:48px;gap:4px}
+    body.hud-mobile #dashboard #mapbox{height:48px;padding:2px}
+    body.hud-mobile #dashboard #activity{height:48px;padding:3px 4px;gap:2px 3px}
+    body.hud-mobile #dashboard #activityIcon{font-size:10px}
+    body.hud-mobile #dashboard #activityText{font-size:8px;line-height:1.1}
+    body.hud-mobile #dashboard #activitySkip{min-height:19px;padding:2px 5px;font-size:7px}
+    body.hud-mobile #dashboard .cash-label{font-size:7px}
+    body.hud-mobile #dashboard #cash{font-size:12px;padding:1px 3px}
+    body.hud-mobile #dashboard #profileToggle{min-height:21px;padding:3px 5px;font-size:8px}
+    body.hud-mobile #message{top:auto;bottom:100px}
+  }
+  @media(max-width:420px){
+    body.hud-mobile #dashboard{grid-template-columns:minmax(40px,.75fr) minmax(150px,2fr) minmax(46px,.85fr)}
+  }
+
 </style>
 </head>
 <body>
 <canvas id="game" aria-label="3D free-roam car game"></canvas>
 <div id="vignette"></div>
-<div id="topbar">
-  <div id="brand" class="panel"><strong>FREE ROAM</strong><span>CAR PLAYGROUND · v0.15.2</span></div>
-  <div id="status" class="panel"><div id="vehicleName">Compact Car</div><div id="speed">0 <small>MPH</small></div></div>
-  <div id="cash" class="panel">CASH&nbsp; $0</div>
-  <div id="boostStatus" class="panel" style="padding:9px 12px;font-size:11px;font-weight:850;letter-spacing:.04em;color:#a8efff">BOOST READY · SHIFT</div>
-  <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED PBR: ON</button>
+<div id="dashboard" class="panel" aria-label="Driving dashboard">
+  <div class="dash-side dash-left">
+    <div id="vehicleName">COMPACT</div>
+    <div class="speed-gauge" id="speedGauge" aria-label="Vehicle speed"><div class="speed-readout"><div id="speed">0</div><span id="speedUnit">MPH</span></div></div>
+    <div id="boostStatus" aria-live="polite">BOOST READY</div>
+  </div>
+  <div class="dash-center">
+    <div id="mapbox" aria-label="Fixed-orientation objective map with a rotating vehicle marker"><canvas id="map" width="360" height="216"></canvas></div>
+    <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
+  </div>
+  <div class="dash-side dash-right">
+    <div class="cash-label">CASH</div><div id="cash">$0</div>
+    <button id="profileToggle" type="button" aria-label="HUD layout: automatic. Change layout">AUTO</button>
+  </div>
 </div>
-<div id="mapbox" class="panel"><canvas id="map" width="264" height="264"></canvas></div>
-<div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
 <div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
-<div id="touch">
-  <div class="padgroup">
-    <button class="touchbtn" data-control="left" aria-label="Steer left">◀</button>
-    <button class="touchbtn" data-control="right" aria-label="Steer right">▶</button>
-  </div>
-  <div class="padgroup">
-    <button class="touchbtn wide" data-control="brake" aria-label="Brake or reverse">BRAKE</button>
-    <button class="touchbtn wide" data-control="gas" aria-label="Accelerate">GO ▲</button>
-  </div>
+<div id="touchActions" aria-label="Driving actions">
+  <button class="actionbtn brake" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
+  <button class="actionbtn boost" id="boostButton" data-action="boost" aria-label="Boost">⚡</button>
+  <button class="actionbtn interact" id="interact" aria-label="Enter or exit vehicle" hidden>↗</button>
 </div>
-<button id="interact">ENTER / EXIT</button>
+<div id="swipeCue" aria-hidden="true">SWIPE TO DRIVE</div>
 <div id="upgradePanel" class="panel" role="region" aria-live="polite">
   <div class="eyebrow">TOY TOWN TUNING PAD</div>
   <div class="upgradeTitle" id="upgradeTitle">Top Speed</div>
@@ -129,9 +368,10 @@
 <div id="startcover">
   <div id="startcard">
     <h1>Free Roam Car Playground</h1>
-    <p>No races, timers, ads or real-money purchases. Explore a colorful brick-built city, earn cash from crashes and upgrade your vehicles.</p>
+    <p>No races, timers, ads or real-money purchases. Explore a colorful toy city, find activities, earn cash and upgrade your vehicles.</p>
     <p><b>Explore a city four times wider and four times longer, watch 24 cars and pickup trucks turn through the connected city grid, try the stunt ramps, and find the blue tuning ramp. Smash props and earn airtime cash.</b></p>
-    <p class="small">Vehicle models: Grab3D Cozy Vehicles collection (CC0 1.0). Keyboard: WASD / arrows to drive, Shift for a short boost, E to enter or exit, Space for handbrake, C to change camera. Crashes and airtime earn cash. Drive up the blue tuning ramp to upgrade top speed or acceleration; colored stunt ramps pay airtime bonuses.</p>
+    <p class="small">Vehicle models: Grab3D Cozy Vehicles collection (CC0 1.0). Desktop: WASD / arrows to drive, Shift to boost, E to enter or exit, C to change camera. Touch: swipe to steer and accelerate; use the action buttons. Crashes and airtime earn cash. Drive up the blue tuning ramp to upgrade top speed or acceleration; colored stunt ramps pay airtime bonuses.</p>
+    <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED LIGHTING: ON</button>
     <button id="startbtn">START DRIVING</button>
   </div>
 </div>
@@ -149,7 +389,7 @@
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
   const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
-   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
+   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.16.4";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;
   }
  } catch(error) {

@@ -1,155 +1,185 @@
 "use strict";
 // =============================================================================
-// src/hud.js
-// HUD text updates and the minimap.
-// updateUI() and drawMap() run every frame.
+// src/hud.js — Molded driving dashboard and fixed-orientation objective map.
 // =============================================================================
-
-// DOM writes are expensive on phones, so each HUD field is only written when its value changes.
 const boostEl = $("boostStatus");
-let lastVehicleName = "",
-  lastSpeedHtml = "",
-  lastBoostText = "",
-  lastBoostColor = "";
-function setHudText(el, text, last) {
-  if (text !== last) el.textContent = text;
-  return text;
+const cashEl = $("cash");
+const mapCanvas = $("map");
+const speedGaugeEl = $("speedGauge");
+const speedUnitEl = $("speedUnit");
+let lastVehicleName = "", lastSpeedText = "", lastBoostText = "", lastBoostColor = "";
+
+function setHudText(element, value, previous) {
+  if (value !== previous) element.textContent = value;
+  return value;
 }
-function setBoostHud(text, color) {
-  if (text !== lastBoostText) {
-    boostEl.textContent = text;
-    lastBoostText = text;
+function updateSpeedGauge(element, ratio) {
+  // Older/cached page markup may not contain the decorative gauge wrapper.
+  if (!element) return false;
+  element.style.setProperty("--speed-sweep", (ratio * 270).toFixed(1) + "deg");
+  return true;
+}
+function setBoostHud(value, color) {
+  if (value !== lastBoostText) {
+    boostEl.textContent = value;
+    lastBoostText = value;
   }
   if (color !== lastBoostColor) {
     boostEl.style.color = color;
     lastBoostColor = color;
   }
 }
+
 function updateUI() {
-  let name, speedHtml;
+  let name, speedValue;
   if (onFoot) {
-    setBoostHud("BOOST · IN VEHICLE", "#a8efff");
-    name = "On Foot";
-    speedHtml = "WALK <small>MODE</small>";
+    setBoostHud("ON FOOT", "#AFC2C8");
+    name = "WALK";
+    speedValue = 0;
   } else {
     name = controlled.name;
-    speedHtml = Math.round(currentSpeed()) + " <small>MPH</small>";
-    if (controlled.boostTime > 0) {
-      setBoostHud("BOOST ACTIVE · " + controlled.boostTime.toFixed(1) + "s", "#ffe17c");
-    } else if (controlled.boostCooldown > 0) {
-      setBoostHud("BOOST RECHARGE · " + controlled.boostCooldown.toFixed(1) + "s", "#c4d0d5");
-    } else {
-      setBoostHud("BOOST READY · SHIFT", "#a8efff");
-    }
+    speedValue = Math.round(currentSpeed());
+    if (controlled.boostTime > 0) setBoostHud("BOOST!", "#F4CF59");
+    else if (controlled.boostCooldown > 0) setBoostHud("RECHARGING", "#F28F73");
+    else setBoostHud("BOOST READY", "#72D2DC");
   }
+
   lastVehicleName = setHudText(vehicleNameEl, name, lastVehicleName);
-  if (speedHtml !== lastSpeedHtml) {
-    speedEl.innerHTML = speedHtml;
-    lastSpeedHtml = speedHtml;
-  }
-  let hint =
-    "Explore a glossy, brick-built toy town on a flat city baseplate with an industrial yard.";
-  if (onFoot) {
-    const v = nearestVehicle(player.x, player.z);
-    hint = v
-      ? "Press E to get into the " + v.name + "."
-      : "Walk up to a vehicle and press E to drive it.";
-  } else if (atUpgradePad()) {
-    hint = "Tuning pad: stop to buy top-speed, acceleration or impact upgrades.";
+
+  // The HUD and script can briefly be out of sync on cached/static deployments.
+  // Keep speed telemetry functional even when an older page has no gauge wrapper.
+  if (speedUnitEl) {
+    lastSpeedText = setHudText(speedEl, String(speedValue), lastSpeedText);
   } else {
-    hint =
-      "Shift: turbo boost  ·  E: exit vehicle  ·  C: camera  ·  Crashes, broken props and airtime earn cash.";
+    const legacySpeedHtml = speedValue + " <small>MPH</small>";
+    if (speedEl.innerHTML !== legacySpeedHtml) speedEl.innerHTML = legacySpeedHtml;
   }
-  if (hint !== lastHint) {
-    hintEl.textContent = hint;
-    lastHint = hint;
-  }
+
+  const maxSpeed = !onFoot && controlled ? Math.max(controlled.maxSpeed * MPH_PER_MS, 1) : 1;
+  const speedRatio = Math.max(0, Math.min(1, speedValue / maxSpeed));
+  updateSpeedGauge(speedGaugeEl, speedRatio);
+
+  const cashText = "$" + Math.floor(cash).toLocaleString("en-US");
+  if (cashEl.textContent !== cashText) cashEl.textContent = cashText;
+
+  const nearby = onFoot
+    ? nearestVehicle(player.x, player.z)
+    : controlled && Math.hypot(controlled.vx, controlled.vz) < 2.4 && controlled.grounded !== false;
+  $("interact").hidden = !nearby;
   updateActivityHud();
   refreshUpgradePanel();
   if (performance.now() > messageUntil) messageEl.classList.remove("show");
 }
+
+// Fixed-world map: roads stay in place while the vehicle arrow turns. Map left/right
+// is aligned to the chase-camera view so directions match what the player sees.
+function mapProjectPoint(x, z, origin, scale, width, height) {
+  return [
+    width * 0.5 - (x - origin.x) * scale,
+    height * 0.5 - (z - origin.z) * scale * 0.58,
+  ];
+}
+
+function mapHeadingScreenAngle(yaw) {
+  // The chase camera presents +X toward screen-left and +Z upward; positive vehicle
+  // yaw turns toward +X, so the screen-space arrow rotates by the negative yaw.
+  return -yaw;
+}
+
 function drawMap() {
-  const c = $("map"),
-    ctx = c.getContext("2d"),
-    W = c.width,
-    H = c.height;
+  // Match the backing store to the displayed dimensions for crisp markers without distortion.
+  const bounds = mapCanvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const targetWidth = Math.max(1, Math.round((bounds.width || mapCanvas.width) * pixelRatio));
+  const targetHeight = Math.max(1, Math.round((bounds.height || mapCanvas.height) * pixelRatio));
+  if (mapCanvas.width !== targetWidth || mapCanvas.height !== targetHeight) {
+    mapCanvas.width = targetWidth;
+    mapCanvas.height = targetHeight;
+  }
+
+  const ctx = mapCanvas.getContext("2d");
+  const W = mapCanvas.width, H = mapCanvas.height;
+  const p = onFoot ? player : controlled;
+  if (!p) return;
+
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#263d37";
+  ctx.fillStyle = "#173E49";
   ctx.fillRect(0, 0, W, H);
-  // minimap covers the full 4x4 city footprint.
-  const px = (x) => ((x + 440) / 880) * W,
-    py = (z) => ((440 - z) / 880) * H;
-  ctx.strokeStyle = "#899494";
-  ctx.lineWidth = 3;
+
+  const scale = Math.min(W / 390, H / 230) * 0.94;
+  const project = (x, z) => mapProjectPoint(x, z, p, scale, W, H);
+
+  ctx.save();
   ctx.beginPath();
-  for (const s of streetLines) {
-    ctx.moveTo(px(s), py(-440));
-    ctx.lineTo(px(s), py(440));
-    ctx.moveTo(px(-440), py(s));
-    ctx.lineTo(px(440), py(s));
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
+
+  // Bright, toy-like road bands with restrained lane markings.
+  ctx.strokeStyle = "rgba(114,210,220,.52)";
+  ctx.lineWidth = Math.max(3, 8 * scale);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const line of streetLines) {
+    let a = project(line, -WORLD_HALF), b = project(line, WORLD_HALF);
+    ctx.moveTo(...a); ctx.lineTo(...b);
+    a = project(-WORLD_HALF, line); b = project(WORLD_HALF, line);
+    ctx.moveTo(...a); ctx.lineTo(...b);
   }
   ctx.stroke();
-  ctx.strokeStyle = "#e5dca9";
-  ctx.lineWidth = 0.7;
-  ctx.setLineDash([3, 4]);
+
+  ctx.strokeStyle = "rgba(244,207,89,.30)";
+  ctx.lineWidth = Math.max(1, 1.25 * scale);
+  ctx.setLineDash([7 * scale, 7 * scale]);
   ctx.beginPath();
-  for (const s of streetLines) {
-    ctx.moveTo(px(s), py(-440));
-    ctx.lineTo(px(s), py(440));
-    ctx.moveTo(px(-440), py(s));
-    ctx.lineTo(px(440), py(s));
+  for (const line of streetLines) {
+    let a = project(line, -WORLD_HALF), b = project(line, WORLD_HALF);
+    ctx.moveTo(...a); ctx.lineTo(...b);
+    a = project(-WORLD_HALF, line); b = project(WORLD_HALF, line);
+    ctx.moveTo(...a); ctx.lineTo(...b);
   }
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = "#b9a98b";
-  for (const b of buildingColliders)
-    if (!b.kind || b.kind === "building")
-      ctx.fillRect(
-        px(b.x - b.hw),
-        py(b.z + b.hl),
-        ((b.hw * 2) / 880) * W,
-        ((b.hl * 2) / 880) * H,
-      );
-  ctx.fillStyle = "#f4cf59";
-  ctx.fillRect(px(upgradeRamp.x) - 7, py(34.2) - 7, 14, 14);
-  ctx.strokeStyle = "#fff2b5";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(px(upgradeRamp.x) - 7, py(34.2) - 7, 14, 14);
-  const rampMapColors = ["#ff8b54", "#54d4da", "#cf8cff"];
-  for (let i = 0; i < stuntRamps.length; i++) {
-    const r = stuntRamps[i];
-    ctx.fillStyle = rampMapColors[i % rampMapColors.length];
-    ctx.fillRect(px(r.x) - 5, py((r.startZ + r.endZ) / 2) - 5, 10, 10);
-  }
-  drawActivityMapMarkers(ctx, px, py);
-  for (const v of vehicles) {
+
+  // Only current objective(s) are shown. Color is meaningful: yellow pickup, green drop-off.
+  for (const marker of activeMarkers()) {
+    const [x, y] = project(marker.x, marker.z);
+    const color = marker.kind === "pickup" ? "#F4CF59" : "#8BC99B";
     ctx.beginPath();
-    ctx.arc(px(v.x), py(v.z), v.ai ? 4.5 : 6.2, 0, Math.PI * 2);
-    ctx.fillStyle =
-      v === controlled
-        ? "#fff37b"
-        : v.type === "semi"
-          ? "#f2bd3f"
-          : v.type === "pickup"
-            ? "#6fbaff"
-            : v.ai
-              ? "#e5eceb"
-              : "#e96c60";
+    ctx.arc(x, y, Math.max(6, 9 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, 2.5 * scale);
+    ctx.strokeStyle = "#F4F1E8";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(1.8, 2.5 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = "#152A34";
     ctx.fill();
   }
-  const p = onFoot ? player : controlled;
+
+  // Screen-up is fixed to the city's world grid; the icon itself follows vehicle yaw.
   ctx.save();
-  ctx.translate(px(p.x), py(p.z));
-  ctx.rotate(-p.yaw);
-  ctx.fillStyle = "#fff";
+  ctx.translate(W * 0.5, H * 0.5);
+  ctx.rotate(mapHeadingScreenAngle(p.yaw || 0));
+  ctx.shadowColor = "rgba(0,0,0,.42)";
+  ctx.shadowBlur = 6 * pixelRatio;
+  ctx.fillStyle = "#72D2DC";
+  ctx.strokeStyle = "#F4F1E8";
+  ctx.lineWidth = Math.max(1.8, 2.5 * scale);
   ctx.beginPath();
-  ctx.moveTo(0, -9);
-  ctx.lineTo(6, 7);
-  ctx.lineTo(-6, 7);
-  ctx.closePath();
+  ctx.arc(0, 0, Math.max(7, 11 * scale), 0, Math.PI * 2);
+  ctx.fillStyle = "#152A34";
   ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -Math.max(11, 15 * scale));
+  ctx.lineTo(Math.max(6, 8 * scale), Math.max(5, 7 * scale));
+  ctx.lineTo(0, Math.max(2, 3 * scale));
+  ctx.lineTo(-Math.max(6, 8 * scale), Math.max(5, 7 * scale));
+  ctx.closePath();
+  ctx.fillStyle = "#72D2DC";
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
-  ctx.strokeStyle = "rgba(255,255,255,.32)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+  ctx.restore();
 }

@@ -338,3 +338,113 @@ Body:
 - Replace the proposed north-up map with a tilted/oblique toy-diorama map that rotates with the player's direction. Focus on the player and relevant objectives, not all world objects or traffic; faint road context may remain if it helps orientation.
 - Mobile driving uses an invisible floating swipe stick on the left/lower-left area. Use bottom-right icon buttons for brake, boost and contextual enter/exit. Support simultaneous touches and avoid permanent visible joystick artwork.
 - These choices supersede the earlier north-up minimap, N marker, traffic-rich map and visible thumbstick proposal. This is still design/specification only; no HUD or input code is authorized. Next design deliverable: desktop and mobile HUD mockups for owner review.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 IMPLEMENTATION HANDOFF
+Status: first implementation pass complete on feature branch; review and owner playtest pending
+Branch: `feature/t012-molded-dashboard`
+Files changed: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`.
+Implemented:
+- Replaced scattered top-bar/map layout with a compact centered molded dashboard. Speed, vehicle, boost status and cash surround an integrated map.
+- Added Auto / Desktop / Mobile profile selection. Auto uses coarse-pointer capability or a narrow viewport; manual selection is stored in localStorage and takes precedence.
+- Replaced the old traffic/building-heavy map with a player-relative, rotated and vertically compressed road-context map. It shows the player and active activity marker(s), not traffic/buildings/rocks. Map remains present in all views.
+- Added invisible floating swipe steering on mobile: horizontal displacement steers, upward displacement accelerates and downward displacement brakes. The same control is used on foot. Added bottom-right brake, boost and contextual enter/exit buttons; simultaneous pointer input is supported.
+- Preserved keyboard controls and existing activity/upgrade systems. Updated on-foot movement to accept the swipe control's gas/brake signals.
+Not yet verified:
+- No local browser/WebGL/touch test was run in this environment.
+- Full `node tools/smoke_test.js` has not yet been run against this branch.
+Review focus:
+1. Check CSS stacking/spacing at narrow phone sizes and desktop.
+2. Verify pointer/touch simultaneous input, swipe release neutralization and mobile profile override persistence.
+3. Confirm cash readout, objective map markers and enter/exit visibility.
+4. Run syntax checks and the full smoke test before owner playtest.
+No merge to main; owner approval follows real browser/touch playtest.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 REVIEW FIXES
+Status: static review findings addressed; owner playtest pending
+Branch: `feature/t012-molded-dashboard`
+Changes after the first implementation review:
+- Removed duplicate activity HUD declarations and rendering from `src/hud.js`; `src/activities.js` remains the sole owner of activity HUD text and retains destination-aware instructions.
+- Added the missing cached cash element binding in `src/hud.js`.
+- Separated swipe-stick state from action-button state so releasing one finger cannot cancel a brake button held by another finger. Blur clears both sources.
+- Restricted swipe-stick initiation to the lower-left play area and dismisses the first-use cue after the first deliberate movement.
+- Matched the minimap canvas backing resolution to its displayed dimensions (with a 2x pixel-ratio cap) to avoid stretching circular markers and the player arrow.
+- Replaced the CSS literal newline with an actual rule break; retained the hidden-state rule for the contextual interaction button.
+- Shortened the visible lighting toggle to `PBR ON/OFF`, while keeping explanatory accessible labels and titles. Increased the small dashboard control targets and adjusted mobile activity spacing.
+- Fixed the escaped newline in the T-012 status paragraph in `DESIGN.md`.
+- Extended `tools/smoke_test.js` with HUD profile cycling and simultaneous swipe/button brake regression checks.
+Static validation performed: changed JavaScript files parsed successfully; a cross-script top-level lexical scan found no duplicate declarations; CSS checks confirmed no literal `\\n` remains in the style block and the interaction hidden rule is separate.
+Not run: the full Node smoke test or a browser/WebGL/touch session. A local repository clone was unavailable in this environment, so these remain required before the owner playtest.
+Next: run `node tools/smoke_test.js`, then owner tests on phone and laptop. Do not merge until the owner confirms.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 HUD REFINEMENT
+Status: implementation committed to the same feature branch; owner playtest pending
+Research notes:
+- Forza Horizon 5: keep essential speed/vehicle telemetry legible and make contrast/color choices purposeful. Its official support guidance describes high-contrast UI and map/UI icon color customization.
+- Mario Kart 8 Deluxe: strong, quickly recognized icon states and a minimap that communicates useful nearby game state without demanding long reading.
+- Burnout Paradise: directional destination/context cues can communicate the next goal clearly without turning free-roam into a dense race dashboard.
+Sources reviewed: Forza Support accessibility guide (https://support.forza.net/hc/en-us/articles/4409280058259-Forza-Horizon-5-Accessibility-Support), Nintendo Mario Kart 8 Deluxe guide (https://www.nintendo.com/jp/ichikara/aabpa/02_en.html), Burnout Paradise Remastered gameplay HUD reference (https://www.4gamer.net/games/410/G041072/20180327018/screenshot.html).
+Implemented:
+- Replaced heading-up counter-rotating map with a fixed world-oriented map. The vehicle marker rotates with vehicle yaw; the map's horizontal axis is mirrored to match the chase-camera's left/right view, so map bearings and visible direction agree.
+- Added a circular digital speed gauge with an animated aqua arc, while keeping the actual numeric MPH readout central.
+- Increased visual character using the approved petrol/teal base with stronger aqua, warm-yellow, coral and green accents, raised borders, molded inset panels and color-coded touch actions.
+- Removed the lighting selector from the driving dashboard and moved it into the startup card. Labels now say ADVANCED LIGHTING: ON/OFF (or unavailable).
+- Updated the version to v0.16.1 and revised the minimap description.
+- Added smoke checks for fixed map axes, the rotating vehicle indicator, gauge markup and startup-only PBR placement.
+Not yet run:
+- Full `node tools/smoke_test.js` (the execution environment cannot resolve github.com to clone the project).
+- Browser/WebGL/touch playtest.
+Please review map turn direction and objective placement on phone and laptop before any merge.
+
+
+### 2026-11-25 | ChatGPT -> All | CLAIM T-013
+Status: open
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
+Plan: Compact the dashboard's internal layout so its overall height is about half the current footprint, move the objective info and SKIP action into a reserved row above the minimap, then add DOM-structure regression checks and update the version/docs. No activity logic or gameplay physics changes.
+
+
+### 2026-11-25 | ChatGPT -> All | HANDOFF T-013
+Status: partial (implementation complete; owner visual playtest pending)
+Done:
+- Reduced the dashboard's vertical footprint to about half by turning the vehicle/speed/boost and cash/profile panels into compact horizontal side panels.
+- Moved the active objective icon, short instruction/distance and SKIP action inside the dashboard, immediately above the minimap.
+- Reserved the objective row when hidden so an activity appearing or clearing does not change dashboard height.
+- Kept a proportional compact minimap (88×32 desktop, 74×26 mobile), bumped the page/script cache version to v0.16.3 and added structural/CSS assertions.
+Files changed: `index.html` (layout, markup, styles, version), `tools/smoke_test.js` (layout regression checks), `README.txt` (v0.16.3 notes), `TASKS.md` (T-013 scope/status), `agent_comments.md` (claim/handoff).
+Verified: all 19 loaded JavaScript source files parse; the smoke-test file parses; static checks confirm the objective panel is inside the dashboard and precedes the map, the reserved desktop/mobile rows and map sizing are present, the active objective row has a display rule, and CSS braces are balanced.
+Not verified: `node tools/smoke_test.js` was not run; no real-browser/WebGL, phone or touch playtest. Visual legibility and forward visibility still need owner confirmation.
+Next agent should: Claude review the CSS/markup and run the full smoke test; then the owner should check objective text/SKIP, map legibility and forward sightline on desktop and mobile before merging PR #8.
+
+
+### 2026-11-25 | ChatGPT -> All | T-013 readability refinement
+Status: done
+Body: Kept the same compact overall footprint but moved a few pixels from the map to the objective row: 18×29px strip/map sizing on desktop and 16×23px on mobile; map width is 80px desktop and 64px mobile. Increased objective text and SKIP label sizes, and improved compact boost/cash/profile label sizing. This supersedes the map dimensions in the preceding T-013 HANDOFF. Browser/touch readability still needs owner validation.
+
+
+### 2026-11-25 | ChatGPT -> All | CLAIM T-014
+Status: open
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Plan: Replace the stacked objective-above-map center column with a compact side-by-side map/objective arrangement, with a substantially larger map and a readable objective/skip panel. Keep the existing dashboard footprint and game logic; update docs and layout regression checks.
+
+
+### 2026-11-25 | ChatGPT -> All | HANDOFF T-014
+Status: partial (implementation complete; owner visual playtest pending)
+Done:
+- Replaced the stacked center HUD with a side-by-side arrangement: larger minimap on the left and objective details plus SKIP on the right.
+- Increased map height to 54px desktop / 48px mobile while keeping the overall dashboard compact. Desktop/mobile center columns use separate widths; objective column remains allocated when hidden.
+- Updated build/cache version to v0.16.4 and added smoke-test layout assertions.
+Files changed: `index.html` (markup, responsive CSS, version), `tools/smoke_test.js` (side-by-side layout checks), `README.txt` (v0.16.4 notes), `DESIGN.md` (HUD layout decision), `TASKS.md` (T-014 handoff), `agent_comments.md` (claim/handoff).
+Verified: all 19 JavaScript sources will be syntax-checked after fetch; smoke-test script will be syntax-checked; static checks will inspect side-by-side markup/order and dimensions.
+Not verified: full `node tools/smoke_test.js`, real browser/WebGL, phone and touch playtest.
+Next agent should: review desktop and mobile fit, especially objective text and SKIP target on small screens; run the complete smoke test; ask owner to confirm the minimap is readable and enough forward visibility remains.
+
+
+### 2026-11-25 | ChatGPT -> All | T-014 verification update
+Status: implementation complete; static checks passed
+Body:
+- Confirmed the map is the first/left grid item and the objective/skip panel is the second/right item.
+- Desktop center layout: 54px high; mobile center layout: 48px high. Separate column sizing keeps a usable map/objective split on smaller screens while the dashboard remains compact.
+- All 19 scripts loaded by index.html pass JavaScript syntax parsing. The smoke-test file itself passes syntax parsing. CSS braces are balanced, the objective panel's active state restores as a two-column/two-row grid, and the map fills its allocated column.
+- The actual `node tools/smoke_test.js` run and visual browser/phone touch checks have not been completed.

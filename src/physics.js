@@ -10,7 +10,7 @@ function updateFoot(dt) {
   player.yaw += turn * 2.35 * dt;
   const f = [Math.sin(player.yaw), Math.cos(player.yaw)];
   let move =
-    (pressed("w") || pressed("arrowup") ? 1 : 0) - (pressed("s") || pressed("arrowdown") ? 1 : 0);
+    (pressed("w") || pressed("arrowup") || pressed("gas") ? 1 : 0) - (pressed("s") || pressed("arrowdown") || pressed("brake") ? 1 : 0);
   player.x += f[0] * move * 6.2 * dt;
   player.z += f[1] * move * 6.2 * dt;
   player.x = clamp(player.x, -106, 106);

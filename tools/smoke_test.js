@@ -87,9 +87,73 @@ const end = JSON.parse(
 
 const failures = [];
 if (uncaught) failures.push("Uncaught error: " + uncaught);
+
+// ---- T-012 HUD and touch-input checks ----
+const profileButton = w.document.getElementById("profileToggle");
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: Auto did not select desktop in the wide, fine-pointer test viewport");
+profileButton.click(); // Auto -> Desktop
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: Desktop override did not apply");
+profileButton.click(); // Desktop -> Mobile
+if (!w.document.body.classList.contains("hud-mobile"))
+  failures.push("HUD profile: Mobile override did not apply");
+profileButton.click(); // Mobile -> Auto
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: returning to Auto did not re-detect the desktop viewport");
+
+// Releasing a swipe must not cancel a brake button held by another finger.
+run("touch.brake=true; swipeTouch.brake=true; releaseSwipe()", "touch-source-check");
+if (run("pressed('brake')", "touch-check") !== true)
+  failures.push("Touch input: releasing swipe input cleared a still-held brake button");
+run("touch.brake=false; swipeTouch.brake=false", "touch-source-reset");
+
+// T-012 fixed-orientation map and startup-only lighting checks.
+const mapProjection = JSON.parse(run(
+  "JSON.stringify({right:mapProjectPoint(10,0,{x:0,z:0},1,100,100),forward:mapProjectPoint(0,10,{x:0,z:0},1,100,100),leftTurn:mapHeadingScreenAngle(Math.PI/2)})",
+  "map-projection"
+));
+if (mapProjection.right[0] >= 50)
+  failures.push("HUD map: positive world X should appear to screen-left, matching the chase-camera view");
+if (mapProjection.forward[1] >= 50)
+  failures.push("HUD map: positive world Z should remain toward the top on the fixed map");
+if (mapProjection.leftTurn >= 0)
+  failures.push("HUD map: a positive/left vehicle turn should rotate its arrow toward screen-left");
+const lightingButton = w.document.getElementById("lightingToggle");
+if (!lightingButton || !lightingButton.closest("#startcard"))
+  failures.push("HUD: PBR lighting control is not on the startup screen");
+if (w.document.getElementById("dashboard").contains(lightingButton))
+  failures.push("HUD: PBR lighting control is still present in the driving dashboard");
+if (!w.document.getElementById("speedGauge"))
+  failures.push("HUD: analog/digital speed gauge markup is missing");
+if (run("updateSpeedGauge(null, 0.5) === false", "missing-gauge-check") !== true)
+  failures.push("HUD: a missing optional speed gauge should not throw");
+
+// T-013 compact dashboard structure and objective placement.
+const dashboard = w.document.getElementById("dashboard");
+const dashCenter = w.document.querySelector("#dashboard .dash-center");
+const activityPanel = w.document.getElementById("activity");
+const mapBox = w.document.getElementById("mapbox");
+if (!dashboard || !dashCenter || !activityPanel || !mapBox || !dashboard.contains(activityPanel))
+  failures.push("HUD: objective panel is not integrated into the dashboard");
+if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== mapBox || dashCenter.children[1] !== activityPanel)
+  failures.push("HUD: minimap and objective details must be side by side, with map first");
+const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
+if (!hudStyles.includes("grid-template-columns:minmax(96px,.9fr) minmax(120px,1.1fr);") || !hudStyles.includes("grid-template-rows:54px;"))
+  failures.push("HUD: desktop side-by-side map/objective dimensions are missing");
+if (!hudStyles.includes("grid-template-columns:minmax(64px,.9fr) minmax(88px,1.1fr);") || !hudStyles.includes("grid-template-rows:48px;"))
+  failures.push("HUD: mobile side-by-side map/objective dimensions are missing");
+if (!hudStyles.includes("#dashboard #activity.show{display:grid}"))
+  failures.push("HUD: active objective panel is not restored when an activity is available");
+if (!hudStyles.includes("width:100%;") || !hudStyles.includes("height:54px;"))
+  failures.push("HUD: minimap is not sized to fill its larger dashboard column");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
+if (run("started", "q") !== true)
+  failures.push("Frame loop: the game stopped during the initial driving frames");
+if (w.document.getElementById("map").width < 1 || w.document.getElementById("map").height < 1)
+  failures.push("HUD: minimap canvas has an invalid backing size");
 
 // ---- Activity checks (src/activities.js) ----
 const get = (expr) => JSON.parse(run("JSON.stringify(" + expr + ")", "q"));

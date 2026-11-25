@@ -89,29 +89,60 @@ Notes:
 - The owner also asked for six semis. Defer moving AI semis in this task: the trailer articulation simulation already runs for AI vehicles, but the existing compact-car turn path does not account for a tractor-trailer swept footprint. Do not add six semis as untested moving traffic; a later task should add trailer-aware path planning, turn clearance and speed control.
 - No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
  
-### T-012 HUD, minimap and mobile interaction redesign (design phase)
-Assigned to: ChatGPT (design specification; implementation requires separate approval).
-Status: owner-approved visual language and layout direction; detailed specification recorded in `DESIGN.md`. Desktop/mobile mockups are the next design deliverable. No UI code authorized yet.
-Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`; mockups may be added as design references.
+### T-012 HUD, minimap and mobile interaction redesign
+Assigned to: ChatGPT (implementation); Claude review requested after handoff.
+Status: HUD refinement committed to `feature/t012-molded-dashboard`; automated smoke test and owner browser/touch playtest remain pending.
+Files: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`, `agent_comments.md`.
+
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
 Done when:
 - Define one cohesive toy-like visual language: approved palette, typography, shapes, spacing, surfaces, borders, icon treatment and semantic status colors.
 - Specify a compact, persistent top-center dashboard with the minimap integrated into its center and essential vehicle/speed/cash readouts around it.
 - Specify separate desktop and mobile HUD layouts, automatic profile detection, and a persistent manual Auto / Desktop / Mobile override.
-- Specify a tilted, player-relative minimap that rotates with the player's heading, stays visible in every view and focuses on the player plus relevant objectives rather than all world objects or traffic.
+- Specify a fixed world-oriented minimap that stays visible in every view, focuses on the player plus relevant objectives, and rotates only the vehicle marker so its turn direction matches the in-world view.
 - Specify mobile invisible swipe-stick driving, with brake, boost and contextual enter/exit icon buttons at the bottom right.
 - Include child-focused language rules: icons first, short labels, no paragraphs of instructions during play.
-- Keep desktop keyboard and mobile touch both supported. No code changes in this design phase.
+- Keep desktop keyboard and mobile touch both supported. Keyboard remains available in either profile; mobile swipe controls support simultaneous action-button touches.
 Notes:
 - **Approved visual direction:** Molded dashboard, but intentionally more toy-like and less realistic than a real instrument cluster. Use chunky rounded shapes, raised molded-plastic edges and friendly simple icons.
 - **Approved palette:** deep petrol `#152A34`, raised teal `#203D48`, warm ivory `#F4F1E8`, blue-grey `#AFC2C8`, aqua `#72D2DC`, warm yellow `#F4CF59`, soft coral `#F28F73`, soft green `#8BC99B`. Use accents semantically.
 - **Approved placement:** one compact dashboard centered at the top/overhead edge of the play area so the bottom remains clear for thumbs. The minimap is integrated into the dashboard center and persists across driving, on-foot and other views.
-- **Approved minimap:** tilted/oblique toy-diorama view, player-relative rotation with the direction of travel always toward the top; show the player and relevant objective markers, with only faint road context if needed. Do not show all traffic, buildings, rocks and ordinary props. No north-up compass requirement.
+- **Approved minimap refinement (2026-11-25):** keep the street grid fixed in world orientation and rotate the player marker with vehicle heading. Align map left/right with the chase-camera view. Show only the player, active objective and quiet road context; omit traffic, buildings, rocks and ordinary props.
 - **Approved desktop/mobile approach:** distinct layouts. Auto-detect using pointer capability and viewport dimensions rather than user-agent sniffing; offer a persistent Auto / Desktop / Mobile override for hybrid devices or detection errors.
 - **Approved mobile controls:** invisible floating swipe-stick on the left/lower-left area (touch origin plus finger displacement for steering and forward/reverse); brake, boost and contextual enter/exit icon buttons in a bottom-right cluster. Support simultaneous touches. A brief first-use cue may teach the invisible stick, but no permanent joystick graphic or instruction panel.
-- The prior north-up map, N marker, traffic-rich minimap and visible left thumbstick/right accelerator proposal are superseded.
+- The earlier heading-up/counter-rotating minimap was superseded after owner playtesting on 2026-11-25. The original north-up compass/traffic-rich map and visible left thumbstick/right accelerator proposal remain rejected.
 - T-003's exact primary device remains unconfirmed, but supporting both profiles with automatic detection and manual override means it no longer blocks T-012.
  
+### T-013 Compact dashboard and integrated objective strip
+Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
+Status: implementation complete on `feature/t012-molded-dashboard`; full smoke test and owner browser/touch playtest pending.
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
+Why: The top-center dashboard currently obscures too much of the driving view, and the separate objective panel competes with the dashboard for screen space.
+Done when:
+- Reduce the dashboard's visible vertical footprint to approximately half its current size on desktop and mobile, while retaining readable speed, vehicle, boost, cash and profile controls.
+- Put the active objective icon, concise instruction/distance and SKIP control inside the dashboard, in a compact row directly above the minimap.
+- Reserve the objective row so the dashboard does not jump in height when an activity appears or disappears.
+- Keep the minimap, objective skip interaction, touch controls and desktop keyboard behavior working.
+- Add structural regression checks and update the build version/documentation.
+Notes:
+- Implementation (2026-11-25): vehicle/speed/boost and cash/profile controls now use compact side-by-side panels. The objective icon, instruction/distance and SKIP action live in a reserved row directly above a 80×29 desktop / 64×23 mobile minimap. The row stays reserved while hidden, preventing dashboard height changes. Build version is v0.16.3.
+- Static validation: all 19 loaded JavaScript source files parse; the smoke-test script parses; markup and CSS checks confirm objective containment/order, fixed compact row dimensions, map sizing and the active-row rule.
+- Not yet run: `node tools/smoke_test.js` (requires the project's local Node/jsdom/assets setup). No real-browser, WebGL, phone or touch playtest has been performed.
+
+### T-014 Side-by-side minimap and objective panel
+Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
+Status: implementation complete on `feature/t012-molded-dashboard`; full smoke test and owner browser/touch playtest pending.
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
+Why: The compact stacked objective strip forced the integrated minimap to become too small to use comfortably.
+Done when:
+- Place the minimap in the first/left column and active-objective information in the second/right column of the dashboard center section.
+- Increase the minimap's visible size substantially (54px desktop / 48px mobile high) while preserving the compact top-center dashboard and keeping its overall height close to the v0.16.3 design.
+- Keep the objective icon, concise instruction/distance and SKIP action visible and usable on desktop and mobile; no layout jump when no objective is active.
+- Update structural regression checks and build/version documentation.
+Notes:
+- Implementation (2026-11-25): center layout now uses side-by-side columns: fixed-world minimap on the left and objective text/icon/SKIP panel on the right. Map display height is 54px desktop and 48px mobile; objective panel is a two-line-clamped text area with a separate SKIP button. Hidden objectives keep their reserved grid column. Build version v0.16.4.
+- Static verification: all 19 loaded JavaScript sources parse; the smoke-test script parses; markup order confirms map-left/objective-right; desktop/mobile column and height rules, objective active-state styling, two-line text handling, map fill sizing and CSS brace balance all pass. Full smoke test and real browser/touch check remain required.
+
 ## Later: proposed order, not yet authorized as coding tasks
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
