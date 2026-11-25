@@ -126,6 +126,8 @@ if (w.document.getElementById("dashboard").contains(lightingButton))
   failures.push("HUD: PBR lighting control is still present in the driving dashboard");
 if (!w.document.getElementById("speedGauge"))
   failures.push("HUD: analog/digital speed gauge markup is missing");
+if (run("updateSpeedGauge(null, 0.5) === false", "missing-gauge-check") !== true)
+  failures.push("HUD: a missing optional speed gauge should not throw");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
