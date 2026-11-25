@@ -125,7 +125,7 @@ Done when:
 - Keep the minimap, objective skip interaction, touch controls and desktop keyboard behavior working.
 - Add structural regression checks and update the build version/documentation.
 Notes:
-- Implementation (2026-11-25): vehicle/speed/boost and cash/profile controls now use compact side-by-side panels. The objective icon, instruction/distance and SKIP action live in a reserved row directly above a 88×32 desktop / 74×26 mobile minimap. The row stays reserved while hidden, preventing dashboard height changes. Build version is v0.16.3.
+- Implementation (2026-11-25): vehicle/speed/boost and cash/profile controls now use compact side-by-side panels. The objective icon, instruction/distance and SKIP action live in a reserved row directly above a 80×29 desktop / 64×23 mobile minimap. The row stays reserved while hidden, preventing dashboard height changes. Build version is v0.16.3.
 - Static validation: all 19 loaded JavaScript source files parse; the smoke-test script parses; markup and CSS checks confirm objective containment/order, fixed compact row dimensions, map sizing and the active-row rule.
 - Not yet run: `node tools/smoke_test.js` (requires the project's local Node/jsdom/assets setup). No real-browser, WebGL, phone or touch playtest has been performed.
 
