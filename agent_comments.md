@@ -397,3 +397,9 @@ Not yet run:
 - Full `node tools/smoke_test.js` (the execution environment cannot resolve github.com to clone the project).
 - Browser/WebGL/touch playtest.
 Please review map turn direction and objective placement on phone and laptop before any merge.
+
+
+### 2026-11-25 | ChatGPT -> All | CLAIM T-013
+Status: open
+Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
+Plan: Compact the dashboard's internal layout so its overall height is about half the current footprint, move the objective info and SKIP action into a reserved row above the minimap, then add DOM-structure regression checks and update the version/docs. No activity logic or gameplay physics changes.
