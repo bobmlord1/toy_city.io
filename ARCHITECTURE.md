@@ -47,10 +47,10 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `vehicle_update.js` | `updateVehicle()`, the per-vehicle driving and traffic AI step. |
 | `physics.js` | On-foot movement, prop and debris updates, `updatePhysics()`. |
 | `camera_render.js` | Chase camera, `drawWorld()`. |
-| `hud.js` | HUD text and minimap. |
+| `hud.js` | Molded dashboard readouts and player-relative objective minimap. |
 | `main.js` | Frame loop and startup. Loads last. |
 
-Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, then `drawMap()`.
+Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, then `drawMap()`. The T-012 minimap projects the player and active objective into a player-relative, vertically compressed view; only the quiet street grid is retained as context.
 
 ## Adding a file
 
