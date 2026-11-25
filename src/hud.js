@@ -60,7 +60,7 @@ function updateUI() {
 // rotates with the car, so left/right turns match what the player sees in the world.
 function mapProjectPoint(x, z, origin, scale, width, height) {
   return [
-    width * 0.5 + (x - origin.x) * scale,
+    width * 0.5 - (x - origin.x) * scale,
     height * 0.5 - (z - origin.z) * scale * 0.58,
   ];
 }
