@@ -107,6 +107,25 @@ run("touch.brake=true; swipeTouch.brake=true; releaseSwipe()", "touch-source-che
 if (run("pressed('brake')", "touch-check") !== true)
   failures.push("Touch input: releasing swipe input cleared a still-held brake button");
 run("touch.brake=false; swipeTouch.brake=false", "touch-source-reset");
+
+// T-012 fixed-orientation map and startup-only lighting checks.
+const mapProjection = JSON.parse(run(
+  "JSON.stringify({right:mapProjectPoint(10,0,{x:0,z:0},1,100,100),forward:mapProjectPoint(0,10,{x:0,z:0},1,100,100),leftTurn:mapHeadingScreenAngle(Math.PI/2)})",
+  "map-projection"
+));
+if (mapProjection.right[0] <= 50)
+  failures.push("HUD map: positive world X should remain to the right on the fixed map");
+if (mapProjection.forward[1] >= 50)
+  failures.push("HUD map: positive world Z should remain toward the top on the fixed map");
+if (mapProjection.leftTurn >= 0)
+  failures.push("HUD map: a positive/left vehicle turn should rotate its arrow toward screen-left");
+const lightingButton = w.document.getElementById("lightingToggle");
+if (!lightingButton || !lightingButton.closest("#startcard"))
+  failures.push("HUD: PBR lighting control is not on the startup screen");
+if (w.document.getElementById("dashboard").contains(lightingButton))
+  failures.push("HUD: PBR lighting control is still present in the driving dashboard");
+if (!w.document.getElementById("speedGauge"))
+  failures.push("HUD: analog/digital speed gauge markup is missing");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
