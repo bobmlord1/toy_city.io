@@ -40,6 +40,9 @@ function awardCash(amount) {
 }
 function registerCrashReward(key, impact) {
   if (!currentCrashContacts) return;
+  // Smashable props pay only when destroyed. Do not reward low-speed pushing or
+  // repeated prop contact here; damageProp owns the single break payout.
+  if (typeof key === "string" && (key.startsWith("prop:") || key.startsWith("trailer-prop:"))) return;
   currentCrashContacts.add(key);
   if (previousCrashContacts.has(key) || onFoot || !controlled || impact < 2.25) return;
   const payout = clamp(Math.round(impact * 7.5), 12, 70);

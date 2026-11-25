@@ -124,6 +124,20 @@ if (!(smashRegression.afterFirstHit < 5 &&
       smashRegression.broken))
   failures.push("Smashable props: sustained pushing applied repeated damage or a fresh impact failed to break the barrel");
 
+// Prop collisions must not create crash-bonus income without destroying the prop.
+const propRewardRegression = JSON.parse(run(`(() => {
+  const previous = currentCrashContacts;
+  const before = cash;
+  currentCrashContacts = new Set();
+  registerCrashReward("prop:smash-regression:999", 2.8);
+  registerCrashReward("trailer-prop:smash-regression:999", 2.8);
+  const after = cash;
+  currentCrashContacts = previous;
+  return {before,after};
+})()`, "prop-reward-regression"));
+if (propRewardRegression.after !== propRewardRegression.before)
+  failures.push("Smashable props: prop contact paid crash-bonus cash without breaking the prop");
+
 
 // ---- T-012 HUD and touch-input checks ----
 const profileButton = w.document.getElementById("profileToggle");
