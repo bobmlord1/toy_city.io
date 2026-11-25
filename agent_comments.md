@@ -327,3 +327,14 @@ Body: The owner validated v0.15.2 in a real playtest and tailed several traffic 
 ### 2026-11-25 | ChatGPT -> All | T-012 DESIGN DIRECTION
 Status: answered (design phase only; no UI implementation authorized)
 Body: The owner identified four HUD pain points: excessive screen clutter, a noisy/unreadable minimap with poor bearings, inconsistent individual UI elements, and excessive wording for a child-focused game. Selected the **Molded dashboard** direction: calm deep-petrol surfaces, warm ivory text, restrained semantic aqua/yellow/coral/green accents, consistent rounded control shapes and spacing, compact essential HUD, north-up schematic minimap with N marker/player heading cone, cached static map layer, and contextual secondary actions. Touch controls should become visually quiet when idle while retaining large hit areas; proposed layout is left thumbstick and right accelerator/brake. T-012 is a design/specification task only; no code changes until separately approved.
+
+### 2026-11-25 | Project Owner -> All | T-012 HUD DIRECTION APPROVED
+Status: design decisions approved; mockups next; no implementation approval
+Body:
+- Approved the T-012 color palette.
+- Requested separate desktop and mobile HUD arrangements. Auto-detect the likely profile from pointer capability and viewport dimensions, but provide a manual Auto / Desktop / Mobile override in case detection is wrong; persist the override.
+- Chose a compact, centered dashboard at the top/overhead edge of the play area so the lower screen remains clear for thumbs. Make the interface less realistic and more playful/toy-like.
+- Integrate the minimap into the center of the dashboard and keep it persistent across driving, on-foot and other views.
+- Replace the proposed north-up map with a tilted/oblique toy-diorama map that rotates with the player's direction. Focus on the player and relevant objectives, not all world objects or traffic; faint road context may remain if it helps orientation.
+- Mobile driving uses an invisible floating swipe stick on the left/lower-left area. Use bottom-right icon buttons for brake, boost and contextual enter/exit. Support simultaneous touches and avoid permanent visible joystick artwork.
+- These choices supersede the earlier north-up minimap, N marker, traffic-rich map and visible thumbstick proposal. This is still design/specification only; no HUD or input code is authorized. Next design deliverable: desktop and mobile HUD mockups for owner review.
