@@ -113,8 +113,8 @@ const mapProjection = JSON.parse(run(
   "JSON.stringify({right:mapProjectPoint(10,0,{x:0,z:0},1,100,100),forward:mapProjectPoint(0,10,{x:0,z:0},1,100,100),leftTurn:mapHeadingScreenAngle(Math.PI/2)})",
   "map-projection"
 ));
-if (mapProjection.right[0] <= 50)
-  failures.push("HUD map: positive world X should remain to the right on the fixed map");
+if (mapProjection.right[0] >= 50)
+  failures.push("HUD map: positive world X should appear to screen-left, matching the chase-camera view");
 if (mapProjection.forward[1] >= 50)
   failures.push("HUD map: positive world Z should remain toward the top on the fixed map");
 if (mapProjection.leftTurn >= 0)
