@@ -427,3 +427,15 @@ Body: Kept the same compact overall footprint but moved a few pixels from the ma
 Status: open
 Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `DESIGN.md`, `TASKS.md`, `agent_comments.md`.
 Plan: Replace the stacked objective-above-map center column with a compact side-by-side map/objective arrangement, with a substantially larger map and a readable objective/skip panel. Keep the existing dashboard footprint and game logic; update docs and layout regression checks.
+
+
+### 2026-11-25 | ChatGPT -> All | HANDOFF T-014
+Status: partial (implementation complete; owner visual playtest pending)
+Done:
+- Replaced the stacked center HUD with a side-by-side arrangement: larger minimap on the left and objective details plus SKIP on the right.
+- Increased map height to 54px desktop / 48px mobile while keeping the overall dashboard compact. Desktop/mobile center columns use separate widths; objective column remains allocated when hidden.
+- Updated build/cache version to v0.16.4 and added smoke-test layout assertions.
+Files changed: `index.html` (markup, responsive CSS, version), `tools/smoke_test.js` (side-by-side layout checks), `README.txt` (v0.16.4 notes), `DESIGN.md` (HUD layout decision), `TASKS.md` (T-014 handoff), `agent_comments.md` (claim/handoff).
+Verified: all 19 JavaScript sources will be syntax-checked after fetch; smoke-test script will be syntax-checked; static checks will inspect side-by-side markup/order and dimensions.
+Not verified: full `node tools/smoke_test.js`, real browser/WebGL, phone and touch playtest.
+Next agent should: review desktop and mobile fit, especially objective text and SKIP target on small screens; run the complete smoke test; ask owner to confirm the minimap is readable and enough forward visibility remains.
