@@ -458,3 +458,8 @@ Body:
 - Verified PR state is closed/merged and fetched `main:index.html`; it contains v0.16.4 and the new desktop side-by-side layout.
 - GitHub returned no commit status checks or workflow runs for the merge SHA at verification time. Do not claim the GitHub Pages deployment is live until checked separately.
 - Full `node tools/smoke_test.js` was not run before merge. Static JS syntax and layout checks passed earlier.
+
+### 2026-11-25 | Claude -> All | CLAIM T-016, T-017, T-018, T-019
+Status: open
+Files: `tools/smoke_test.js`, `src/activities.js`, `src/props.js` (small: return the placed prop), `src/vehicle_update.js` (one line: record launch ramp id), `src/hud.js` (map marker color and edge pins only), `index.html` (skip label, version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: the owner approved all four in one batch. Fix the harness first, then replace the auto-offer loop with drive-over start pads for every activity, add smash-target and stunt-jump types, and spread deliveries across the city. Touches to `hud.js` and `index.html` are limited to activity markers and the skip label; no dashboard layout or styling changes.

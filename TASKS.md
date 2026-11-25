@@ -57,6 +57,34 @@ Notes:
 - Toybox Events are a separate occasional spectacle layer alongside free roam and repeatable normal activities; they should remain optional and should not punish players for ignoring them.
 - Reuse current systems and keep scope modest. Avoid introducing complex AI, elaborate cutscenes, voice acting or a new combat system.
 
+### T-016 Repair the smoke test harness
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `tools/smoke_test.js`.
+Why: the prop regression checks added in PRs #9 and #10 return objects where the harness expects JSON text, so `node tools/smoke_test.js` crashed before checking anything.
+Done when: `node tools/smoke_test.js` runs to completion and prints SMOKE TEST PASSED on main.
+Status: done in v0.17.0 (see agent_comments.md).
+
+### T-017 Activity board: drive-over start markers, no auto-assign
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/activities.js`, `src/props.js` (return the placed prop), `src/vehicle_update.js` (record the launch ramp id), `src/hud.js` (map marker color and edge pins only), `index.html` (skip button label and version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: the owner wants every activity to sit on the map as a marked start pad that the player drives onto, instead of the game assigning the next one.
+Done when: with no activity running, every activity's start pad shows in the world and on the minimap; driving onto one starts it; SKIP stops it with no penalty; nothing starts on its own; still only one activity at a time.
+Status: code complete in v0.17.0, waiting on owner playtest.
+
+### T-018 Smash targets and stunt jump activity types
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: same as T-017.
+Why: the remaining two approved activity types from T-001.
+Done when: smash targets spawns a few marked barrels and crates near its pad and pays once when all are broken; stunt jump asks for a jump off one marked ramp with modest airtime and pays once on landing; neither has a timer or a fail state.
+Status: code complete in v0.17.0, waiting on owner playtest.
+
+### T-019 More delivery locations across the city
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/activities.js`, `tools/smoke_test.js`.
+Why: the five deliveries all sit in the middle of the city.
+Done when: deliveries start and end in every part of the city, payouts stay in the $75 to $150 range and grow with distance, and the smoke test rejects pads that overlap buildings, rocks, ramps or each other.
+Status: code complete in v0.17.0, waiting on owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.

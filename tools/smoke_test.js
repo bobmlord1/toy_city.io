@@ -116,7 +116,7 @@ const smashRegression = JSON.parse(run(`(() => {
   finishPropCollisionFrame(1/60);
   const result = {afterFirstHit,afterSustainedContact,afterBriefSeparation,broken:p.broken};
   props.splice(props.indexOf(p),1);
-  return result;
+  return JSON.stringify(result);
 })()`, "smashable-prop-regression"));
 if (!(smashRegression.afterFirstHit < 5 &&
       smashRegression.afterSustainedContact === smashRegression.afterFirstHit &&
@@ -133,7 +133,7 @@ const propRewardRegression = JSON.parse(run(`(() => {
   registerCrashReward("trailer-prop:smash-regression:999", 2.8);
   const after = cash;
   currentCrashContacts = previous;
-  return {before,after};
+  return JSON.stringify({before,after});
 })()`, "prop-reward-regression"));
 if (propRewardRegression.after !== propRewardRegression.before)
   failures.push("Smashable props: prop contact paid crash-bonus cash without breaking the prop");
