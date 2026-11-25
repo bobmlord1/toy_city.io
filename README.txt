@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.15.2
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.0 (HUD feature branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -56,3 +56,9 @@ Version 0.15.2 changes:
 - Traffic top speeds now vary by up to 5 mph either way, chosen at random each time the game loads.
 - A car stuck behind a slower car is less likely to take the same exit at the next intersection, and less likely again at each following one.
 
+
+Version 0.16.0 (T-012 HUD feature branch):
+- Added a compact top-center molded dashboard with integrated player-relative objective map.
+- Added Auto / Desktop / Mobile HUD profiles with a persistent manual override.
+- Added invisible mobile swipe steering plus brake, boost and contextual enter/exit buttons.
+- This branch is awaiting automated checks and real browser/touch playtesting.
