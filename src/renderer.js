@@ -281,17 +281,21 @@ function activateLighting(mode, notify = false) {
   const toggle = $("lightingToggle");
   toggle.dataset.mode = activeLighting;
   if (!advancedProgram) {
-    toggle.textContent = "SIMPLE LIGHTING · PBR UNAVAILABLE";
+    toggle.textContent = "PBR OFF";
+    toggle.setAttribute("aria-label", "Advanced PBR lighting is unavailable; simple lighting is active.");
     toggle.disabled = true;
     toggle.title = "This GPU/browser could not compile the advanced PBR shader.";
   } else if (simpleProgram === advancedProgram) {
-    toggle.textContent = "ADVANCED PBR: ON";
+    toggle.textContent = "PBR ON";
+    toggle.setAttribute("aria-label", "Advanced PBR lighting is active. Simple comparison lighting is unavailable.");
     toggle.disabled = true;
     toggle.title = "Advanced PBR is active; the simple comparison shader was unavailable.";
   } else {
     toggle.disabled = false;
-    toggle.textContent =
-      activeLighting === "advanced" ? "ADVANCED PBR: ON · SWITCH" : "ADVANCED PBR: OFF · SWITCH";
+    toggle.textContent = activeLighting === "advanced" ? "PBR ON" : "PBR OFF";
+    toggle.setAttribute("aria-label", activeLighting === "advanced"
+      ? "Advanced PBR lighting is on. Switch to simple lighting."
+      : "Advanced PBR lighting is off. Switch to advanced lighting.");
     toggle.title = "Click to switch between advanced PBR and simple glossy lighting.";
   }
   if (notify)
