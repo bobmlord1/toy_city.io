@@ -13,6 +13,12 @@ function setHudText(element, value, previous) {
   if (value !== previous) element.textContent = value;
   return value;
 }
+function updateSpeedGauge(element, ratio) {
+  // Older/cached page markup may not contain the decorative gauge wrapper.
+  if (!element) return false;
+  element.style.setProperty("--speed-sweep", (ratio * 270).toFixed(1) + "deg");
+  return true;
+}
 function setBoostHud(value, color) {
   if (value !== lastBoostText) {
     boostEl.textContent = value;
@@ -51,9 +57,7 @@ function updateUI() {
 
   const maxSpeed = !onFoot && controlled ? Math.max(controlled.maxSpeed * MPH_PER_MS, 1) : 1;
   const speedRatio = Math.max(0, Math.min(1, speedValue / maxSpeed));
-  if (speedGaugeEl) {
-    speedGaugeEl.style.setProperty("--speed-sweep", (speedRatio * 270).toFixed(1) + "deg");
-  }
+  updateSpeedGauge(speedGaugeEl, speedRatio);
 
   const cashText = "$" + Math.floor(cash).toLocaleString("en-US");
   if (cashEl.textContent !== cashText) cashEl.textContent = cashText;
