@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.16.0 (HUD feature branch)
+FREE ROAM CAR PLAYGROUND - VERSION 0.16.1 (HUD refinement branch)
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -57,8 +57,12 @@ Version 0.15.2 changes:
 - A car stuck behind a slower car is less likely to take the same exit at the next intersection, and less likely again at each following one.
 
 
-Version 0.16.0 (T-012 HUD feature branch):
-- Added a compact top-center molded dashboard with integrated player-relative objective map.
-- Added Auto / Desktop / Mobile HUD profiles with a persistent manual override.
-- Added invisible mobile swipe steering plus brake, boost and contextual enter/exit buttons.
-- This branch is awaiting automated checks and real browser/touch playtesting.
+Version 0.16.0 (T-012 first HUD pass):
+- Added the top-center molded dashboard, integrated objective map, Auto / Desktop / Mobile profiles and invisible mobile swipe controls.
+
+Version 0.16.1 (T-012 HUD refinement branch):
+- Replaced the counter-rotating heading-up map with a fixed world-oriented map and a vehicle marker that rotates with the car.
+- Added a circular digital speed gauge and strengthened the approved aqua, yellow, coral and green accents across the molded-plastic interface.
+- Moved the PBR lighting selector to the startup screen; it is no longer part of the driving HUD.
+- Added smoke-test coverage for map orientation, speed-gauge markup and startup-only lighting placement.
+- Automated smoke testing and real browser/touch playtesting are still required.
