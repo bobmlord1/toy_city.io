@@ -133,6 +133,35 @@
   body.hud-desktop #touchActions,body.hud-desktop #swipeCue { display:none !important; }
   @media (max-width:420px) { body.hud-mobile #dashboard { grid-template-columns:58px minmax(110px,1fr) 64px; } body.hud-mobile #mapbox { height:66px; } }
 
+
+/* Toy-playset polish: stronger approved colors, molded depth, clear instrument hierarchy. */
+#dashboard{background:linear-gradient(180deg,#294D58,#152A34);border:2px solid #F4CF59;border-radius:22px;box-shadow:0 6px 0 rgba(9,26,33,.72),0 8px 20px #0005,inset 0 2px 0 #F4F1E83D}
+.dash-left,.dash-right{min-height:92px;padding:5px 4px;border-radius:16px;box-shadow:inset 0 2px 0 #F4F1E826}
+.dash-left{background:linear-gradient(150deg,#72D2DC40,#203D48);border:1px solid #72D2DC}
+.dash-right{background:linear-gradient(150deg,#F4CF5938,#203D48);border:1px solid #F4CF59;gap:4px}
+#vehicleName{max-width:100%;color:#F4F1E8;font-size:11px;font-weight:950;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.speed-gauge{--speed-sweep:0deg;position:relative;width:68px;height:68px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(from 225deg,#72D2DC 0deg var(--speed-sweep),#AFC2C847 var(--speed-sweep) 270deg,transparent 270deg)}
+.speed-gauge:before{content:"";position:absolute;inset:5px;border-radius:50%;background:#152A34;border:2px solid #3B6672;box-shadow:inset 0 2px 4px #0008}
+.speed-readout{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;line-height:1}
+#speed{margin:0;color:#F4F1E8;font-size:24px;font-weight:950;font-variant-numeric:tabular-nums}
+#speedUnit{margin-top:3px;color:#72D2DC;font-size:8px;font-weight:950;letter-spacing:.12em}
+#boostStatus{padding:3px 8px;border:1px solid #72D2DC99;border-radius:99px;background:#152A34;color:#72D2DC;font-size:8px;font-weight:950}
+#mapbox{background:#173E49;border:2px solid #72D2DC;border-radius:16px;box-shadow:inset 0 2px 8px #0006}
+.cash-label{color:#F4F1E8;font-weight:950;letter-spacing:.14em}
+#cash{padding:2px 5px;border-radius:8px;background:#F4CF592E;border:1px solid #F4CF5980;color:#F4CF59;font-weight:950}
+#profileToggle{min-height:32px;border:2px solid #F4F1E8;border-radius:10px;padding:5px 9px;background:#F28F73;color:#152A34;font:950 10px system-ui;box-shadow:0 2px 0 #0005}
+#activity{border:1px solid #8BC99B;border-left:4px solid #8BC99B;background:#152A34F7}
+#message{border:1px solid #72D2DC;background:#152A34FA}
+.actionbtn{border:2px solid #F4F1E8;box-shadow:0 4px 0 #0006,0 5px 12px #0004}
+.actionbtn.brake{background:#F28F73;color:#152A34}.actionbtn.boost{background:#F4CF59;color:#152A34}.actionbtn.interact{background:#72D2DC;color:#152A34}
+#upgradePanel{background:linear-gradient(160deg,#294D58,#152A34);border:2px solid #F4CF59;box-shadow:0 6px 0 #091A21A0,0 8px 20px #0004}
+#upgradePanel .eyebrow{color:#F4CF59}
+#upgradeButton,#accelerationButton,#impactButton{border:2px solid #152A3461;border-radius:12px}
+#startcard #lightingToggle{display:block;width:min(250px,100%);min-height:42px;margin:10px auto 4px;padding:9px 14px;border:2px solid #F4CF59;border-radius:12px;background:#203D48;color:#F4F1E8;font:950 12px system-ui;letter-spacing:.04em;white-space:normal;max-width:none;align-self:center;box-shadow:0 3px 0 #0006;cursor:pointer}
+#startcard #lightingToggle[data-mode="advanced"]{background:#72D2DC;color:#152A34;border-color:#F4F1E8}
+@media(max-width:760px){.dash-left,.dash-right{min-height:78px;padding:3px 2px;gap:3px;border-radius:13px}.speed-gauge{width:50px;height:50px}.speed-gauge:before{inset:4px;border-width:1.5px}#speed{font-size:19px}#speedUnit{font-size:7px;margin-top:2px}#vehicleName{font-size:8px;letter-spacing:.04em}#boostStatus{padding:2px 4px;font-size:7px;letter-spacing:0}#cash{font-size:14px;padding:2px}#profileToggle{min-height:28px;padding:4px 6px;font-size:8px}#activity{top:calc(max(10px,env(safe-area-inset-top)) + 100px)}}
+@media(max-width:420px){.speed-gauge{width:48px;height:48px}}
+
 </style>
 </head>
 <body>
@@ -141,14 +170,13 @@
 <div id="dashboard" class="panel" aria-label="Driving dashboard">
   <div class="dash-side dash-left">
     <div id="vehicleName">COMPACT</div>
-    <div id="speed">0 <small>MPH</small></div>
+    <div class="speed-gauge" id="speedGauge" aria-label="Vehicle speed"><div class="speed-readout"><div id="speed">0</div><span id="speedUnit">MPH</span></div></div>
     <div id="boostStatus" aria-live="polite">BOOST READY</div>
   </div>
   <div id="mapbox" aria-label="Player-relative objective map"><canvas id="map" width="360" height="216"></canvas></div>
   <div class="dash-side dash-right">
     <div class="cash-label">CASH</div><div id="cash">$0</div>
     <button id="profileToggle" type="button" aria-label="HUD layout: automatic. Change layout">AUTO</button>
-    <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">LIGHT</button>
   </div>
 </div>
 <div id="activity" class="panel" role="status" aria-live="polite"><span id="activityIcon"></span><span id="activityText"></span><button id="activitySkip" type="button" aria-label="Skip this delivery">SKIP (G)</button></div>
@@ -156,7 +184,7 @@
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
 <div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
 <div id="touchActions" aria-label="Driving actions">
-  <button class="actionbtn" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
+  <button class="actionbtn brake" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
   <button class="actionbtn boost" id="boostButton" data-action="boost" aria-label="Boost">⚡</button>
   <button class="actionbtn interact" id="interact" aria-label="Enter or exit vehicle" hidden>↗</button>
 </div>
@@ -181,6 +209,7 @@
     <p>No races, timers, ads or real-money purchases. Explore a colorful toy city, find activities, earn cash and upgrade your vehicles.</p>
     <p><b>Explore a city four times wider and four times longer, watch 24 cars and pickup trucks turn through the connected city grid, try the stunt ramps, and find the blue tuning ramp. Smash props and earn airtime cash.</b></p>
     <p class="small">Vehicle models: Grab3D Cozy Vehicles collection (CC0 1.0). Desktop: WASD / arrows to drive, Shift to boost, E to enter or exit, C to change camera. Touch: swipe to steer and accelerate; use the action buttons. Crashes and airtime earn cash. Drive up the blue tuning ramp to upgrade top speed or acceleration; colored stunt ramps pay airtime bonuses.</p>
+    <button id="lightingToggle" type="button" data-mode="advanced" aria-label="Toggle advanced PBR lighting">ADVANCED LIGHTING: ON</button>
     <button id="startbtn">START DRIVING</button>
   </div>
 </div>
