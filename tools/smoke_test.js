@@ -128,6 +128,19 @@ if (!w.document.getElementById("speedGauge"))
   failures.push("HUD: analog/digital speed gauge markup is missing");
 if (run("updateSpeedGauge(null, 0.5) === false", "missing-gauge-check") !== true)
   failures.push("HUD: a missing optional speed gauge should not throw");
+
+// T-013 compact dashboard structure and objective placement.
+const dashboard = w.document.getElementById("dashboard");
+const dashCenter = w.document.querySelector("#dashboard .dash-center");
+const activityPanel = w.document.getElementById("activity");
+const mapBox = w.document.getElementById("mapbox");
+if (!dashboard || !dashCenter || !activityPanel || !mapBox || !dashboard.contains(activityPanel))
+  failures.push("HUD: objective panel is not integrated into the dashboard");
+if (activityPanel.parentElement !== dashCenter || dashCenter.children[0] !== activityPanel || dashCenter.children[1] !== mapBox)
+  failures.push("HUD: objective controls must sit directly above the minimap");
+const hudStyles = Array.from(w.document.querySelectorAll("style")).map((style) => style.textContent).join("\n");
+if (!/grid-template-rows:\\s*15px\\s+32px/.test(hudStyles) || !/grid-template-rows:\\s*13px\\s+26px/.test(hudStyles))
+  failures.push("HUD: compact dashboard dimensions or mobile override are missing");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
