@@ -338,3 +338,24 @@ Body:
 - Replace the proposed north-up map with a tilted/oblique toy-diorama map that rotates with the player's direction. Focus on the player and relevant objectives, not all world objects or traffic; faint road context may remain if it helps orientation.
 - Mobile driving uses an invisible floating swipe stick on the left/lower-left area. Use bottom-right icon buttons for brake, boost and contextual enter/exit. Support simultaneous touches and avoid permanent visible joystick artwork.
 - These choices supersede the earlier north-up minimap, N marker, traffic-rich map and visible thumbstick proposal. This is still design/specification only; no HUD or input code is authorized. Next design deliverable: desktop and mobile HUD mockups for owner review.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 IMPLEMENTATION HANDOFF
+Status: first implementation pass complete on feature branch; review and owner playtest pending
+Branch: `feature/t012-molded-dashboard`
+Files changed: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`.
+Implemented:
+- Replaced scattered top-bar/map layout with a compact centered molded dashboard. Speed, vehicle, boost status and cash surround an integrated map.
+- Added Auto / Desktop / Mobile profile selection. Auto uses coarse-pointer capability or a narrow viewport; manual selection is stored in localStorage and takes precedence.
+- Replaced the old traffic/building-heavy map with a player-relative, rotated and vertically compressed road-context map. It shows the player and active activity marker(s), not traffic/buildings/rocks. Map remains present in all views.
+- Added invisible floating swipe steering on mobile: horizontal displacement steers, upward displacement accelerates and downward displacement brakes. The same control is used on foot. Added bottom-right brake, boost and contextual enter/exit buttons; simultaneous pointer input is supported.
+- Preserved keyboard controls and existing activity/upgrade systems. Updated on-foot movement to accept the swipe control's gas/brake signals.
+Not yet verified:
+- No local browser/WebGL/touch test was run in this environment.
+- Full `node tools/smoke_test.js` has not yet been run against this branch.
+Review focus:
+1. Check CSS stacking/spacing at narrow phone sizes and desktop.
+2. Verify pointer/touch simultaneous input, swipe release neutralization and mobile profile override persistence.
+3. Confirm cash readout, objective map markers and enter/exit visibility.
+4. Run syntax checks and the full smoke test before owner playtest.
+No merge to main; owner approval follows real browser/touch playtest.
