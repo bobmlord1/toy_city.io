@@ -94,7 +94,8 @@ Use a 4 px spacing base (4, 8, 12, 16, 24 px), three shared corner radii (8, 12,
 - Traffic starts and route choices use seeded randomness: varied but repeatable between runs. Pickup trucks have four paint variants and larger collision footprints. v0.15.2 adds varied traffic speeds, speed matching behind slower vehicles and reduced route preference for a slower leader's chosen exit when a car remains held back.
 - One optional delivery activity is available at a time. The player can ignore or skip it without penalty; completing it pays predictable cash and offers another activity.
 - Cash comes from delivery payouts plus incidental crash and airtime rewards. It buys top-speed, acceleration and impact upgrades at the tuning pad.
-- The owner confirmed the upgrade-ramp side-wall and ramp-shadow fixes look right in a real browser.\n- T-012 first implementation pass: top-center molded dashboard, integrated player-relative tilted objective map, Auto/Desktop/Mobile profile selector, invisible mobile swipe steering and bottom-right brake/boost/contextual enter-exit controls. This is on a feature branch and has not yet passed owner browser/touch playtesting.
+- The owner confirmed the upgrade-ramp side-wall and ramp-shadow fixes look right in a real browser.
+- T-012 first implementation pass: top-center molded dashboard, integrated player-relative tilted objective map, Auto/Desktop/Mobile profile selector, invisible mobile swipe steering and bottom-right brake/boost/contextual enter-exit controls. This is on a feature branch and has not yet passed owner browser/touch playtesting.
 
 ## Approved gameplay loop (T-001 — approved 2026-11-24)
 
