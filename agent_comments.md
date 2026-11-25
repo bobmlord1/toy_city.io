@@ -377,3 +377,23 @@ Changes after the first implementation review:
 Static validation performed: changed JavaScript files parsed successfully; a cross-script top-level lexical scan found no duplicate declarations; CSS checks confirmed no literal `\\n` remains in the style block and the interaction hidden rule is separate.
 Not run: the full Node smoke test or a browser/WebGL/touch session. A local repository clone was unavailable in this environment, so these remain required before the owner playtest.
 Next: run `node tools/smoke_test.js`, then owner tests on phone and laptop. Do not merge until the owner confirms.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 HUD REFINEMENT
+Status: implementation committed to the same feature branch; owner playtest pending
+Research notes:
+- Forza Horizon 5: keep essential speed/vehicle telemetry legible and make contrast/color choices purposeful. Its official support guidance describes high-contrast UI and map/UI icon color customization.
+- Mario Kart 8 Deluxe: strong, quickly recognized icon states and a minimap that communicates useful nearby game state without demanding long reading.
+- Burnout Paradise: directional destination/context cues can communicate the next goal clearly without turning free-roam into a dense race dashboard.
+Sources reviewed: Forza Support accessibility guide (https://support.forza.net/hc/en-us/articles/4409280058259-Forza-Horizon-5-Accessibility-Support), Nintendo Mario Kart 8 Deluxe guide (https://www.nintendo.com/jp/ichikara/aabpa/02_en.html), Burnout Paradise Remastered gameplay HUD reference (https://www.4gamer.net/games/410/G041072/20180327018/screenshot.html).
+Implemented:
+- Replaced heading-up counter-rotating map with a fixed world-oriented map. The vehicle marker rotates with vehicle yaw; the map's horizontal axis is mirrored to match the chase-camera's left/right view, so map bearings and visible direction agree.
+- Added a circular digital speed gauge with an animated aqua arc, while keeping the actual numeric MPH readout central.
+- Increased visual character using the approved petrol/teal base with stronger aqua, warm-yellow, coral and green accents, raised borders, molded inset panels and color-coded touch actions.
+- Removed the lighting selector from the driving dashboard and moved it into the startup card. Labels now say ADVANCED LIGHTING: ON/OFF (or unavailable).
+- Updated the version to v0.16.1 and revised the minimap description.
+- Added smoke checks for fixed map axes, the rotating vehicle indicator, gauge markup and startup-only PBR placement.
+Not yet run:
+- Full `node tools/smoke_test.js` (the execution environment cannot resolve github.com to clone the project).
+- Browser/WebGL/touch playtest.
+Please review map turn direction and objective placement on phone and laptop before any merge.
