@@ -95,11 +95,11 @@ const smashRegression = JSON.parse(run(`(() => {
   props.push(p);
   beginPropCollisionFrame();
   registerPropImpact(p,rammer,8);
-  finishPropCollisionFrame();
+  finishPropCollisionFrame(1/60);
   const afterFirstHit = p.hp;
   beginPropCollisionFrame();
   registerPropImpact(p,rammer,8);
-  finishPropCollisionFrame();
+  finishPropCollisionFrame(1/60);
   const afterSustainedContact = p.hp;
   // A brief gap is still part of the same shove; require a real disengagement.
   for (let i = 0; i < 10; i++) {
@@ -114,7 +114,7 @@ const smashRegression = JSON.parse(run(`(() => {
   beginPropCollisionFrame();
   registerPropImpact(p,rammer,8);
   finishPropCollisionFrame(1/60);
-  const result = {afterFirstHit,afterSustainedContact,broken:p.broken};
+  const result = {afterFirstHit,afterSustainedContact,afterBriefSeparation,broken:p.broken};
   props.splice(props.indexOf(p),1);
   return result;
 })()`, "smashable-prop-regression"));
