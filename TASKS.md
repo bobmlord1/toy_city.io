@@ -89,10 +89,11 @@ Notes:
 - The owner also asked for six semis. Defer moving AI semis in this task: the trailer articulation simulation already runs for AI vehicles, but the existing compact-car turn path does not account for a tractor-trailer swept footprint. Do not add six semis as untested moving traffic; a later task should add trailer-aware path planning, turn clearance and speed control.
 - No new assets, spawning/despawning, pathfinding engine, road geometry or dependencies.
  
-### T-012 HUD, minimap and mobile interaction redesign (design phase)
-Assigned to: ChatGPT (design specification; implementation requires separate approval).
-Status: owner-approved visual language and layout direction; detailed specification recorded in `DESIGN.md`. Desktop/mobile mockups are the next design deliverable. No UI code authorized yet.
-Files: `DESIGN.md`, `TASKS.md`, `agent_comments.md`; mockups may be added as design references.
+### T-012 HUD, minimap and mobile interaction redesign
+Assigned to: ChatGPT (implementation); Claude review requested after handoff.
+Status: first implementation pass committed to `feature/t012-molded-dashboard`; awaiting code review, smoke test and owner browser/touch playtest.
+Files: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`, `agent_comments.md`.
+
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
 Done when:
 - Define one cohesive toy-like visual language: approved palette, typography, shapes, spacing, surfaces, borders, icon treatment and semantic status colors.
@@ -101,7 +102,7 @@ Done when:
 - Specify a tilted, player-relative minimap that rotates with the player's heading, stays visible in every view and focuses on the player plus relevant objectives rather than all world objects or traffic.
 - Specify mobile invisible swipe-stick driving, with brake, boost and contextual enter/exit icon buttons at the bottom right.
 - Include child-focused language rules: icons first, short labels, no paragraphs of instructions during play.
-- Keep desktop keyboard and mobile touch both supported. No code changes in this design phase.
+- Keep desktop keyboard and mobile touch both supported. Keyboard remains available in either profile; mobile swipe controls support simultaneous action-button touches.
 Notes:
 - **Approved visual direction:** Molded dashboard, but intentionally more toy-like and less realistic than a real instrument cluster. Use chunky rounded shapes, raised molded-plastic edges and friendly simple icons.
 - **Approved palette:** deep petrol `#152A34`, raised teal `#203D48`, warm ivory `#F4F1E8`, blue-grey `#AFC2C8`, aqua `#72D2DC`, warm yellow `#F4CF59`, soft coral `#F28F73`, soft green `#8BC99B`. Use accents semantically.
