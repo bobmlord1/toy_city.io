@@ -115,7 +115,7 @@ Notes:
  
 ### T-013 Compact dashboard and integrated objective strip
 Assigned to: ChatGPT (requested by the project owner on 2026-11-25).
-Status: implementation in progress on `feature/t012-molded-dashboard`; owner visual playtest pending.
+Status: implementation complete on `feature/t012-molded-dashboard`; full smoke test and owner browser/touch playtest pending.
 Files: `index.html`, `tools/smoke_test.js`, `README.txt`, `TASKS.md`, `agent_comments.md`.
 Why: The top-center dashboard currently obscures too much of the driving view, and the separate objective panel competes with the dashboard for screen space.
 Done when:
@@ -124,7 +124,10 @@ Done when:
 - Reserve the objective row so the dashboard does not jump in height when an activity appears or disappears.
 - Keep the minimap, objective skip interaction, touch controls and desktop keyboard behavior working.
 - Add structural regression checks and update the build version/documentation.
-Notes: Avoid gameplay or activity-state changes. A real browser/touch check is still required to judge map legibility and actual forward visibility.
+Notes:
+- Implementation (2026-11-25): vehicle/speed/boost and cash/profile controls now use compact side-by-side panels. The objective icon, instruction/distance and SKIP action live in a reserved row directly above a 88×32 desktop / 74×26 mobile minimap. The row stays reserved while hidden, preventing dashboard height changes. Build version is v0.16.3.
+- Static validation: all 19 loaded JavaScript source files parse; the smoke-test script parses; markup and CSS checks confirm objective containment/order, fixed compact row dimensions, map sizing and the active-row rule.
+- Not yet run: `node tools/smoke_test.js` (requires the project's local Node/jsdom/assets setup). No real-browser, WebGL, phone or touch playtest has been performed.
 
 ## Later: proposed order, not yet authorized as coding tasks
 
