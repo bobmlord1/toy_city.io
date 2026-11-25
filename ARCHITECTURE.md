@@ -50,7 +50,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `hud.js` | Molded dashboard readouts and player-relative objective minimap. |
 | `main.js` | Frame loop and startup. Loads last. |
 
-Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, then `drawMap()`. The T-012 minimap projects the player and active objective into a player-relative, vertically compressed view; only the quiet street grid is retained as context.
+Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, then `drawMap()`. The T-012 minimap projects the player and active objective into a fixed world-oriented view, with the vehicle marker rotated to match vehicle yaw; only the quiet street grid is retained as context.
 
 ## Adding a file
 
