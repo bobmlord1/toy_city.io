@@ -359,3 +359,21 @@ Review focus:
 3. Confirm cash readout, objective map markers and enter/exit visibility.
 4. Run syntax checks and the full smoke test before owner playtest.
 No merge to main; owner approval follows real browser/touch playtest.
+
+
+### 2026-11-25 | ChatGPT -> All | T-012 REVIEW FIXES
+Status: static review findings addressed; owner playtest pending
+Branch: `feature/t012-molded-dashboard`
+Changes after the first implementation review:
+- Removed duplicate activity HUD declarations and rendering from `src/hud.js`; `src/activities.js` remains the sole owner of activity HUD text and retains destination-aware instructions.
+- Added the missing cached cash element binding in `src/hud.js`.
+- Separated swipe-stick state from action-button state so releasing one finger cannot cancel a brake button held by another finger. Blur clears both sources.
+- Restricted swipe-stick initiation to the lower-left play area and dismisses the first-use cue after the first deliberate movement.
+- Matched the minimap canvas backing resolution to its displayed dimensions (with a 2x pixel-ratio cap) to avoid stretching circular markers and the player arrow.
+- Replaced the CSS literal newline with an actual rule break; retained the hidden-state rule for the contextual interaction button.
+- Shortened the visible lighting toggle to `PBR ON/OFF`, while keeping explanatory accessible labels and titles. Increased the small dashboard control targets and adjusted mobile activity spacing.
+- Fixed the escaped newline in the T-012 status paragraph in `DESIGN.md`.
+- Extended `tools/smoke_test.js` with HUD profile cycling and simultaneous swipe/button brake regression checks.
+Static validation performed: changed JavaScript files parsed successfully; a cross-script top-level lexical scan found no duplicate declarations; CSS checks confirmed no literal `\\n` remains in the style block and the interaction hidden rule is separate.
+Not run: the full Node smoke test or a browser/WebGL/touch session. A local repository clone was unavailable in this environment, so these remain required before the owner playtest.
+Next: run `node tools/smoke_test.js`, then owner tests on phone and laptop. Do not merge until the owner confirms.
