@@ -1,39 +1,72 @@
 "use strict";
 // =============================================================================
-// src/hud.js — T-012 molded dashboard and player-relative objective map.
+// src/hud.js — Molded driving dashboard and fixed-orientation objective map.
 // =============================================================================
 const boostEl = $("boostStatus");
 const cashEl = $("cash");
 const mapCanvas = $("map");
-let lastVehicleName = "", lastSpeedHtml = "", lastBoostText = "", lastBoostColor = "";
-function setHudText(el, value, previous) { if (value !== previous) el.textContent = value; return value; }
-function setBoostHud(value, color) {
-  if (value !== lastBoostText) { boostEl.textContent = value; lastBoostText = value; }
-  if (color !== lastBoostColor) { boostEl.style.color = color; lastBoostColor = color; }
+const speedGaugeEl = $("speedGauge");
+let lastVehicleName = "", lastSpeedText = "", lastBoostText = "", lastBoostColor = "";
+
+function setHudText(element, value, previous) {
+  if (value !== previous) element.textContent = value;
+  return value;
 }
+function setBoostHud(value, color) {
+  if (value !== lastBoostText) {
+    boostEl.textContent = value;
+    lastBoostText = value;
+  }
+  if (color !== lastBoostColor) {
+    boostEl.style.color = color;
+    lastBoostColor = color;
+  }
+}
+
 function updateUI() {
-  let name, speedHtml;
+  let name, speedValue;
   if (onFoot) {
-    setBoostHud("ON FOOT", "#AFC2C8"); name = "WALK"; speedHtml = "0 <small>MPH</small>";
+    setBoostHud("ON FOOT", "#AFC2C8");
+    name = "WALK";
+    speedValue = 0;
   } else {
-    name = controlled.name; speedHtml = Math.round(currentSpeed()) + " <small>MPH</small>";
+    name = controlled.name;
+    speedValue = Math.round(currentSpeed());
     if (controlled.boostTime > 0) setBoostHud("BOOST!", "#F4CF59");
-    else if (controlled.boostCooldown > 0) setBoostHud("RECHARGING", "#AFC2C8");
+    else if (controlled.boostCooldown > 0) setBoostHud("RECHARGING", "#F28F73");
     else setBoostHud("BOOST READY", "#72D2DC");
   }
+
   lastVehicleName = setHudText(vehicleNameEl, name, lastVehicleName);
-  if (speedHtml !== lastSpeedHtml) { speedEl.innerHTML = speedHtml; lastSpeedHtml = speedHtml; }
+  lastSpeedText = setHudText(speedEl, String(speedValue), lastSpeedText);
+
+  const maxSpeed = !onFoot && controlled ? Math.max(controlled.maxSpeed * MPH_PER_MS, 1) : 1;
+  const speedRatio = Math.max(0, Math.min(1, speedValue / maxSpeed));
+  speedGaugeEl.style.setProperty("--speed-sweep", (speedRatio * 270).toFixed(1) + "deg");
+
   const cashText = "$" + Math.floor(cash).toLocaleString("en-US");
   if (cashEl.textContent !== cashText) cashEl.textContent = cashText;
-  const nearby = onFoot ? nearestVehicle(player.x, player.z) : controlled && Math.hypot(controlled.vx, controlled.vz) < 2.4 && controlled.grounded !== false;
-  const interactButton = $("interact");
-  interactButton.hidden = !nearby;
+
+  const nearby = onFoot
+    ? nearestVehicle(player.x, player.z)
+    : controlled && Math.hypot(controlled.vx, controlled.vz) < 2.4 && controlled.grounded !== false;
+  $("interact").hidden = !nearby;
   updateActivityHud();
   refreshUpgradePanel();
   if (performance.now() > messageUntil) messageEl.classList.remove("show");
 }
+
+// World-up map: the road grid stays in the same screen orientation. The vehicle arrow
+// rotates with the car, so left/right turns match what the player sees in the world.
+function mapProjectPoint(x, z, origin, scale, width, height) {
+  return [
+    width * 0.5 + (x - origin.x) * scale,
+    height * 0.5 - (z - origin.z) * scale * 0.58,
+  ];
+}
+
 function drawMap() {
-  // Match the backing store to the displayed size so circles and arrows are not stretched.
+  // Match the backing store to the displayed dimensions for crisp markers without distortion.
   const bounds = mapCanvas.getBoundingClientRect();
   const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
   const targetWidth = Math.max(1, Math.round((bounds.width || mapCanvas.width) * pixelRatio));
@@ -42,54 +75,90 @@ function drawMap() {
     mapCanvas.width = targetWidth;
     mapCanvas.height = targetHeight;
   }
-  const canvas = mapCanvas;
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
+
+  const ctx = mapCanvas.getContext("2d");
+  const W = mapCanvas.width, H = mapCanvas.height;
   const p = onFoot ? player : controlled;
   if (!p) return;
+
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#203D48"; ctx.fillRect(0, 0, W, H);
-  // Player-relative coordinates: forward is always toward the top. Vertical compression
-  // gives the simple road grid a toy-diorama / tilted-map feel without blurring markers.
-  const yaw = p.yaw || 0, cs = Math.cos(yaw), sn = Math.sin(yaw);
+  ctx.fillStyle = "#173E49";
+  ctx.fillRect(0, 0, W, H);
+
   const scale = Math.min(W / 390, H / 230) * 0.94;
-  const project = (x,z) => {
-    const dx=x-p.x, dz=z-p.z;
-    const right=dx*cs-dz*sn, forward=dx*sn+dz*cs;
-    return [W/2+right*scale, H/2-forward*scale*0.58];
-  };
+  const project = (x, z) => mapProjectPoint(x, z, p, scale, W, H);
+
   ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
-  // Quiet, simplified street context only; no building, rock or traffic symbols.
-  ctx.strokeStyle="rgba(175,194,200,.28)"; ctx.lineWidth=8*scale; ctx.lineCap="round";
   ctx.beginPath();
-  for (const s of streetLines) {
-    let a=project(s,-WORLD_HALF), b=project(s,WORLD_HALF);
+  ctx.rect(0, 0, W, H);
+  ctx.clip();
+
+  // Bright, toy-like road bands with restrained lane markings.
+  ctx.strokeStyle = "rgba(114,210,220,.52)";
+  ctx.lineWidth = Math.max(3, 8 * scale);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const line of streetLines) {
+    let a = project(line, -WORLD_HALF), b = project(line, WORLD_HALF);
     ctx.moveTo(...a); ctx.lineTo(...b);
-    a=project(-WORLD_HALF,s); b=project(WORLD_HALF,s);
+    a = project(-WORLD_HALF, line); b = project(WORLD_HALF, line);
     ctx.moveTo(...a); ctx.lineTo(...b);
   }
   ctx.stroke();
-  ctx.strokeStyle="rgba(244,241,232,.16)"; ctx.lineWidth=1.2; ctx.setLineDash([5,7]);
+
+  ctx.strokeStyle = "rgba(244,207,89,.30)";
+  ctx.lineWidth = Math.max(1, 1.25 * scale);
+  ctx.setLineDash([7 * scale, 7 * scale]);
   ctx.beginPath();
-  for (const s of streetLines) {
-    let a=project(s,-WORLD_HALF), b=project(s,WORLD_HALF);
+  for (const line of streetLines) {
+    let a = project(line, -WORLD_HALF), b = project(line, WORLD_HALF);
     ctx.moveTo(...a); ctx.lineTo(...b);
-    a=project(-WORLD_HALF,s); b=project(WORLD_HALF,s);
+    a = project(-WORLD_HALF, line); b = project(WORLD_HALF, line);
     ctx.moveTo(...a); ctx.lineTo(...b);
   }
-  ctx.stroke(); ctx.setLineDash([]);
-  // Only current objective(s) are shown. Markers remain crisp and high contrast.
-  for (const m of activeMarkers()) {
-    const [x,y]=project(m.x,m.z), color=m.kind==="pickup"?"#F4CF59":"#8BC99B";
-    ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fillStyle=color; ctx.fill();
-    ctx.lineWidth=2.5; ctx.strokeStyle="#F4F1E8"; ctx.stroke();
-    ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fillStyle="#152A34"; ctx.fill();
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Only current objective(s) are shown. Color is meaningful: yellow pickup, green drop-off.
+  for (const marker of activeMarkers()) {
+    const [x, y] = project(marker.x, marker.z);
+    const color = marker.kind === "pickup" ? "#F4CF59" : "#8BC99B";
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(6, 9 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, 2.5 * scale);
+    ctx.strokeStyle = "#F4F1E8";
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(1.8, 2.5 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = "#152A34";
+    ctx.fill();
   }
-  // Player marker points up regardless of world heading because the map itself rotates.
-  ctx.save(); ctx.translate(W/2,H/2); ctx.shadowColor="rgba(0,0,0,.35)"; ctx.shadowBlur=5;
-  ctx.fillStyle="#72D2DC"; ctx.strokeStyle="#F4F1E8"; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(9,9); ctx.lineTo(0,5); ctx.lineTo(-9,9); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Screen-up is fixed to the city's world grid; the icon itself follows vehicle yaw.
+  ctx.save();
+  ctx.translate(W * 0.5, H * 0.5);
+  ctx.rotate(p.yaw || 0);
+  ctx.shadowColor = "rgba(0,0,0,.42)";
+  ctx.shadowBlur = 6 * pixelRatio;
+  ctx.fillStyle = "#72D2DC";
+  ctx.strokeStyle = "#F4F1E8";
+  ctx.lineWidth = Math.max(1.8, 2.5 * scale);
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(7, 11 * scale), 0, Math.PI * 2);
+  ctx.fillStyle = "#152A34";
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -Math.max(11, 15 * scale));
+  ctx.lineTo(Math.max(6, 8 * scale), Math.max(5, 7 * scale));
+  ctx.lineTo(0, Math.max(2, 3 * scale));
+  ctx.lineTo(-Math.max(6, 8 * scale), Math.max(5, 7 * scale));
+  ctx.closePath();
+  ctx.fillStyle = "#72D2DC";
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
   ctx.restore();
 }
