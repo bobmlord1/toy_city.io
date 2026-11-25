@@ -116,21 +116,28 @@ function registerPropImpact(p, rammer, impact, isTrailer = false) {
   // Record every overlapping frame, including soft contact. Otherwise a slow frame
   // could reset the latch while the vehicle is still pushing the prop.
   const key = (isTrailer ? "trailer:" : "vehicle:") + rammer.id;
-  const previous = p._damageContacts || new Set();
+  const cooldowns = p._damageContactCooldowns || new Map();
   const current = p._damageContactsNow || (p._damageContactsNow = new Set());
   current.add(key);
-  // Damage is awarded once per contact episode, not once per physics frame. A vehicle
-  // must separate from the prop and make a fresh approach before it can damage it again.
-  // Tractor and trailer contacts use distinct keys so either body can make its own hit.
-  if (previous.has(key) || impact < 3.0) return false;
+  // A short separation grace period prevents tiny physics gaps from turning one long
+  // shove into a series of artificial impacts. The player must disengage before re-ramming.
+  if ((cooldowns.get(key) || 0) > 0 || impact < 3.0) return false;
   return damageProp(p, impact, rammer);
 }
 function beginPropCollisionFrame() {
   for (const p of props) p._damageContactsNow = new Set();
 }
-function finishPropCollisionFrame() {
+function finishPropCollisionFrame(dt) {
   for (const p of props) {
-    p._damageContacts = p._damageContactsNow || new Set();
+    const cooldowns = p._damageContactCooldowns || new Map();
+    const current = p._damageContactsNow || new Set();
+    for (const [key, remaining] of cooldowns) {
+      if (current.has(key)) cooldowns.set(key, 0.4);
+      else if (remaining <= dt) cooldowns.delete(key);
+      else cooldowns.set(key, remaining - dt);
+    }
+    for (const key of current) if (!cooldowns.has(key)) cooldowns.set(key, 0.4);
+    p._damageContactCooldowns = cooldowns;
     delete p._damageContactsNow;
   }
 }
