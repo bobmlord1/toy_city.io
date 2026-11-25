@@ -78,12 +78,34 @@ Why: the five deliveries all sit in the middle of the city.
 Done when: deliveries start and end in every part of the city, payouts stay in the $75 to $150 range and grow with distance, and the smoke test rejects pads that overlap buildings, rocks, ramps or each other.
 Status: code complete in v0.17.0, waiting on owner playtest.
 
+### T-020 Traffic must not drive through buildings
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: a traffic car knocked off its lane can drive straight through buildings, because the traffic branch of `updateVehicle()` never runs building collisions.
+Done when: a traffic car aimed at a building from the lawn never ends up inside it, and `tools/traffic_report.js` shows no new stuck cars.
+Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+
+### T-021 Toybox Events framework
+Assigned to: Claude. Owner approved 2026-11-25. Part of T-015.
+Files: `src/events.js` (new), `index.html` (script list, comms panel, version), `src/hud.js` (event map symbols), `src/camera_render.js` (draw hook), `src/main.js` (update hook), `src/collisions.js`, `src/vehicle_update.js`, `src/economy.js` (small hooks), `tools/smoke_test.js`, docs.
+Why: shared timing, announcement, map marking and cleanup for occasional optional events.
+Done when: on a fixed interval the game draws from a pool of every event plus "no event", all with equal weight; at most one event at a time; a comms panel slides out with the event name and Dr. BadDude's line; the event has a unique minimap symbol; when its timer runs out it disappears cleanly with no fail message or penalty; activities in progress keep going.
+Notes (owner decisions 2026-11-25): timers only make an event vanish, never a fail state. One-liners stay; the child does not need to read them. Events appear on a timer from a pool that includes "no event", all equal weight.
+Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+
+### T-022 Toybox Events: City Under Attack, Tuning Ray, Reward Ring
+Assigned to: Claude. Owner approved 2026-11-25. Events 1 to 3 of T-015.
+Files: same as T-021.
+Why: the first three approved Toybox Events.
+Done when: City Under Attack places a blocky stationary creature in one of three tiers that light bumps visibly shove and that pays once when smashed; Tuning Ray places a hard-to-miss ray gate on a road near the player, and driving through it gives one of four temporary handling effects that undo cleanly without touching upgrades; Reward Ring places a golden ring on a road and driving through it gives a random permanent upgrade to the current vehicle.
+Notes (owner decisions 2026-11-25): Reward Ring upgrades are permanent. Tuning Ray is opt-in (drive through it) but must be hard to miss.
+Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
 - Optional traffic experiment: raising the AI steering cap from 1.55 to 2.6 rad/s halved moderate lawn excursions in simulation (39 to 21 in 10 minutes) but left severe ones unchanged. It makes turns tighter, which is a visual call for the owner.
 - Intersection yielding: remaining traffic incidents are crossing and oncoming contacts at intersections. Fixing them needs right-of-way rules, which is a design decision before it is a coding task.
-- Traffic can drive through buildings after a knock (found while fixing the smoke test, 2026-11-25): a traffic car spun around by a second collision drove through the yard warehouse and then the Yellow House. `resolveVehicleBuilding()` runs for traffic, but the route spring appears to pull the car through once it is deep enough. Needs a look in `vehicle_update.js` and `collisions.js` before it is a task.
 - Activity tuning after playtest: smash payout ($100 for four targets plus $18 per prop), the stunt airtime goal (0.49 s) and whether 24 pads feel like too many or too few.
 - After the owner playtests T-008, reassess whether 24 mixed traffic vehicles feel busy enough and whether desktop/mobile performance remains comfortable; do not add more traffic until that check.
 - Add more smashable physics props in selected districts, using deterministic placement and keeping streets/ramps clear.
