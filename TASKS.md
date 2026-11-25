@@ -145,6 +145,43 @@ Notes:
 
 ## Later: proposed order, not yet authorized as coding tasks
 
+### T-015 Toybox Events: Dr. BadDude's Bad Ideas (future milestone)
+Assigned to: project owner / design; engineering assignment after normal activity types are implemented and event designs are finalized.
+Status: design concept approved for future planning; discussion only. Do not begin implementation yet.
+Files: to be determined when the milestone is authorized.
+Why: Add occasional, optional, surprising city-wide events that make the world feel like a toybox, using familiar driving controls and existing gameplay systems wherever possible.
+Done when:
+- Establish a lightweight event framework for occasional, self-contained, optional events that do not forcibly interrupt free roam or cancel an activity already in progress.
+- All events share a recognizable connection to Dr. BadDude, an overconfident inventor whose experiments and excuses create the situations the player gets to resolve.
+- Keep event instructions and announcements short and child-readable; each event should be immediately understandable and have a satisfying visual/reward payoff.
+- Finalize event timing, activation/acceptance, map markers, duration, rewards, cleanup and compatibility with normal activities before implementation.
+- Implement the approved event set below only after the normal activity types are complete and the owner authorizes the milestone.
+
+**Approved event concepts and current one-liners**
+
+1. **City Under Attack:** A blocky giant toy creature spawns in the city. Smash it before the event timer expires. Support a few difficulty tiers with different creature models/health/rewards. The creature is stationary and unanimated; it uses prop-like health and the existing destruction/particle system. Give it exaggeratedly light physical response so even low-speed bumps visibly move it. No enemy AI or combat system.
+   - Dr. BadDude: “Technically, the containment system worked. The City is the containment system!”
+2. **Tuning Ray:** Dr. BadDude's ray temporarily changes the player's vehicle handling rather than its physical size. Candidate effects include Soap Tires (very slippery), Super Springs (exaggerated bouncing), Turbo Overload (extreme acceleration / temporary speed boost) and Tank Treads (heavy steering with strong traction). Final effect list and duration remain to be tuned.
+   - Dr. BadDude: “Your car is 37% better. I just need to measure what!”
+3. **Reward Ring:** A golden ring appears at a random eligible location. Drive through it to receive a random stat upgrade; decide later whether upgrades are temporary or permanent and balance accordingly.
+   - Dr. BadDude: “It's perfectly safe. The test dummy only exploded once!”
+4. **Rival:** A marked rival vehicle appears. Wreck into it before the time limit expires. Reuse existing vehicle collision behavior where possible.
+   - Dr. BadDude: “I've maxed out my crash insurance! Let's see what it pays out!”
+5. **Treasure:** A special smashable object appears somewhere in the city with extremely low, one-hit health. Destroy it for a very large payout. Keep its reward separate from ordinary prop rewards and balance it as a rare event.
+   - Dr. BadDude: “Someone asked about my research fund: What research fund?!”
+
+**Shared character direction**
+- Dr. BadDude is the common source or catalyst for every Toybox Event, but his role varies: sometimes he hires the player, sometimes asks for help, sometimes tries to prove a theory, and sometimes simply loses control of an experiment.
+- Personality: overconfident, evasive through technicalities, oblivious to the consequences, and generous with other people's willingness to take risks. He delivers excuses sincerely, as if they are perfectly reasonable.
+- Keep the humor accessible to children on the surface, with optional extra absurdity for adults. Do not rely on obscure references or long explanations.
+- Use the five one-liners above as the current approved working dialogue. Preserve their wording unless the owner revises it.
+
+Notes:
+- This is a future milestone goal, not authorization to implement. The owner explicitly wants normal event/activity types implemented first and all Toybox Events kept in discussion until then.
+- Toybox Events are a separate occasional spectacle layer alongside free roam and repeatable normal activities; they should remain optional and should not punish players for ignoring them.
+- Reuse current systems and keep scope modest. Avoid introducing complex AI, elaborate cutscenes, voice acting or a new combat system.
+
+
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
 - Optional traffic experiment: raising the AI steering cap from 1.55 to 2.6 rad/s halved moderate lawn excursions in simulation (39 to 21 in 10 minutes) but left severe ones unchanged. It makes turns tighter, which is a visual call for the owner.
 - Intersection yielding: remaining traffic incidents are crossing and oncoming contacts at intersections. Fixing them needs right-of-way rules, which is a design decision before it is a coding task.
