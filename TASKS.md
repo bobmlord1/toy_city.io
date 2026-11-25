@@ -91,7 +91,7 @@ Notes:
  
 ### T-012 HUD, minimap and mobile interaction redesign
 Assigned to: ChatGPT (implementation); Claude review requested after handoff.
-Status: first implementation pass committed to `feature/t012-molded-dashboard`; awaiting code review, smoke test and owner browser/touch playtest.
+Status: implementation and static-review fixes committed to `feature/t012-molded-dashboard`; automated smoke test and owner browser/touch playtest remain pending.
 Files: `index.html`, `src/hud.js`, `src/input.js`, `src/physics.js`, `src/economy.js`, `DESIGN.md`, `TASKS.md`, `ARCHITECTURE.md`, `README.txt`, `agent_comments.md`.
 
 Why: The owner identifies screen clutter, a noisy and hard-to-orient minimap, inconsistent UI elements and excessive wording as the largest current usability problems.
