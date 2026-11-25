@@ -5,6 +5,13 @@
 // The big per-frame vehicle simulation function.
 // =============================================================================
 
+// True when a traffic car has left the street corridors far enough to touch a building or rock.
+function trafficOffStreet(v) {
+  const reach = SIDEWALK_OUTER - Math.hypot(v.width, v.length) * 0.5;
+  for (const line of streetLines)
+    if (Math.abs(v.x - line) < reach || Math.abs(v.z - line) < reach) return false;
+  return true;
+}
 function updateVehicle(v, dt) {
   if (v.boostCooldown > 0) v.boostCooldown = Math.max(0, v.boostCooldown - dt);
   const boostActive = v === controlled && !onFoot && v.boostTime > 0;
@@ -67,6 +74,9 @@ function updateVehicle(v, dt) {
       v.x += v.vx * dt;
       v.z += v.vz * dt;
       v.yaw = Math.atan2(v.vx, v.vz);
+      // T-020: a knocked car steering back to its lane must not drive through buildings or rocks.
+      // They only stand outside the street corridors, so on-road traffic skips this check.
+      if (trafficOffStreet(v)) for (const box of buildingColliders) resolveVehicleBuilding(v, box);
     } else {
       throw new Error("Unknown traffic route \"" + v.route + "\" for " + v.id);
     }
@@ -95,8 +105,10 @@ function updateVehicle(v, dt) {
     if (throttle) {
       const airTraction = v.grounded === false ? 0.2 : 1;
       const boostMultiplier = boostActive ? 2.25 : 1;
-      v.vx += f[0] * v.accel * boostMultiplier * throttle * dt * airTraction;
-      v.vz += f[1] * v.accel * boostMultiplier * throttle * dt * airTraction;
+      // rayMul(): temporary Tuning Ray handling effects (src/events.js). 1 when no effect.
+      const accel = v.accel * rayMul(v, "accel");
+      v.vx += f[0] * accel * boostMultiplier * throttle * dt * airTraction;
+      v.vz += f[1] * accel * boostMultiplier * throttle * dt * airTraction;
     }
     if (brakeInput) {
       const speed = v.vx * f[0] + v.vz * f[1];
@@ -111,7 +123,8 @@ function updateVehicle(v, dt) {
     }
     const speed = v.vx * f[0] + v.vz * f[1],
       steerFactor = clamp(Math.abs(speed) / 4.0, 0.14, 1.25);
-    const desiredYawRate = steerInput * v.steerRate * steerFactor * (speed >= -0.2 ? 1 : -1);
+    const desiredYawRate =
+      steerInput * v.steerRate * rayMul(v, "steer") * steerFactor * (speed >= -0.2 ? 1 : -1);
     const steeringResponse = v.type === "semi" ? 2.4 : v.mass > 1450 ? 4.2 : 7.5;
     v.yawRate = lerp(v.yawRate, desiredYawRate, 1 - Math.exp(-steeringResponse * dt));
     v.yaw += v.yawRate * dt;
@@ -119,10 +132,11 @@ function updateVehicle(v, dt) {
       nr = [Math.cos(v.yaw), -Math.sin(v.yaw)];
     let forwardSpeed = v.vx * nf[0] + v.vz * nf[1],
       sideSpeed = v.vx * nr[0] + v.vz * nr[1];
-    sideSpeed *= Math.exp(-(hand ? 8.0 : v.lateralGrip) * dt);
+    sideSpeed *= Math.exp(-(hand ? 8.0 : v.lateralGrip * rayMul(v, "grip")) * dt);
     forwardSpeed *= Math.exp(-(hand ? 3.4 : throttle || brakeInput ? 0.24 : 0.68) * dt);
-    const boostTopSpeed = boostActive ? v.maxSpeed * 1.16 : v.maxSpeed;
-    forwardSpeed = clamp(forwardSpeed, -v.maxSpeed * 0.36, boostTopSpeed);
+    const topSpeed = rayTopSpeed(v);
+    const boostTopSpeed = boostActive ? topSpeed * 1.16 : topSpeed;
+    forwardSpeed = clamp(forwardSpeed, -topSpeed * 0.36, boostTopSpeed);
     v.vx = nf[0] * forwardSpeed + nr[0] * sideSpeed;
     v.vz = nf[1] * forwardSpeed + nr[1] * sideSpeed;
     v.longAccel = (forwardSpeed - previousForwardSpeed) / Math.max(dt, 0.001);
@@ -192,7 +206,7 @@ function updateVehicle(v, dt) {
         landed = true;
         v.suspensionVelocity -= Math.min(landingImpact * 0.17, 0.8);
         v.pitchVelocity += clamp(-landingImpact * 0.025, -0.22, 0.22);
-        say("Nice landing!", 650);
+        if (!v.rayEffect) say("Nice landing!", 650); // Super Springs hops would spam it
       } else v.airTime = (v.airTime || 0) + dt;
     }
     if (landed) {

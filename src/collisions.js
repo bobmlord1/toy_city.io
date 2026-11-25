@@ -102,10 +102,12 @@ function damageProp(p, impact, rammer) {
   if (p.hp <= 0) {
     p.broken = true;
     spawnPropDebris(p, p.type, impact);
-    if (rammer === controlled) {
-      cash += 18;
+    // Event props (the City Under Attack creature) set smashCash: 0 and pay through the event.
+    const reward = p.smashCash ?? 18;
+    if (rammer === controlled && reward > 0) {
+      cash += reward;
       updateCashUI();
-      say(`SMASHED ${p.type.toUpperCase()}  +$18`, 1150);
+      say(`SMASHED ${p.type.toUpperCase()}  +$${reward}`, 1150);
     }
     return true;
   }
@@ -143,7 +145,7 @@ function finishPropCollisionFrame(dt) {
 }
 function resolveVehicleProp(v, p, propIndex) {
   if (!p || p.broken) return;
-  if (v.grounded === false && Number.isFinite(v.y) && v.y > p.y + 1.35) return;
+  if (v.grounded === false && Number.isFinite(v.y) && v.y > p.y + (p.height || 1.35)) return;
   if (farApart(v.x, v.z, v.width / 2 + v.length / 2, p.x, p.z, p.radius)) return;
   const a = obbInfo(v),
     dx = p.x - a.x,
@@ -174,7 +176,8 @@ function resolveVehicleProp(v, p, propIndex) {
     const impact = Math.max(0, -rel);
     registerPropImpact(p, v, impact);
     const ramPower = v === controlled ? v.impactMultiplier || 1 : 1;
-    const kick = clamp((impact * 1.25 + 1.5) * ramPower, 1.5, 24);
+    // kickScale > 1 makes a prop feel lighter (the event creature uses it).
+    const kick = clamp((impact * 1.25 + 1.5) * ramPower * (p.kickScale || 1), 1.5, 24);
     p.vx += nx * kick;
     p.vz += nz * kick;
     v.vx -= nx * Math.min(impact * 0.12, 2);

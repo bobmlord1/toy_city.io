@@ -52,7 +52,7 @@ function drawWorld(dt) {
   // Props are individually movable and have simple momentum.
   for (const p of props) {
     if (p.broken) continue;
-    const mesh = p.type === "barrel" ? barrelModel : crateModel;
+    const mesh = p.model || (p.type === "barrel" ? barrelModel : crateModel); // p.model: event props
     draw(mesh, modelMatrix(p.x, p.y, p.z, p.yaw), vp, [camera.x, camera.y, camera.z]);
   }
   for (const d of debris) {
@@ -85,6 +85,8 @@ function drawWorld(dt) {
   }
   // Activity beacons, pads and the carried parcel (src/activities.js).
   drawActivityMarkers(vp);
+  // Toybox Event gates, rings, beacons and health pips (src/events.js).
+  drawEvents(vp);
   // Small on-foot character, built from primitive boxes.
   if (onFoot) {
     draw(personModel, modelMatrix(player.x, player.y, player.z, player.yaw), vp, [

@@ -484,3 +484,34 @@ Next agent should: owner playtest. ChatGPT review T-017 to T-019, and see the DE
 ### 2026-11-25 | Claude -> ChatGPT | DESIGN.md is out of date for activities
 Status: open
 Body: the owner decided on 2026-11-25 that activities are no longer offered automatically. Every activity sits on the map as a pad and the player drives onto one to start it. DESIGN.md's "Approved gameplay loop" still says "After completion, offer another" and describes the beacon flow for a single offer. Please update the loop and add a decision log line; I have not edited DESIGN.md. Also worth a design look: the map colors I used for pads (yellow delivery, coral smash, aqua stunt) are from the approved palette, but aqua also marks the player arrow.
+
+### 2026-11-25 | Project Owner (relayed by Claude) -> All | T-015 decisions
+Status: answered
+Body: decisions the owner gave in chat on 2026-11-25:
+- Treasure pays $1,000. Reward Ring upgrades are permanent.
+- An event's timer only makes it disappear cleanly. No fail state.
+- Keep Dr. BadDude's one-liners; the child does not need to read them. Show them in a comms-style slide-out with the event name. Each event gets a unique symbol on the map. Normal activities in progress continue during events.
+- Events appear on a timer from a pool. "No event" is one of the options, and all options have equal weight.
+- Tuning Ray is opt-in, but must not be easy to miss.
+- Build order: traffic fix and event framework, then events 1 to 3 (City Under Attack, Tuning Ray, Reward Ring). Rival and Treasure come later.
+ChatGPT: please carry these into DESIGN.md and T-015 when you next touch them.
+
+### 2026-11-25 | Claude -> All | CLAIM T-020, T-021, T-022
+Status: open
+Files: `src/events.js` (new), `src/vehicle_update.js`, `src/collisions.js`, `src/economy.js`, `src/hud.js`, `src/camera_render.js`, `src/main.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: give traffic building collisions when off the road, then add the event layer in a new file with small marked hooks elsewhere, then the three events. Changes to `hud.js` and `index.html` are limited to event map symbols and the new comms panel.
+
+### 2026-11-25 | Claude -> All | HANDOFF T-020, T-021, T-022
+Status: partial (code complete and tested headless; owner playtest needed)
+Done:
+- T-020: the traffic branch of `updateVehicle()` returned before building collisions ever ran, so a knocked car steering back to its lane drove straight through buildings. Traffic now runs `resolveVehicleBuilding()` when it is off the street corridor (`trafficOffStreet()`). Headless: eight cars aimed at buildings from the lawn previously went up to 8.7 units inside; now 0, and all were back on the road within 150 s, never stuck. Trade-off: a car that bounces off a wall can take longer to recover. Over six 6-minute `traffic_report.js` seeds, three were identical and three had 1 to 6 more lawn excursions (seed 7: 36 to 42, longest 10 s to 13 s).
+- T-021 framework (`src/events.js`, new): every 75 s with no event running, one option is drawn from cityAttack, tuningRay, rewardRing and "no event", all equal weight (first draw after 45 s). One event at a time. A comms panel slides in from the left (below the dashboard on mobile) for 7 s with Dr. BadDude, the event name and his approved line. Each event has a pinned map symbol in its own shape (burst, diamond, ring). When the timer runs out the event vanishes with no message, no cash change and no fail state. Activities are never touched.
+- T-022 City Under Attack (120 s): a blocky toy creature on an open lawn 60 to 200 units away. Three tiers with equal weight: small (8 hp, $200), medium (15 hp, $300), large (24 hp, $450). It is a prop, so normal ramming damage applies, with `kickScale` 2.5: a 5 mph bump shoves it about 3.5 units, against about 1.4 for a normal-weight prop. Health pips and a beacon float above it. Pays once; no ordinary $18 prop cash.
+- T-022 Tuning Ray (75 s): a gate with hanging beam strands and a tall pulsing beacon, placed on a road 60 to 200 units away and ahead of the player when possible. Driving through it inside the road (opt-in) gives 25 s of one random effect: Soap Tires (slides more than twice as far), Super Springs (automatic hops), Turbo Overload (32 mph instead of 20, capped at about 50 mph), or Tank Treads (barely slides, turns at half rate). Effects are multipliers read in `vehicle_update.js`, so upgrades bought or won meanwhile are kept. Super Springs hops pay no airtime cash and never count as a stunt jump.
+- T-022 Reward Ring (75 s): a golden ring on a road. Driving through it gives one random permanent upgrade (top speed, acceleration or impact) to the current vehicle via `applyUpgrade()`, now shared with the tuning pad.
+- Smoke test: events are held off during the older checks so a random event cannot disturb them, then tested on their own. Every new rule was broken on purpose (16 cases: pool without "no event", unequal weights, timeout leaving the creature, creature paying prop cash, no light shove, ray effects ignored, effects never ending, ray triggered by proximity, hops keeping the ramp id, double ring upgrade, traffic fix removed, two events at once, comms never hiding, an event cancelling an activity, Turbo uncapped, the timer never drawing) and the test failed each time.
+- 15-minute soak with events on their real timer while driving: 5 events, no errors, nothing left behind.
+Not verified: anything visual or on touch. The creature, gate and ring models; comms slide-out on phone and desktop; the event map symbols; how strong each ray effect feels; whether events come often enough (about one every 3 minutes with these timings).
+Owner decisions needing design docs: see the decisions entry above. ChatGPT, please update DESIGN.md and T-015.
+Files changed: `src/events.js` (new), `src/vehicle_update.js`, `src/collisions.js`, `src/economy.js`, `src/hud.js`, `src/camera_render.js`, `src/main.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest. Rival and Treasure remain (T-015); Treasure is small.

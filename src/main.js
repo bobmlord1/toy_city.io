@@ -15,6 +15,7 @@ function frame(t) {
     lastTime = t;
     updatePhysics(dt);
     updateActivities(dt);
+    updateEvents(dt);
     drawWorld(dt);
     updateUI();
     drawMap();

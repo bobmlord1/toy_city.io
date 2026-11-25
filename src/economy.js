@@ -50,6 +50,19 @@ function registerCrashReward(key, impact) {
   updateCashUI();
   say("CRASH BONUS  +$" + payout, 1150);
 }
+// One upgrade level for a vehicle. Used by the tuning pad and by the Reward Ring event.
+function applyUpgrade(v, tier) {
+  if (tier === "speed") {
+    v.topSpeedLevel++;
+    v.maxSpeed += 5 * MPH_TO_MS;
+  } else if (tier === "acceleration") {
+    v.accelerationLevel++;
+    v.accel = v.baseAccel * Math.pow(1.15, v.accelerationLevel);
+  } else if (tier === "impact") {
+    v.impactLevel++;
+    v.impactMultiplier = Math.pow(1.2, v.impactLevel);
+  }
+}
 function atUpgradePad() {
   if (onFoot || !controlled) return false;
   const r = upgradeRamp;
@@ -146,8 +159,7 @@ function purchaseTopSpeedUpgrade() {
     return;
   }
   cash -= cost;
-  controlled.topSpeedLevel++;
-  controlled.maxSpeed += 5 * MPH_TO_MS;
+  applyUpgrade(controlled, "speed");
   updateCashUI();
   say(
     `${controlled.name} upgraded to ${Math.round(controlled.maxSpeed * MPH_PER_MS)} MPH!`,
@@ -170,8 +182,7 @@ function purchaseAccelerationUpgrade() {
     return;
   }
   cash -= cost;
-  controlled.accelerationLevel++;
-  controlled.accel = controlled.baseAccel * Math.pow(1.15, controlled.accelerationLevel);
+  applyUpgrade(controlled, "acceleration");
   updateCashUI();
   say(`${controlled.name} acceleration upgraded by 15%!`, 1900);
   refreshUpgradePanel();
@@ -193,8 +204,7 @@ function purchaseImpactUpgrade() {
     return;
   }
   cash -= cost;
-  controlled.impactLevel++;
-  controlled.impactMultiplier = Math.pow(1.2, controlled.impactLevel);
+  applyUpgrade(controlled, "impact");
   updateCashUI();
   say(
     `${controlled.name} impact power upgraded to ×${controlled.impactMultiplier.toFixed(2)}!`,

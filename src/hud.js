@@ -144,7 +144,8 @@ function drawMap() {
   // when none is running. Colors come from ACTIVITY_MAP_COLORS. Markers flagged "pin" stay on
   // the map edge when they are out of view, so there is always a direction to drive.
   const edge = Math.max(6, 9 * scale) + 2;
-  for (const marker of activeMarkers()) {
+  // Toybox Events (src/events.js) add one pinned marker with its own shape and color.
+  for (const marker of activeMarkers().concat(eventMarkers())) {
     let [x, y] = project(marker.x, marker.z);
     const outside = x < edge || x > W - edge || y < edge || y > H - edge;
     if (outside && !marker.pin) continue;
@@ -155,7 +156,11 @@ function drawMap() {
       y = H * 0.5 + dy * k;
     }
     const radius = Math.max(6, 9 * scale) * (outside || marker.kind === "smashTarget" ? 0.75 : 1);
-    const color = ACTIVITY_MAP_COLORS[marker.kind] || "#8BC99B";
+    const color = marker.color || ACTIVITY_MAP_COLORS[marker.kind] || "#8BC99B";
+    if (marker.shape) {
+      drawMapEventSymbol(ctx, marker.shape, x, y, radius * 1.35, color, scale);
+      continue;
+    }
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
@@ -194,4 +199,43 @@ function drawMap() {
   ctx.stroke();
   ctx.restore();
   ctx.restore();
+}
+
+// Event symbols differ in shape from the round activity markers: burst (City Under Attack),
+// diamond (Tuning Ray) and hollow ring (Reward Ring).
+function drawMapEventSymbol(ctx, shape, x, y, r, color, scale) {
+  ctx.beginPath();
+  if (shape === "burst") {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 - Math.PI / 2,
+        rr = i % 2 ? r * 0.55 : r;
+      ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+  } else if (shape === "diamond") {
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r * 0.75, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r * 0.75, y);
+    ctx.closePath();
+  } else {
+    ctx.arc(x, y, r * 0.85, 0, Math.PI * 2);
+  }
+  ctx.lineWidth = Math.max(1.5, 2.5 * scale);
+  ctx.strokeStyle = "#F4F1E8";
+  if (shape === "ring") {
+    // Hollow: a thick colored band with the light outline on both edges.
+    ctx.lineWidth = Math.max(4, 6 * scale);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.lineWidth = Math.max(1, 1.5 * scale);
+    ctx.strokeStyle = "#F4F1E8";
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.85 + Math.max(2, 3 * scale), 0, Math.PI * 2);
+    ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.stroke();
 }
