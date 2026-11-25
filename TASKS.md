@@ -141,7 +141,7 @@ Done when:
 - Update structural regression checks and build/version documentation.
 Notes:
 - Implementation (2026-11-25): center layout now uses side-by-side columns: fixed-world minimap on the left and objective text/icon/SKIP panel on the right. Map display height is 54px desktop and 48px mobile; objective panel is a two-line-clamped text area with a separate SKIP button. Hidden objectives keep their reserved grid column. Build version v0.16.4.
-- Static verification: markup order, CSS column/row sizing, active panel display rule and balanced CSS will be checked. Full smoke test and real browser/touch check remain required.
+- Static verification: all 19 loaded JavaScript sources parse; the smoke-test script parses; markup order confirms map-left/objective-right; desktop/mobile column and height rules, objective active-state styling, two-line text handling, map fill sizing and CSS brace balance all pass. Full smoke test and real browser/touch check remain required.
 
 ## Later: proposed order, not yet authorized as coding tasks
 
