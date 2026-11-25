@@ -112,15 +112,17 @@ function damageProp(p, impact, rammer) {
   return false;
 }
 function registerPropImpact(p, rammer, impact, isTrailer = false) {
-  if (!p || p.broken || impact < 3.0 || !rammer) return false;
-  // Damage is awarded once per contact episode, not once per physics frame. A vehicle
-  // must separate from the prop and make a fresh approach before it can damage it again.
-  // Tractor and trailer contacts use distinct keys so either body can make its own hit.
+  if (!p || p.broken || !rammer) return false;
+  // Record every overlapping frame, including soft contact. Otherwise a slow frame
+  // could reset the latch while the vehicle is still pushing the prop.
   const key = (isTrailer ? "trailer:" : "vehicle:") + rammer.id;
   const previous = p._damageContacts || new Set();
   const current = p._damageContactsNow || (p._damageContactsNow = new Set());
   current.add(key);
-  if (previous.has(key)) return false;
+  // Damage is awarded once per contact episode, not once per physics frame. A vehicle
+  // must separate from the prop and make a fresh approach before it can damage it again.
+  // Tractor and trailer contacts use distinct keys so either body can make its own hit.
+  if (previous.has(key) || impact < 3.0) return false;
   return damageProp(p, impact, rammer);
 }
 function beginPropCollisionFrame() {
