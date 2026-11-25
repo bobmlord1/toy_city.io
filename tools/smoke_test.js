@@ -87,6 +87,26 @@ const end = JSON.parse(
 
 const failures = [];
 if (uncaught) failures.push("Uncaught error: " + uncaught);
+
+// ---- T-012 HUD and touch-input checks ----
+const profileButton = w.document.getElementById("profileToggle");
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: Auto did not select desktop in the wide, fine-pointer test viewport");
+profileButton.click(); // Auto -> Desktop
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: Desktop override did not apply");
+profileButton.click(); // Desktop -> Mobile
+if (!w.document.body.classList.contains("hud-mobile"))
+  failures.push("HUD profile: Mobile override did not apply");
+profileButton.click(); // Mobile -> Auto
+if (!w.document.body.classList.contains("hud-desktop"))
+  failures.push("HUD profile: returning to Auto did not re-detect the desktop viewport");
+
+// Releasing a swipe must not cancel a brake button held by another finger.
+run("touch.brake=true; swipeTouch.brake=true; releaseSwipe()", "touch-source-check");
+if (run("pressed('brake')", "touch-check") !== true)
+  failures.push("Touch input: releasing swipe input cleared a still-held brake button");
+run("touch.brake=false; swipeTouch.brake=false", "touch-source-reset");
 if (![end.x, end.z, end.yaw].every(Number.isFinite)) failures.push("Car state is not finite");
 if (Math.hypot(end.x - start.x, end.z - start.z) < 1) failures.push("Car did not move");
 if (end.vehicles < 1) failures.push("No vehicles exist");
