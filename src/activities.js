@@ -10,8 +10,8 @@
 
 const ACTIVITY_ZONE_RADIUS = 4.5; // how close the vehicle must get to a pad
 const ACTIVITY_RESTART_DELAY = 2.6; // seconds after a finish or skip before a pad can start again
-const ACTIVITY_PAYOUT_MIN = 75; // tuning range from DESIGN.md (approximately $75-$150)
-const ACTIVITY_PAYOUT_MAX = 150;
+const ACTIVITY_PAYOUT_MIN = 90; // rebalanced baseline; progression multiplier applies at award time
+const ACTIVITY_PAYOUT_MAX = 180;
 const ACTIVITY_DRAW_DISTANCE = 320; // start pads farther than this from the camera are not drawn
 const STUNT_MIN_AIR_SECONDS = 0.49; // any committed run-up passes (stock top speed gives 0.5-0.7 s); slow rolls get about 0.47 s
 // World marker colors (glossy toy paint) and matching minimap colors (approved HUD palette).
@@ -38,10 +38,10 @@ const ACTIVITY_MAP_COLORS = {
 // Smash:    { start:{x,z}, targets:[{type,dx,dz}], payout }. Targets spawn when the activity starts.
 // Stunt:    { start:{x,z}, rampId, payout }. Jump off that ramp and stay up STUNT_MIN_AIR_SECONDS.
 // ---------------------------------------------------------------------------
-// Longer deliveries pay more: $75 plus 25 cents per world unit, capped at $150.
+// Longer deliveries pay more: $90 plus 30 cents per world unit, capped at $180.
 function deliveryPayout(pickup, dropoff) {
   const d = Math.hypot(dropoff.x - pickup.x, dropoff.z - pickup.z);
-  return Math.round(Math.min(ACTIVITY_PAYOUT_MAX, ACTIVITY_PAYOUT_MIN + d * 0.25) / 5) * 5;
+  return Math.round(Math.min(ACTIVITY_PAYOUT_MAX, ACTIVITY_PAYOUT_MIN + d * 0.3) / 5) * 5;
 }
 function delivery(id, pickup, dropoff) {
   return { id, type: "delivery", pickup, dropoff, payout: deliveryPayout(pickup, dropoff) };
@@ -74,13 +74,13 @@ const activityDefs = [
   delivery("cross-town-to-pink-house", { x: 110, z: 79 }, { x: -202, z: -2, label: "the Pink House" }),
   delivery("far-southwest-to-yellow-tower", { x: -299, z: -330 }, { x: 4, z: -233, label: "the Yellow Tower" }),
   // Smash targets (T-018).
-  { id: "smash-northwest", type: "smash", payout: 100, start: { x: -110, z: 79 }, targets: SMASH_TARGET_LAYOUT },
+  { id: "smash-northwest", type: "smash", payout: 140, start: { x: -110, z: 79 }, targets: SMASH_TARGET_LAYOUT },
   { id: "smash-southeast", type: "smash", payout: 100, start: { x: 110, z: -141 }, targets: SMASH_TARGET_LAYOUT },
   { id: "smash-west", type: "smash", payout: 100, start: { x: -220, z: -31 }, targets: SMASH_TARGET_LAYOUT },
   { id: "smash-northeast", type: "smash", payout: 100, start: { x: 220, z: 141 }, targets: SMASH_TARGET_LAYOUT },
   // Stunt jumps (T-018). Each pad sits on the run-up to its ramp.
-  { id: "stunt-west", type: "stunt", payout: 110, start: { x: -78, z: -142 }, rampId: "west-stunt" },
-  { id: "stunt-east", type: "stunt", payout: 120, start: { x: 78, z: -46 }, rampId: "east-stunt" },
+  { id: "stunt-west", type: "stunt", payout: 150, start: { x: -78, z: -142 }, rampId: "west-stunt" },
+  { id: "stunt-east", type: "stunt", payout: 150, start: { x: 78, z: -46 }, rampId: "east-stunt" },
   { id: "stunt-north", type: "stunt", payout: 110, start: { x: -74, z: 110 }, rampId: "north-stunt" },
 ];
 
