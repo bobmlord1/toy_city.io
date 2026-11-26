@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.20.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.21.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -109,3 +109,10 @@ Version 0.20.0 (T-040 Tuning Ray rework):
 - Tank Treads is gone. New: Boing Bumpers. Hit a wall or another car and you bounce off with a BOING.
 - Dr. BadDude's Tuning Ray line now reads: "This will make your car at least 37% better. I just need to measure at what!"
 - Test switch effect names: soapTires, superSprings, turboOverload, boingBumpers.
+
+Version 0.21.0 (T-025, T-028, T-033 fixes):
+- Getting out of a car anywhere in the city now leaves you next to it. Before, outside the center you appeared far away and could never get back to that car.
+- Crates, barrels and Dr. BadDude's creature can no longer be pushed off the edge of the map.
+- Traffic slows down for corners, so cars stay in their own lane after turning and crash into each other less.
+- The camera keeps up at Turbo Overload speed and no longer ends up inside buildings.
+- For developers: tools/soak_test.js runs long randomized play and reports problems.
