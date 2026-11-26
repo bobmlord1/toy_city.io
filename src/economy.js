@@ -6,9 +6,19 @@
 // =============================================================================
 
 let cash = 0;
-const upgradeCosts = [100, 160, 240, 340, 470, 620, 800, 1000];
-const accelerationUpgradeCosts = [120, 190, 280, 400, 550, 720, 920, 1150];
-const impactUpgradeCosts = [160, 250, 370, 520, 710, 940, 1220, 1550];
+let paidUpgradeCount = 0; // session-wide progress; vehicle upgrades remain vehicle-specific
+const UPGRADE_PRICE_BASE = { speed: 100, acceleration: 120, impact: 150 };
+const UPGRADE_PRICE_GROWTH = { speed: 1.18, acceleration: 1.18, impact: 1.17 };
+function progressionMultiplier() {
+  if (paidUpgradeCount >= 12) return 2.5;
+  if (paidUpgradeCount >= 9) return 2.1;
+  if (paidUpgradeCount >= 6) return 1.7;
+  if (paidUpgradeCount >= 3) return 1.35;
+  return 1;
+}
+function scaledReward(amount) {
+  return Math.round(amount * progressionMultiplier());
+}
 let previousCrashContacts = new Set(),
   currentCrashContacts = null;
 function nextUpgradeCost(v, tier = "speed") {
@@ -18,25 +28,19 @@ function nextUpgradeCost(v, tier = "speed") {
       : tier === "impact"
         ? v.impactLevel
         : v.topSpeedLevel;
-  const table =
-    tier === "acceleration"
-      ? accelerationUpgradeCosts
-      : tier === "impact"
-        ? impactUpgradeCosts
-        : upgradeCosts;
-  return (
-    table[level] ??
-    table[table.length - 1] +
-      (level - table.length + 1) * (tier === "acceleration" ? 300 : tier === "impact" ? 420 : 260)
-  );
+  const base = UPGRADE_PRICE_BASE[tier] || UPGRADE_PRICE_BASE.speed;
+  const growth = UPGRADE_PRICE_GROWTH[tier] || UPGRADE_PRICE_GROWTH.speed;
+  return Math.round((base * Math.pow(growth, level)) / 5) * 5;
 }
 function updateCashUI() {
   $("cash").textContent = "$" + Math.floor(cash).toLocaleString("en-US");
 }
 // Single entry point for cash that does not come from crashes (activities use this).
 function awardCash(amount) {
-  cash += amount;
+  const paid = scaledReward(amount);
+  cash += paid;
   updateCashUI();
+  return paid;
 }
 function registerCrashReward(key, impact) {
   if (!currentCrashContacts) return;
@@ -45,7 +49,7 @@ function registerCrashReward(key, impact) {
   if (typeof key === "string" && (key.startsWith("prop:") || key.startsWith("trailer-prop:"))) return;
   currentCrashContacts.add(key);
   if (previousCrashContacts.has(key) || onFoot || !controlled || impact < 2.25) return;
-  const payout = clamp(Math.round(impact * 7.5), 12, 70);
+  const payout = clamp(Math.round(impact * 7.5), 8, 45);
   cash += payout;
   updateCashUI();
   say("CRASH BONUS  +$" + payout, 1150);
@@ -210,6 +214,7 @@ function purchaseTopSpeedUpgrade() {
     return;
   }
   cash -= cost;
+  paidUpgradeCount++;
   applyUpgrade(controlled, "speed");
   updateCashUI();
   say(
@@ -233,6 +238,7 @@ function purchaseAccelerationUpgrade() {
     return;
   }
   cash -= cost;
+  paidUpgradeCount++;
   applyUpgrade(controlled, "acceleration");
   updateCashUI();
   say(`${controlled.name} acceleration upgraded by 15%!`, 1900);
@@ -255,6 +261,7 @@ function purchaseImpactUpgrade() {
     return;
   }
   cash -= cost;
+  paidUpgradeCount++;
   applyUpgrade(controlled, "impact");
   updateCashUI();
   say(
