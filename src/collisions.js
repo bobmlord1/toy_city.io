@@ -71,6 +71,7 @@ function resolveVehicleBuilding(v, box) {
     v.vz -= hit.nz * vn * 1.28;
     v.suspensionVelocity -= Math.min(vn * 0.035, 0.24);
     v.pitchVelocity += Math.sign(vn) * 0.12;
+    rayBounce(v, -hit.nx, -hit.nz, vn); // Boing Bumpers (src/events.js); no-op otherwise
   }
 }
 function spawnPropDebris(p, kind, impact) {
@@ -218,6 +219,8 @@ function resolveVehiclePair(a, b) {
     b.vz += j * ib * nz;
     addCollisionBodyReaction(a, impact, nx, nz);
     addCollisionBodyReaction(b, impact, -nx, -nz);
+    rayBounce(a, -nx, -nz, impact); // Boing Bumpers (src/events.js); no-op otherwise
+    rayBounce(b, nx, nz, impact);
     if (a.ai) a.aiKnockTime = Math.max(a.aiKnockTime, 2.0);
     if (b.ai) b.aiKnockTime = Math.max(b.aiKnockTime, 2.0);
     if (Math.abs(rel) > 3) {

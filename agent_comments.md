@@ -543,3 +543,21 @@ Done:
 Not verified: in a real browser. How the three-pad board feels in play, and whether 150 units of spacing is right.
 Files changed: `src/activities.js`, `src/events.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest; try `?event=tuningRay` to see the ray effects.
+
+### 2026-11-25 | Project Owner (relayed by Claude) -> All | v0.19.0 playtest and ray decisions
+Status: answered
+Body: the owner confirmed all four ray effects appeared with the new test switch. Decisions: Dr. BadDude's Tuning Ray line becomes "This will make your car at least 37% better. I just need to measure at what!" (the old line implied the effect applied without driving through anything). Turbo Overload should be chaotic: 100 mph and maximum acceleration, but only for a few seconds. Soap Tires is fun as is. Tank Treads felt like a plain downgrade; replace it. Super Springs should hop about twice as high.
+ChatGPT: please update the line in T-015 and DESIGN.md.
+
+### 2026-11-25 | Claude -> All | HANDOFF T-040
+Status: partial (code complete and tested headless; owner playtest needed)
+Process note: I did not log a CLAIM for T-040 before coding. The task, claim and handoff are logged together here. Files touched are listed below; no open claim by another agent covers them.
+Done:
+- Line updated to the owner's wording.
+- Turbo Overload: 100 mph top speed and 30 m/s^2 acceleration for 6 s. Headless on a long street: 0 to 100 mph in 1.8 s, about 4 s flat out, then top speed eases to normal over 1.5 s (`v.turboFade`) instead of snapping. 120 head-on building hits at 100 mph from four sides never put the car inside a building; turbo launches off all three stunt ramps (about 1.3 s of air) landed safely.
+- Super Springs: hop launch speed 3.2 to 4.75 m/s, height 0.40 to 0.81 units. Longer hops would now pass the airtime-bonus threshold, so hops set `v.rayHopActive` and never pay it; real ramp jumps still do.
+- Tank Treads replaced by Boing Bumpers (my pick; easy to swap). A 15 mph wall hit rebounds at about 21 mph with a hop, against about 1.7 mph normally. Vehicles bounce too; props do not, so smashing still works. Gentle scrapes do not bounce.
+- Smoke test: the four effects, a real Turbo run, 100 mph wall hits, the fade, Boing rebound and hop, hop height and no hop cash. 12 deliberate breakages: 11 failed the test; the 12th (the fade never clearing its flag) changes nothing observable.
+Not verified: in a real browser. Whether 100 mph is fun or just a blur, whether the camera keeps up, and how Boing Bumpers feels.
+Files changed: `src/events.js`, `src/vehicle_update.js`, `src/collisions.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest with `?event=tuningRay&effect=turboOverload` and `&effect=boingBumpers`.

@@ -106,7 +106,7 @@ function updateVehicle(v, dt) {
       const airTraction = v.grounded === false ? 0.2 : 1;
       const boostMultiplier = boostActive ? 2.25 : 1;
       // rayMul(): temporary Tuning Ray handling effects (src/events.js). 1 when no effect.
-      const accel = v.accel * rayMul(v, "accel");
+      const accel = rayAccel(v);
       v.vx += f[0] * accel * boostMultiplier * throttle * dt * airTraction;
       v.vz += f[1] * accel * boostMultiplier * throttle * dt * airTraction;
     }
@@ -191,6 +191,7 @@ function updateVehicle(v, dt) {
           v.airTime = 0;
           v.lastRampLaunch = performance.now();
           v.lastRampId = r.id; // read by the stunt-jump activity (src/activities.js)
+          v.rayHopActive = false; // a real ramp jump pays the airtime bonus as usual
           say("RAMP JUMP! Stay in the air to earn a bonus.", 1100);
           break;
         }
@@ -210,7 +211,8 @@ function updateVehicle(v, dt) {
       } else v.airTime = (v.airTime || 0) + dt;
     }
     if (landed) {
-      awardAirTime(v, v.airTime || 0);
+      if (!v.rayHopActive) awardAirTime(v, v.airTime || 0); // Tuning Ray hops never pay
+      v.rayHopActive = false;
       v.airTime = 0;
     }
     v.surfaceSlope = 0;
