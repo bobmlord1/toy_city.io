@@ -108,6 +108,7 @@ Why: With all activity types and Toybox Events arriving, ensure the core systems
 Done when: smoke tests cover critical activity/event transitions and regressions; owner can test free roam, all activities, events, vehicle collisions, reset/recovery and rewards without encountering a critical issue; remaining known issues are documented rather than hidden.
 Notes: Fix only scoped, reproducible defects; avoid broad architecture changes.
 
+Status: in progress (Claude, claimed 2026-11-26).
 ### T-026 Backyard equirectangular skybox
 Assigned to: Claude; project owner supplies and playtests the texture.
 Files: rendering/environment files as required, startup/settings UI only if needed, asset(s) (new), `tools/smoke_test.js` where applicable, `TASKS.md`.
@@ -129,6 +130,7 @@ Why: Address visible traffic routing, spacing, intersection incidents, post-coll
 Done when: traffic recovers reliably from bumps and route deviations, does not routinely drive through buildings or remain wedged, and intersections/spacing feel credible in owner playtesting; regression checks cover fixes.
 Notes: Avoid adding traffic vehicles or complex right-of-way simulation without a demonstrated need. Resolve the known post-knock building traversal if reproducible.
 
+Status: in progress (Claude, claimed 2026-11-26).
 ### T-029 Toy-playset material and lighting consistency
 Assigned to: Claude; project owner reviews visually.
 Files: rendering/material files and affected assets as required, `TASKS.md`.
@@ -164,6 +166,7 @@ Why: Improve camera comfort and robustness during driving, collisions, jumps, ve
 Done when: camera smoothing and positioning are comfortable, avoid persistent clipping or disorienting transitions, and recovery returns the player to a usable state; owner playtests representative situations.
 Notes: Keep the current camera design; avoid a camera-system rewrite.
 
+Status: in progress (Claude, claimed 2026-11-26).
 ### T-034 Lightweight sound-effects pass
 Assigned to: project owner / ChatGPT (asset/design); Claude (integration).
 Files: sound assets (new), audio/gameplay/UI files as required, `TASKS.md`.

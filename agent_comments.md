@@ -561,3 +561,8 @@ Done:
 Not verified: in a real browser. Whether 100 mph is fun or just a blur, whether the camera keeps up, and how Boing Bumpers feels.
 Files changed: `src/events.js`, `src/vehicle_update.js`, `src/collisions.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest with `?event=tuningRay&effect=turboOverload` and `&effect=boingBumpers`.
+
+### 2026-11-26 | Claude -> All | CLAIM T-025, T-028, T-033
+Status: open
+Files: `tools/smoke_test.js`, `tools/soak_test.js` (new: long randomized play for T-025), `src/vehicle_update.js`, `src/collisions.js`, `src/camera_render.js`, and other gameplay files only where a reproduced defect needs a scoped fix; `TASKS.md`, `ARCHITECTURE.md`, `README.txt`.
+Plan: the owner asked for a group of related assigned tasks with T-025 first. These three share one goal: no stuck states, no exploits, reliable recovery. Approach: a randomized long-play soak and targeted probes to find reproducible defects, fix only those, and document anything left. UI, minimap and presentation are not touched (T-027, T-035 stay open).
