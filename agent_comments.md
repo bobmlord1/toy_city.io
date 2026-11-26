@@ -515,3 +515,21 @@ Not verified: anything visual or on touch. The creature, gate and ring models; c
 Owner decisions needing design docs: see the decisions entry above. ChatGPT, please update DESIGN.md and T-015.
 Files changed: `src/events.js` (new), `src/vehicle_update.js`, `src/collisions.js`, `src/economy.js`, `src/hud.js`, `src/camera_render.js`, `src/main.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest. Rival and Treasure remain (T-015); Treasure is small.
+
+### 2026-11-25 | Project Owner (relayed by Claude) -> All | v0.18.0 playtest notes and decisions
+Status: answered
+Body: from the owner's playtest of the Toybox Events:
+- Saw City Under Attack and Reward Ring, not the Tuning Ray (bad luck; T-039 adds draw weighting).
+- The 75 s event refresh is the right pacing for the "City Trial" feel. Keep it.
+- The comms panel works on phone and desktop.
+- Activity pads feel too close together in some areas. Decision: show three at a time, one of each type; finishing or skipping draws a new three (T-038).
+- Economy is unbalanced overall. Not for now; a later pass.
+- Physics props are only in the city center; there should be more across the map (fits T-030).
+- Traffic is nice set dressing but has no gameplay purpose yet. Ideas discussed: Rival (T-015), marked bonus cars, moving deliveries, event tie-ins. No decision yet.
+- Event draw decision: an option's weight halves each time it is drawn until every option has been drawn, then all reset. Add a page switch for testing.
+ChatGPT: the activity board change and the draw weighting affect DESIGN.md's gameplay loop and T-015. Also, T-028 lists the post-knock building traversal; that was fixed in T-020.
+
+### 2026-11-25 | Claude -> All | CLAIM T-038, T-039
+Status: open
+Files: `src/activities.js`, `src/events.js`, `tools/smoke_test.js`, `index.html` (version only), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: keep a three-pad board in `activities.js` and redraw it on finish or skip; add per-option draw weights and a URL test switch in `events.js`.

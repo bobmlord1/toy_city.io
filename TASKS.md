@@ -192,6 +192,20 @@ Why: Review control clarity, mobile touch conflicts, UI scale/readability, audio
 Done when: owner checks keyboard and touch play; critical usability problems are documented and fixed with targeted changes; controls and essential information remain usable at tested screen sizes.
 Notes: Audit first and fix demonstrated issues; no new input modes by default.
 
+### T-038 Activity board shows three pads: one of each type
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/activities.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: owner playtest found pads too close together in some areas. Instead of moving them, show fewer at once.
+Done when: only three start pads are active and shown at a time, one delivery, one smash and one stunt, chosen at random and spread apart; finishing or skipping an activity draws a new three; the activity just finished or skipped is not in the next draw.
+Status: code complete in v0.19.0 (headless), waiting on owner playtest.
+
+### T-039 Event draw weighting and a test switch
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/events.js`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: in playtest the Tuning Ray never came up. Purely random draws can leave one option out for a long time, and there was no quick way to test a specific event.
+Done when: every option in the pool (each event and "no event") starts at equal weight; each time an option is drawn its weight halves; once every option has been drawn at least once, all weights reset. Adding `?event=<id>` to the page address starts that event as soon as play begins (optionally `&effect=` for the ray and `&tier=` for the creature), with no visible change for normal play.
+Status: code complete in v0.19.0 (headless), waiting on owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
