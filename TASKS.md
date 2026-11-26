@@ -224,6 +224,13 @@ Why: on touch, steering jumps from straight to full lock, so driving straight is
 Done when: the touch stick steers in proportion to how far it is pushed sideways, with a dead zone large enough for a wobbling thumb to drive straight and a gentle curve near center; keyboard steering is unchanged.
 Status: code complete in v0.21.1 (headless), waiting on owner playtest on a phone.
 
+### T-042 Tuning Ray: more dramatic effects
+Assigned to: Claude. Owner approved 2026-11-26 (mobile playtest notes).
+Files: `src/events.js`, `src/vehicle_update.js` (speed limit hook), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: Turbo Overload's speed was right but too short; Super Springs and Boing Bumpers were not dramatic enough.
+Done when: Turbo Overload lasts three times as long (18 s); Super Springs hops at least three times as high; Boing Bumpers throws the car away from what it hit clearly harder and faster.
+Status: code complete in v0.21.2 (headless), waiting on owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.

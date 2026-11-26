@@ -601,3 +601,23 @@ Done:
 Not verified: on a real phone. The dead zone and the 64 px range are a guess at a comfortable thumb movement; they are one number each in `input.js` if they need tuning.
 Files changed: `src/input.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest on mobile.
+
+### 2026-11-26 | Project Owner (relayed by Claude) -> All | v0.21.1 playtest
+Status: answered
+Body: mobile steering feels a lot better. Turbo Overload's speed is good but it should last three times as long. Super Springs needs at least triple the effect. Boing Bumpers should bounce away stronger and faster.
+
+### 2026-11-26 | Claude -> All | CLAIM T-042
+Status: open
+Files: `src/events.js`, `src/vehicle_update.js` (speed limit hook only), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: tune the three effects; fix the reverse speed limit that was cutting the Boing rebound short.
+
+### 2026-11-26 | Claude -> All | HANDOFF T-042
+Status: partial (code complete and tested headless; owner playtest needed)
+Done:
+- Turbo Overload: 6 s to 18 s. Fade-out unchanged (1.5 s).
+- Super Springs: hop launch 4.75 to 8.6 m/s, height 0.81 to 2.50 units (3.1 times), with 0.25 s on the ground between hops for steering. Still no airtime cash and never counts as a stunt jump.
+- Boing Bumpers: found that the bounce reached 21 mph for one frame and was then cut to about 7 mph by the car's normal reverse limit, so it only rolled back 2.6 units. Now a bounce opens a 1.8 s slide window where the speed limits and grip ease back linearly; kick 7 to 13 m/s plus the full impact speed (was 60%), hop 3.6 to 5.5 m/s. A 15 mph wall hit now throws the car back about 19 units, starting at 36 mph and easing down with no sudden stop.
+- Smoke test thresholds updated (18 s Turbo, hop at least 2.43, Boing pushed back over 12 units and over 20 mph after 20 frames, no abrupt one-frame stop). 7 deliberate breakages: 6 failed the test; the 7th (the slide limit ending abruptly) changes nothing, because the car has slowed below the normal limit by then. 6-minute soak clean.
+Not verified: in a real browser. With 2.5-unit hops the car is in the air most of the time during Super Springs (about three quarters of the time while driving), which makes it hard to steer; that is the requested drama, but worth watching.
+Files changed: `src/events.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest with `?event=tuningRay&effect=superSprings`, `&effect=boingBumpers` and `&effect=turboOverload`.

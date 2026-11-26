@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.21.1
+FREE ROAM CAR PLAYGROUND - VERSION 0.21.2
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -119,3 +119,8 @@ Version 0.21.0 (T-025, T-028, T-033 fixes):
 
 Version 0.21.1 (T-041):
 - Touch steering is now gradual: slide a little for a small turn, all the way for a sharp one. Small wobbles of your thumb no longer swerve the car, so driving straight is easy.
+
+Version 0.21.2 (T-042):
+- Turbo Overload lasts 18 seconds (three times as long).
+- Super Springs hops about three times higher.
+- Boing Bumpers throws you back much harder and farther when you hit something.

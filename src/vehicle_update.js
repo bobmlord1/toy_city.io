@@ -154,7 +154,8 @@ function updateVehicle(v, dt) {
     forwardSpeed *= Math.exp(-(hand ? 3.4 : throttle || brakeInput ? 0.24 : 0.68) * dt);
     const topSpeed = rayTopSpeed(v);
     const boostTopSpeed = boostActive ? topSpeed * 1.16 : topSpeed;
-    forwardSpeed = clamp(forwardSpeed, -topSpeed * 0.36, boostTopSpeed);
+    // rayReverseCap / rayForwardCap: normally the car's own limits (src/events.js).
+    forwardSpeed = clamp(forwardSpeed, -rayReverseCap(v, topSpeed), rayForwardCap(v, boostTopSpeed));
     v.vx = nf[0] * forwardSpeed + nr[0] * sideSpeed;
     v.vz = nf[1] * forwardSpeed + nr[1] * sideSpeed;
     v.longAccel = (forwardSpeed - previousForwardSpeed) / Math.max(dt, 0.001);

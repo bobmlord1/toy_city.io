@@ -21,11 +21,19 @@ const EVENT_SPAWN_MAX = 200; // ...but not farther, when a site allows it
 const RAY_EFFECT_SECONDS = 25; // default length of a Tuning Ray effect
 const TURBO_TOP_SPEED = 100 * MPH_TO_MS; // Turbo Overload: deliberately unmanageable, but short
 const TURBO_ACCEL = 30; // m/s^2: 0 to 100 mph in about 1.5 s
-const TURBO_SECONDS = 6;
+const TURBO_SECONDS = 18; // tripled after the 2026-11-26 playtest (was 6)
 const TURBO_FADE_SECONDS = 1.5; // afterwards top speed eases back down instead of snapping
-const SPRING_HOP_SPEED = 4.75; // m/s upward: about 0.8 units high, twice the v0.18 hop (0.40)
+const SPRING_HOP_SPEED = 8.6; // m/s upward: about 2.5 units high (v0.20 was 0.8, v0.18 was 0.4)
+const SPRING_GROUND_SECONDS = 0.25; // time on the ground between hops, to steer and speed up
 const BOING_MIN_IMPACT = 1.5; // m/s: slower scrapes do not bounce
-const BOING_BOUNCE = 7; // m/s extra rebound off walls and vehicles, plus a hop
+const BOING_BOUNCE = 13; // m/s extra rebound off walls and vehicles, plus a hop (v0.20 was 7)
+const BOING_IMPACT_SHARE = 1.0; // plus this share of the impact speed (v0.20 was 0.6)
+const BOING_HOP_SPEED = 5.5; // m/s upward (v0.20 was 3.6)
+// After a bounce the car may fly back or sideways faster than its normal reverse limit and
+// slides with little grip, so the rebound carries instead of being cut off the next frame.
+const BOING_SLIDE_SECONDS = 1.8; // long enough for the rebound to slow on its own before limits return
+const BOING_SLIDE_GRIP = 0.2;
+const BOING_SPEED_CAP = 30; // m/s while sliding from a bounce
 
 // Dr. BadDude's approved one-liners (TASKS.md T-015). Keep the wording unless the owner revises it.
 const eventTypes = {
@@ -230,7 +238,25 @@ function rayFx(v) {
 }
 function rayMul(v, key) {
   const fx = rayFx(v);
-  return fx && fx[key] !== undefined ? fx[key] : 1;
+  const m = fx && fx[key] !== undefined ? fx[key] : 1;
+  if (key !== "grip" || !rayBoingSliding(v)) return m;
+  return m * (BOING_SLIDE_GRIP + (1 - BOING_SLIDE_GRIP) * (1 - rayBoingShare(v)));
+}
+function rayBoingSliding(v) {
+  return !!v && v.boingUntil > eventClock;
+}
+// 1 right after a bounce, easing to 0 when the slide ends, so limits and grip return smoothly.
+function rayBoingShare(v) {
+  return rayBoingSliding(v) ? clamp((v.boingUntil - eventClock) / BOING_SLIDE_SECONDS, 0, 1) : 0;
+}
+// Speed limits used by vehicle_update.js for reverse and forward travel. Normally the car's own
+// limits; for a moment after a Boing Bumpers bounce, high enough to let the rebound fly.
+function rayReverseCap(v, topSpeed) {
+  const base = topSpeed * 0.36;
+  return base + Math.max(0, BOING_SPEED_CAP - base) * rayBoingShare(v);
+}
+function rayForwardCap(v, topSpeed) {
+  return topSpeed + Math.max(0, BOING_SPEED_CAP - topSpeed) * rayBoingShare(v);
 }
 // Acceleration with any ray effect. Turbo Overload sets a fixed, very high value.
 function rayAccel(v) {
@@ -261,12 +287,13 @@ function rayBounce(v, awayX, awayZ, impact) {
   const fx = rayFx(v);
   if (!fx || !fx.bounce || impact < BOING_MIN_IMPACT || eventClock < v.rayEffect.nextBoing) return;
   v.rayEffect.nextBoing = eventClock + 0.25;
-  const push = BOING_BOUNCE + impact * 0.6;
+  const push = BOING_BOUNCE + impact * BOING_IMPACT_SHARE;
+  v.boingUntil = eventClock + BOING_SLIDE_SECONDS;
   v.vx += awayX * push;
   v.vz += awayZ * push;
   if (v.grounded !== false) {
     v.grounded = false;
-    v.vy = 3.6;
+    v.vy = BOING_HOP_SPEED;
     v.airTime = 0;
     v.lastRampId = null;
     v.rayHopActive = true;
@@ -286,8 +313,11 @@ function updateRayEffects(dt) {
     }
     // Super Springs: automatic hops while driving. rayHopActive stops a hop from paying the
     // airtime bonus, and clearing lastRampId stops it counting as a stunt-ramp jump.
+    if (RAY_EFFECTS[v.rayEffect.id].hop && v.grounded === false) v.rayEffect.groundSince = null;
     if (RAY_EFFECTS[v.rayEffect.id].hop && v === controlled && !onFoot && v.grounded !== false) {
-      if (Math.hypot(v.vx, v.vz) > 2.5 && eventClock >= v.rayEffect.nextHop) {
+      if (v.rayEffect.groundSince == null) v.rayEffect.groundSince = eventClock;
+      const rested = eventClock - v.rayEffect.groundSince >= SPRING_GROUND_SECONDS;
+      if (rested && Math.hypot(v.vx, v.vz) > 2.5 && eventClock >= v.rayEffect.nextHop) {
         v.grounded = false;
         v.vy = SPRING_HOP_SPEED;
         v.airTime = 0;
@@ -295,6 +325,7 @@ function updateRayEffects(dt) {
         v.rayHopActive = true;
         v.suspensionVelocity -= 0.6;
         v.rayEffect.nextHop = eventClock + 0.85;
+        v.rayEffect.groundSince = null;
       }
     }
   }
