@@ -162,9 +162,9 @@ function buildMonsterMesh(s, body, accent) {
 }
 // City Under Attack difficulty tiers (chosen with equal weight).
 const MONSTER_TIERS = [
-  { id: "small", scale: 1.0, radius: 1.7, hp: 8, payout: 200, body: [0.36, 0.82, 0.4], accent: [0.98, 0.78, 0.22] },
-  { id: "medium", scale: 1.35, radius: 2.2, hp: 15, payout: 300, body: [0.62, 0.42, 0.92], accent: [0.98, 0.5, 0.75] },
-  { id: "large", scale: 1.75, radius: 2.9, hp: 24, payout: 450, body: [0.95, 0.38, 0.28], accent: [0.25, 0.75, 0.95] },
+  { id: "small", scale: 1.0, radius: 1.7, hp: 8, payout: 250, body: [0.36, 0.82, 0.4], accent: [0.98, 0.78, 0.22] },
+  { id: "medium", scale: 1.35, radius: 2.2, hp: 15, payout: 375, body: [0.62, 0.42, 0.92], accent: [0.98, 0.5, 0.75] },
+  { id: "large", scale: 1.75, radius: 2.9, hp: 24, payout: 550, body: [0.95, 0.38, 0.28], accent: [0.25, 0.75, 0.95] },
 ];
 for (const tier of MONSTER_TIERS) tier.model = buildMonsterMesh(tier.scale, tier.body, tier.accent);
 
