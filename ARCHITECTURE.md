@@ -63,6 +63,7 @@ Every frame runs: `updatePhysics(dt)`, then `drawWorld(dt)`, then `updateUI()`, 
 ## Rules that must not be broken
 
 - **Steering signs are intentional.** The camera looks along +Z, so positive yaw is LEFT on screen. A and Left Arrow are +1, D and Right Arrow are -1. Read the comment in `input.js` before touching it.
+- **Touch steering is proportional (T-041).** `steeringInput()` returns -1 to 1: keys and buttons give full on/off, and the swipe stick adds `swipeTouch.steer` from `swipeSteer(dx)`: nothing for the first `SWIPE_STEER_DEAD_ZONE` (22%, about 14 px) of `SWIPE_STEER_RANGE` (64 px), then a curve (`SWIPE_STEER_CURVE` 1.5) up to full lock at 64 px. Before this the stick was on/off and about 10 px of drift gave full lock. Headless: a thumb holding gas with a +/-20 px sideways wobble swung the car up to 119 degrees off straight before, about 1 degree now. Vehicle steering code is unchanged; it already scales with the input.
 - **`driveSurfaceH(x, z)` is the single source of truth for ground height.** Do not add a second height query.
 - **Streets and their colliders come from the same placement code** (`placeStreetUnit`). Never add road geometry that has no matching collider, or the reverse.
 - **No `Math.random` in static world building** unless seeded. The world should look the same every load.

@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.21.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.21.1
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -116,3 +116,6 @@ Version 0.21.0 (T-025, T-028, T-033 fixes):
 - Traffic slows down for corners, so cars stay in their own lane after turning and crash into each other less.
 - The camera keeps up at Turbo Overload speed and no longer ends up inside buildings.
 - For developers: tools/soak_test.js runs long randomized play and reports problems.
+
+Version 0.21.1 (T-041):
+- Touch steering is now gradual: slide a little for a small turn, all the way for a sharp one. Small wobbles of your thumb no longer swerve the car, so driving straight is easy.
