@@ -217,6 +217,13 @@ Done when: the line reads "This will make your car at least 37% better. I just n
 Notes (owner decisions 2026-11-25): Soap Tires is fun as is. Replacement modifier chosen by Claude: Boing Bumpers (walls and vehicles bounce the car off hard with a hop); the owner can swap it after playtest.
 Status: code complete in v0.20.0 (headless), waiting on owner playtest.
 
+### T-041 Mobile steering is too touchy
+Assigned to: Claude. Owner approved 2026-11-26 (bug found in mobile playtest; fix before new tasks).
+Files: `src/input.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: on touch, steering jumps from straight to full lock, so driving straight is nearly impossible. The swipe stick was on/off: about 10 px of sideways drift gave full steering, the same as holding A or D.
+Done when: the touch stick steers in proportion to how far it is pushed sideways, with a dead zone large enough for a wobbling thumb to drive straight and a gentle curve near center; keyboard steering is unchanged.
+Status: code complete in v0.21.1 (headless), waiting on owner playtest on a phone.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.

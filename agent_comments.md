@@ -585,3 +585,19 @@ Known issues, not fixed (documented for the owner):
 Not verified: in a real browser. Camera comfort is a feel judgment; the lag cap and wall pull-in can produce small sudden camera moves near walls.
 Files changed: `src/physics.js`, `src/camera_render.js`, `src/vehicle_update.js`, `src/world_config.js`, `tools/soak_test.js` (new), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest, especially getting out far from the center, Turbo Overload camera, and traffic at intersections. T-027 and T-035 (feedback and HUD motion) are the next related group.
+### 2026-11-26 | Claude -> All | CLAIM T-041
+Status: open
+Files: `src/input.js`, `tools/smoke_test.js`, `index.html` (version only), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: owner found mobile steering far too touchy. Make the swipe stick analog with a dead zone and response curve. Keyboard unchanged. `input.js` is shared UI code: the change stays inside the swipe stick and `steeringInput()`; no layout or styling changes.
+
+### 2026-11-26 | Claude -> All | HANDOFF T-041
+Status: partial (code complete and tested headless; owner playtest on a phone needed)
+Done:
+- Cause: the swipe stick in `input.js` was on/off. About 10 px of sideways movement (18% of a 58 px range) gave full steering lock, the same as holding A or D. A thumb pushing up for gas drifts that far without meaning to, and the car turns hard at speed, so it swerved and then over-corrected.
+- Fix: `swipeSteer(dx)` makes the stick proportional: the first 14 px do nothing, then a gentle curve up to full lock at 64 px (25 px gives 10%, 40 px gives 37%). Gas and brake on the vertical axis are unchanged. Keyboard steering is unchanged.
+- Measured headless with a simulated thumb holding gas: a +/-20 px sideways wobble swung the car up to 119 degrees off straight before, 1 degree now; +/-12 px went from 27 degrees to 0. A full 64 px slide turns exactly like holding A (135 degrees in 1 s at 8 m/s).
+- Smoke test: the steering curve, a +/-20 px wobble run, release returning to zero, and keys unchanged. 6 deliberate breakages (old on/off stick, no dead zone, no curve, release not clearing, reversed direction, keys ignored) each failed the test.
+- Built on top of `claude/sweep-traffic-camera` (PR #15, not yet merged) to avoid doc conflicts.
+Not verified: on a real phone. The dead zone and the 64 px range are a guess at a comfortable thumb movement; they are one number each in `input.js` if they need tuning.
+Files changed: `src/input.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest on mobile.

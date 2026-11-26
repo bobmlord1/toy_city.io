@@ -3,15 +3,18 @@
 // src/input.js — keyboard plus floating mobile swipe steering and action buttons.
 // STEERING SIGNS ARE INTENTIONAL: A/left = +1, D/right = -1.
 // =============================================================================
-const swipeTouch = { left: false, right: false, gas: false, brake: false };
+const swipeTouch = { left: false, right: false, gas: false, brake: false, steer: 0 };
 
 function pressed(name) {
   return !!keys[name] || !!touch[name] || !!swipeTouch[name];
 }
+// Steering from -1 (right) to 1 (left). Keys and buttons are full on/off; the touch swipe
+// stick is proportional (T-041), so a wobbling thumb can still drive straight.
 function steeringInput() {
   const left = pressed("a") || pressed("arrowleft") || pressed("left");
   const right = pressed("d") || pressed("arrowright") || pressed("right");
-  return (left ? 1 : 0) - (right ? 1 : 0);
+  const digital = (left ? 1 : 0) - (right ? 1 : 0);
+  return Math.max(-1, Math.min(1, digital + (swipeTouch.steer || 0)));
 }
 function activateBoost() {
   if (onFoot || !controlled || controlled.parked) return;
@@ -75,8 +78,19 @@ let swipeOriginX = 0;
 let swipeOriginY = 0;
 let swipeCueDismissed = false;
 
+// T-041: before this the stick was on/off and about 10 px of sideways drift gave full lock.
+const SWIPE_STEER_RANGE = 64; // px of sideways slide for full steering
+const SWIPE_STEER_DEAD_ZONE = 0.22; // share of the range ignored (about 14 px)
+const SWIPE_STEER_CURVE = 1.5; // above 1: gentle near the center, full lock only at the edge
+function swipeSteer(dx) {
+  const n = Math.min(1, Math.abs(dx) / SWIPE_STEER_RANGE);
+  if (n <= SWIPE_STEER_DEAD_ZONE) return 0;
+  const amount = Math.pow((n - SWIPE_STEER_DEAD_ZONE) / (1 - SWIPE_STEER_DEAD_ZONE), SWIPE_STEER_CURVE);
+  return dx < 0 ? amount : -amount; // sliding left steers left (positive)
+}
 function releaseSwipe() {
   swipePointer = null;
+  swipeTouch.steer = 0;
   swipeTouch.left = false;
   swipeTouch.right = false;
   swipeTouch.gas = false;
@@ -85,10 +99,8 @@ function releaseSwipe() {
 function updateSwipe(e) {
   const dx = e.clientX - swipeOriginX;
   const dy = e.clientY - swipeOriginY;
-  const nx = Math.max(-1, Math.min(1, dx / 58));
   const ny = Math.max(-1, Math.min(1, dy / 58));
-  swipeTouch.left = nx < -0.18;
-  swipeTouch.right = nx > 0.18;
+  swipeTouch.steer = swipeSteer(dx);
   swipeTouch.gas = ny < -0.18;
   swipeTouch.brake = ny > 0.72;
 

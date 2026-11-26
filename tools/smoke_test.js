@@ -1227,6 +1227,41 @@ const turnCheck = get(`(() => { const near = (val) => streetLines.reduce((b, l) 
 if (turnCheck.wrong > 200) failures.push("Traffic: " + turnCheck.wrong + " samples on the wrong side of the road just past intersections");
 if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples * 0.05)
   failures.push("Traffic: cars take turns faster than they can steer (" + JSON.stringify(turnCheck) + ")");
+// ---- T-041: touch steering is proportional, with a dead zone, and keys are unchanged ----
+{
+  const body = w.document.body;
+  const hadMobile = body.classList.contains("hud-mobile"), hadDesktop = body.classList.contains("hud-desktop");
+  body.classList.add("hud-mobile"); body.classList.remove("hud-desktop");
+  Object.defineProperty(w, "innerWidth", { value: 800, configurable: true });
+  Object.defineProperty(w, "innerHeight", { value: 400, configurable: true });
+  const finger = (type, x, y) => { const e = new w.Event(type, { bubbles: true });
+    Object.assign(e, { pointerId: 41, pointerType: "touch", clientX: x, clientY: y }); body.dispatchEvent(e); };
+  const steerAt = (dx) => { finger("pointerdown", 120, 300); finger("pointermove", 120 + dx, 255); const v = get("steeringInput()"); finger("pointerup", 120, 300); return v; };
+  const curve = { d10: steerAt(-10), d25: steerAt(-25), d40: steerAt(-40), d64: steerAt(-64), r64: steerAt(64), released: get("steeringInput()") };
+  if (curve.d10 !== 0 || !(curve.d25 > 0 && curve.d25 < 0.2) || !(curve.d40 > 0.25 && curve.d40 < 0.6) || curve.d64 !== 1 || curve.r64 !== -1 || curve.released !== 0)
+    failures.push("Touch steering: not proportional with a dead zone (" + JSON.stringify(curve) + ")");
+  // A thumb holding gas while wobbling +/-20 px sideways keeps the car nearly straight.
+  run("if (currentActivity) skipActivity(); onFoot = false; controlled = playerCar; playerCar.x = -420; playerCar.z = -56.5; playerCar.yaw = Math.PI / 2; playerCar.vx = playerCar.vz = 0; playerCar.yawRate = 0; playerCar.rayEffect = null;", "thumb");
+  step(3);
+  finger("pointerdown", 120, 300);
+  let wob = 0, ws = 5, worst = 0;
+  for (let i = 0; i < 300; i++) {
+    ws = (ws * 16807) % 2147483647; wob = Math.max(-20, Math.min(20, wob + (ws / 2147483647 - 0.5) * 10));
+    finger("pointermove", 120 + wob, 255);
+    step(1);
+    const yaw = get("playerCar.yaw");
+    worst = Math.max(worst, Math.abs(((yaw - Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI));
+  }
+  finger("pointerup", 120, 300);
+  // Measured: up to 119 degrees off straight with the old on/off stick, about 1 now.
+  if (worst * 57.3 > 10) failures.push("Touch steering: a +/-20 px thumb wobble swung the car " + (worst * 57.3).toFixed(0) + " degrees off straight");
+  key("keydown", "a", "KeyA");
+  const keyLeft = get("steeringInput()");
+  key("keyup", "a", "KeyA");
+  if (keyLeft !== 1) failures.push("Touch steering: keyboard steering changed (A gave " + keyLeft + ")");
+  body.classList.toggle("hud-mobile", hadMobile); body.classList.toggle("hud-desktop", hadDesktop);
+  step(5);
+}
 
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
