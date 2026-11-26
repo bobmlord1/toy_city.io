@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.21.2</title>
+<title>Free Roam Car Playground · v0.21.3</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -335,6 +335,12 @@ body.hud-mobile #commsAvatar{width:36px;height:36px;font-size:22px}
 body.hud-mobile #commsTitle{font-size:14px}
 body.hud-mobile #commsLine{font-size:11px}
 @media (prefers-reduced-motion: reduce){#comms{transition:opacity .3s}}
+
+/* T-043: close button for the tuning panel (big enough for a thumb). */
+#upgradeClose{position:absolute;top:6px;right:6px;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34;color:#F4F1E8;font-size:18px;font-weight:900;line-height:1;display:grid;place-items:center;cursor:pointer;z-index:1}
+#upgradeClose:active{transform:scale(.94)}
+#upgradePanel .eyebrow,#upgradePanel .upgradeTitle{padding-right:44px}
+body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
 </style>
 </head>
 <body>
@@ -367,6 +373,7 @@ body.hud-mobile #commsLine{font-size:11px}
 </div>
 <div id="swipeCue" aria-hidden="true">SWIPE TO DRIVE</div>
 <div id="upgradePanel" class="panel" role="region" aria-live="polite">
+  <button id="upgradeClose" type="button" aria-label="Close the tuning panel">&#x2715;</button>
   <div class="eyebrow">TOY TOWN TUNING PAD</div>
   <div class="upgradeTitle" id="upgradeTitle">Top Speed</div>
   <div id="upgradeDetails">Drive onto the gold pad and stop to tune this vehicle.</div>
@@ -404,7 +411,7 @@ body.hud-mobile #commsLine{font-size:11px}
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
   const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "events", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
-   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.21.2";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
+   await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.21.3";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;
   }
  } catch(error) {

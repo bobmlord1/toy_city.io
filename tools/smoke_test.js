@@ -1270,6 +1270,77 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   step(5);
 }
 
+// ---- T-043: gentle stop on the tuning pad, and the panel's close button ----
+{
+  run("if (currentActivity) skipActivity(); if (currentEvent) endEvent(); onFoot = false; controlled = playerCar; playerCar.rayEffect = null; playerCar.boingUntil = 0;", "pad");
+  const padPlace = (x, z, yaw, speed) => run(`(() => { const v = playerCar; v.x = ${x}; v.z = ${z}; v.yaw = ${yaw}; v.vx = Math.sin(${yaw}) * ${speed}; v.vz = Math.cos(${yaw}) * ${speed};
+    v.yawRate = 0; v.grounded = true; v.y = driveSurfaceH(v.x, v.z); })()`, "pad");
+  const padState = () => get("({z: playerCar.z, speed: Math.hypot(playerCar.vx, playerCar.vz), onPad: atUpgradePad(), panel: document.getElementById('upgradePanel').classList.contains('show')})");
+  const ux = get("upgradeRamp.x");
+  // Earlier checks left this car heavily upgraded (Reward Ring); test as a stock car, then restore.
+  run(`window.__padSaved = {maxSpeed: playerCar.maxSpeed, accel: playerCar.accel, top: playerCar.topSpeedLevel, acc: playerCar.accelerationLevel};
+    playerCar.topSpeedLevel = 0; playerCar.accelerationLevel = 0; playerCar.accel = playerCar.baseAccel;
+    playerCar.maxSpeed = __padSaved.maxSpeed - __padSaved.top * 5 * MPH_TO_MS; upgradePanelDismissed = false;`, "pad");
+  // Full speed onto the ramp, letting go of the gas late: without help the car overshoots.
+  // Measured: releasing at z 20 to 34 stops on the pad 8 of 8 times with the assist, 3 of 8 without.
+  for (const releaseAt of [28, 32]) {
+    padPlace(ux, 16, 0, 0);
+    key("keydown", "w", "KeyW");
+    for (let i = 0; i < 600 && get("playerCar.z") < releaseAt; i++) step(1);
+    key("keyup", "w", "KeyW");
+    step(360);
+    const ps = padState();
+    if (!ps.onPad || ps.speed > 1.2) failures.push("Tuning pad: letting go of the gas at z " + releaseAt + " did not stop on the pad (" + JSON.stringify(ps) + ")");
+  }
+  // A car with three top-speed upgrades (35 mph) arriving at full speed is still caught.
+  run("playerCar.maxSpeed += 15 * MPH_TO_MS;", "pad");
+  padPlace(ux, -14, 0, 0);
+  key("keydown", "w", "KeyW");
+  for (let i = 0; i < 900 && get("playerCar.z") < 32; i++) step(1);
+  key("keyup", "w", "KeyW");
+  step(420);
+  if (!padState().onPad || padState().speed > 1.2) failures.push("Tuning pad: a 35 mph car letting go at z 32 did not stop on the pad (" + JSON.stringify(padState()) + ")");
+  run("playerCar.maxSpeed -= 15 * MPH_TO_MS;", "pad");
+  for (const [label, z, yaw] of [["slowly from the ramp start", 27, 0], ["slowly from the far end", 42, Math.PI]]) {
+    padPlace(ux, z, yaw, 2);
+    step(360);
+    const ps = padState();
+    if (!ps.onPad || ps.speed > 1.2) failures.push("Tuning pad: coasting in " + label + " did not settle on the pad (" + JSON.stringify(ps) + ")");
+  }
+  // Driving off from a standstill on the pad is not held back at all.
+  const acrossRun = (assist) => { padPlace(ux, 33, 0, 0); if (!assist) run("window.__padAssist = upgradePadAssist; upgradePadAssist = () => {};", "pad");
+    key("keydown", "w", "KeyW"); step(150); key("keyup", "w", "KeyW"); const ps = padState(); if (!assist) run("upgradePadAssist = window.__padAssist;", "pad"); return ps; };
+  const withAssist = acrossRun(true), withoutAssist = acrossRun(false);
+  if (Math.abs(withAssist.z - withoutAssist.z) > 0.01 || Math.abs(withAssist.speed - withoutAssist.speed) > 0.01)
+    failures.push("Tuning pad: the assist held back a car driving off with the gas");
+  // Settled on the pad, gas or reverse drives away.
+  for (const k of ["w", "s"]) {
+    padPlace(ux, 30, 0, 3); step(240);
+    key("keydown", k, "Key" + k.toUpperCase()); step(150); key("keyup", k, "Key" + k.toUpperCase());
+    if (get("nearUpgradePad(playerCar)")) failures.push("Tuning pad: holding " + k.toUpperCase() + " did not leave the pad area");
+  }
+  // The close button hides the panel and lets the car roll; Escape works too; leaving resets it.
+  run("upgradePanelDismissed = false;", "pad");
+  padPlace(ux, 30, 0, 3); step(240);
+  if (!padState().panel) failures.push("Tuning pad: the panel did not show on the pad");
+  w.document.getElementById("upgradeClose").dispatchEvent(new w.Event("click", { bubbles: true }));
+  step(2);
+  const closed = padState().panel;
+  run("playerCar.vz = 2.5;", "pad"); step(30);
+  if (closed || padState().panel) failures.push("Tuning pad: the close button did not hide the panel");
+  if (padState().speed < 1.5) failures.push("Tuning pad: the assist kept pulling after the panel was closed");
+  run(`playerCar.x = ${ux}; playerCar.z = 70; playerCar.vx = playerCar.vz = 0;`, "pad"); step(3);
+  padPlace(ux, 30, 0, 3); step(240);
+  if (!padState().panel) failures.push("Tuning pad: the panel did not come back after leaving and returning");
+  w.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape" }));
+  step(2);
+  if (padState().panel) failures.push("Tuning pad: Escape did not close the panel");
+  const closeBtn = w.document.getElementById("upgradeClose");
+  if (closeBtn.tagName !== "BUTTON" || !closeBtn.getAttribute("aria-label")) failures.push("Tuning pad: the close control is not a labelled button");
+  run(`playerCar.x = -12; playerCar.z = -45; playerCar.vx = playerCar.vz = 0;
+    playerCar.maxSpeed = __padSaved.maxSpeed; playerCar.accel = __padSaved.accel; playerCar.topSpeedLevel = __padSaved.top; playerCar.accelerationLevel = __padSaved.acc;`, "pad"); step(5);
+}
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

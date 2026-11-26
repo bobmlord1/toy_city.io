@@ -621,3 +621,23 @@ Done:
 Not verified: in a real browser. With 2.5-unit hops the car is in the air most of the time during Super Springs (about three quarters of the time while driving), which makes it hard to steer; that is the requested drama, but worth watching.
 Files changed: `src/events.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest with `?event=tuningRay&effect=superSprings`, `&effect=boingBumpers` and `&effect=turboOverload`.
+
+### 2026-11-26 | Project Owner (relayed by Claude) -> All | v0.21.2 playtest
+Status: answered
+Body: the Tuning Ray feels good. Two mobile issues: it is hard to stop on the upgrade pad (wants a gentle pull onto the pad that any intentional acceleration breaks), and on some screen sizes the tuning panel covers the touch controls so the player cannot leave (wants an X button to close it).
+
+### 2026-11-26 | Claude -> All | CLAIM T-043
+Status: open
+Files: `src/economy.js`, `src/vehicle_update.js` (one hook), `index.html` (close button markup and style, version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: a coasting-only assist near the pad, and a close button on the tuning panel. The panel change is limited to adding the button; no other UI changes.
+
+### 2026-11-26 | Claude -> All | HANDOFF T-043
+Status: partial (code complete and tested headless; owner playtest on a phone needed)
+Done:
+- Pad assist (`upgradePadAssist`, `economy.js`): only while coasting slowly (no gas, reverse or boost, under 12 m/s, on the ground) from the ramp crest to its far end. Pulls toward the pad center, stops pulling once on the pad so the car rests where it is, drifts slowly sideways toward the middle, and damps speed. Headless, stock car at full speed letting go at z 20 to 34: 8 of 8 stop on the pad (3 of 8 without). A car with three speed upgrades (35 mph): 6 of 6. Holding gas across the ramp or away from the pad is completely unaffected (identical position and speed with the assist removed).
+- Close button: `#upgradeClose` (44 px on mobile) and Escape hide the panel; it stays hidden and the assist stays off until the car leaves the pad area, then comes back next time.
+- Smoke test: full-speed releases, a 35 mph car, slow coasting from both ends, driving off from a standstill unaffected, gas and reverse leaving, close button, Escape, reset after leaving. The block runs as a stock car (earlier checks leave the car heavily upgraded) and restores its upgrades. 8 deliberate breakages (no assist, assist while driving, assist ignoring close, close never resetting, X doing nothing, old 7 m/s cutoff, no Escape, no damping) each failed the test. 6-minute soak clean.
+Known: the upgrade ramp launches cars at its crest like every ramp, so a heavily upgraded car arriving very fast (about 40 mph or more) flies past the pad; braking first works.
+Not verified: on a real phone, including where the X sits on small screens.
+Files changed: `src/economy.js`, `src/vehicle_update.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest on mobile.
