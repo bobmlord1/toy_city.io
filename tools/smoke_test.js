@@ -1025,7 +1025,7 @@ const rayChecks = get(`(() => {
   return out;
 })()`);
 if (!(rayChecks.soapGrip < 0.5)) failures.push("Tuning Ray: Soap Tires does not reduce grip");
-if (Math.abs(rayChecks.turbo.top - get("100 * MPH_TO_MS")) > 1e-6 || rayChecks.turbo.accel < 25 || Math.abs(rayChecks.turbo.seconds - get("TURBO_SECONDS")) > 1e-6 || get("TURBO_SECONDS") > 8)
+if (Math.abs(rayChecks.turbo.top - get("100 * MPH_TO_MS")) > 1e-6 || rayChecks.turbo.accel < 25 || Math.abs(rayChecks.turbo.seconds - get("TURBO_SECONDS")) > 1e-6 || get("TURBO_SECONDS") !== 18)
   failures.push("Tuning Ray: Turbo Overload should be 100 mph with huge acceleration for a few seconds (" + JSON.stringify(rayChecks.turbo) + ")");
 if (Math.abs(rayChecks.soapSeconds - get("RAY_EFFECT_SECONDS")) > 1e-6) failures.push("Tuning Ray: other effects should last RAY_EFFECT_SECONDS");
 step(30); // turbo has just ended: its top speed eases down rather than snapping
@@ -1059,15 +1059,21 @@ if (turboSlam > 0.5) failures.push("Tuning Ray: a 100 mph crash put the car " + 
 // Boing Bumpers: a 15 mph wall hit bounces back hard with a hop; a normal car barely rebounds.
 const wallHit = (fx) => {
   const b = get("buildingColliders.find(q => q.kind === 'building' && q.hw > 6)");
-  run(`playerCar.rayEffect = ${fx ? `{id: "${fx}", until: eventClock + 100, nextHop: 0, nextBoing: 0}` : "null"};
+  run(`playerCar.rayEffect = ${fx ? `{id: "${fx}", until: eventClock + 100, nextHop: 0, nextBoing: 0}` : "null"}; playerCar.boingUntil = 0;
     playerCar.x = ${b.x - b.hw - 8}; playerCar.z = ${b.z}; playerCar.yaw = Math.PI / 2; playerCar.vx = 6.7; playerCar.vz = 0; playerCar.yawRate = 0; playerCar.grounded = true; playerCar.y = driveSurfaceH(playerCar.x, playerCar.z);`, "wall");
-  let minVx = 99, hopped = false;
-  for (let i = 0; i < 90; i++) { step(1); const st = get("({vx: playerCar.vx, g: playerCar.grounded})"); minVx = Math.min(minVx, st.vx); if (st.g === false) hopped = true; }
-  return { rebound: -minVx * 2.237, hopped };
+  let hitAt = -1, hitX = 0, hopped = false, after20 = 0, prevVx = 0, worstDrop = 0;
+  for (let i = 0; i < 240; i++) { step(1); const st = get("({vx: playerCar.vx, x: playerCar.x, g: playerCar.grounded})");
+    if (hitAt < 0 && st.vx < 0) { hitAt = i; hitX = st.x; }
+    if (hitAt >= 0) { if (i - hitAt === 20) after20 = -st.vx * 2.237; if (st.g === false) hopped = true;
+      if (i > hitAt + 1) worstDrop = Math.max(worstDrop, (prevVx - st.vx) * -2.237); }
+    prevVx = st.vx; }
+  return { pushedBack: hitAt < 0 ? 0 : hitX - get("playerCar.x"), after20, hopped, worstDrop };
 };
 const plainHit = wallHit(null), boingHit = wallHit("boingBumpers");
-if (!(boingHit.rebound > 12 && boingHit.hopped && plainHit.rebound < 5 && !plainHit.hopped))
-  failures.push("Tuning Ray: Boing Bumpers should bounce hard off walls (" + JSON.stringify({plainHit, boingHit}) + ")");
+// v0.20: about 2.6 units back at about 7 mph (the reverse limit cut the rebound off). Now about 19 units.
+if (!(boingHit.pushedBack > 12 && boingHit.after20 > 20 && boingHit.hopped && plainHit.pushedBack < 2 && !plainHit.hopped))
+  failures.push("Tuning Ray: Boing Bumpers should throw the car well back off a wall (" + JSON.stringify({plainHit, boingHit}) + ")");
+if (boingHit.worstDrop > 5) failures.push("Tuning Ray: the Boing rebound stops abruptly (lost " + boingHit.worstDrop.toFixed(1) + " mph in one frame)");
 const gentleBoing = get(`(() => { const v = playerCar; v.rayEffect = {id: "boingBumpers", until: eventClock + 100, nextHop: 0, nextBoing: 0};
   const vx0 = v.vx = 1, vz0 = v.vz = 0; v.grounded = true; rayBounce(v, -1, 0, 0.8); const moved = v.vx !== vx0 || v.grounded === false;
   v.rayEffect = null; return moved; })()`);
@@ -1088,8 +1094,9 @@ for (let i = 0; i < 240; i++) {
   wasAir = air;
 }
 key("keyup", "w", "KeyW");
-if (hops < 3) failures.push("Tuning Ray: Super Springs made " + hops + " hops in 4 seconds");
-if (springLift < 0.75) failures.push("Tuning Ray: Super Springs hops only reach " + springLift.toFixed(2) + " (should be about 0.8, double the old 0.4)");
+if (hops < 2) failures.push("Tuning Ray: Super Springs made " + hops + " hops in 4 seconds");
+// Owner asked for at least triple the v0.20 hop (0.81): about 2.5 now.
+if (springLift < 2.43) failures.push("Tuning Ray: Super Springs hops only reach " + springLift.toFixed(2) + " (should be at least 2.43, triple the old 0.81)");
 if (get("cash") !== cashBefore) failures.push("Tuning Ray: Super Springs hops paid airtime cash");
 if (get("playerCar.lastRampId") !== null) failures.push("Tuning Ray: a Super Springs hop kept the last stunt ramp id");
 run("playerCar.rayEffect = null;", "q");
