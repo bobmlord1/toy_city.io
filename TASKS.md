@@ -206,6 +206,14 @@ Why: in playtest the Tuning Ray never came up. Purely random draws can leave one
 Done when: every option in the pool (each event and "no event") starts at equal weight; each time an option is drawn its weight halves; once every option has been drawn at least once, all weights reset. Adding `?event=<id>` to the page address starts that event as soon as play begins (optionally `&effect=` for the ray and `&tier=` for the creature), with no visible change for normal play.
 Status: code complete in v0.19.0 (headless), waiting on owner playtest.
 
+### T-040 Tuning Ray rework after playtest
+Assigned to: Claude. Owner approved 2026-11-25.
+Files: `src/events.js`, `src/vehicle_update.js`, `src/collisions.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: owner playtest of the ray effects. Turbo Overload felt slow, Tank Treads felt like a downgrade, Super Springs should hop higher, and Dr. BadDude's line implied the effect applied without driving through anything.
+Done when: the line reads "This will make your car at least 37% better. I just need to measure at what!"; Turbo Overload gives 100 mph and huge acceleration for a few seconds, then eases back down; Tank Treads is replaced by a more fun modifier; Super Springs hops about twice as high; Soap Tires is unchanged.
+Notes (owner decisions 2026-11-25): Soap Tires is fun as is. Replacement modifier chosen by Claude: Boing Bumpers (walls and vehicles bounce the car off hard with a hop); the owner can swap it after playtest.
+Status: code complete in v0.20.0 (headless), waiting on owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.

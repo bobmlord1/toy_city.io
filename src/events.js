@@ -18,8 +18,14 @@ const EVENT_POOL = ["cityAttack", "tuningRay", "rewardRing", null]; // null = no
 const EVENT_COMMS_SECONDS = 7;
 const EVENT_SPAWN_MIN = 60; // events appear this far from the player...
 const EVENT_SPAWN_MAX = 200; // ...but not farther, when a site allows it
-const RAY_EFFECT_SECONDS = 25;
-const RAY_TOP_SPEED_CAP = 22; // m/s (about 50 mph): keeps Turbo Overload well short of tunnelling
+const RAY_EFFECT_SECONDS = 25; // default length of a Tuning Ray effect
+const TURBO_TOP_SPEED = 100 * MPH_TO_MS; // Turbo Overload: deliberately unmanageable, but short
+const TURBO_ACCEL = 30; // m/s^2: 0 to 100 mph in about 1.5 s
+const TURBO_SECONDS = 6;
+const TURBO_FADE_SECONDS = 1.5; // afterwards top speed eases back down instead of snapping
+const SPRING_HOP_SPEED = 4.75; // m/s upward: about 0.8 units high, twice the v0.18 hop (0.40)
+const BOING_MIN_IMPACT = 1.5; // m/s: slower scrapes do not bounce
+const BOING_BOUNCE = 7; // m/s extra rebound off walls and vehicles, plus a hop
 
 // Dr. BadDude's approved one-liners (TASKS.md T-015). Keep the wording unless the owner revises it.
 const eventTypes = {
@@ -32,7 +38,7 @@ const eventTypes = {
   },
   tuningRay: {
     name: "Tuning Ray",
-    line: "Your car is 37% better. I just need to measure what!",
+    line: "This will make your car at least 37% better. I just need to measure at what!",
     duration: 75,
     mapShape: "diamond",
     mapColor: "#72D2DC",
@@ -214,42 +220,81 @@ const rewardRingMesh = (() => {
 const RAY_EFFECTS = {
   soapTires: { name: "SOAP TIRES!", grip: 0.12, steer: 1.1 },
   superSprings: { name: "SUPER SPRINGS!", hop: true },
-  turboOverload: { name: "TURBO OVERLOAD!", accel: 2.2, speed: 1.6 },
-  tankTreads: { name: "TANK TREADS!", grip: 3.0, steer: 0.5, accel: 0.75, speed: 0.8 },
+  turboOverload: { name: "TURBO OVERLOAD!", topSpeed: TURBO_TOP_SPEED, accel: TURBO_ACCEL, seconds: TURBO_SECONDS },
+  boingBumpers: { name: "BOING BUMPERS!", bounce: true },
 };
 const RAY_EFFECT_IDS = Object.keys(RAY_EFFECTS);
-// Multiplier for one handling value of a vehicle ("grip", "steer", "accel", "speed").
+// Multiplier for one handling value of a vehicle ("grip" or "steer"). 1 when no effect.
+function rayFx(v) {
+  return v && v.rayEffect ? RAY_EFFECTS[v.rayEffect.id] || null : null;
+}
 function rayMul(v, key) {
-  const fx = v && v.rayEffect ? RAY_EFFECTS[v.rayEffect.id] : null;
+  const fx = rayFx(v);
   return fx && fx[key] !== undefined ? fx[key] : 1;
 }
-// Top speed with any ray effect, capped so Turbo Overload stays controllable.
+// Acceleration with any ray effect. Turbo Overload sets a fixed, very high value.
+function rayAccel(v) {
+  const fx = rayFx(v);
+  return fx && fx.accel ? Math.max(v.accel, fx.accel) : v.accel;
+}
+// Top speed with any ray effect. After Turbo Overload it eases back to normal over
+// TURBO_FADE_SECONDS, so the car slows hard but smoothly instead of stopping dead.
 function rayTopSpeed(v) {
-  const m = rayMul(v, "speed");
-  return m > 1 ? Math.min(v.maxSpeed * m, Math.max(v.maxSpeed, RAY_TOP_SPEED_CAP)) : v.maxSpeed * m;
+  const fx = rayFx(v);
+  if (fx && fx.topSpeed) return Math.max(v.maxSpeed, fx.topSpeed);
+  if (v.turboFade) {
+    const k = clamp((v.turboFade.until - eventClock) / TURBO_FADE_SECONDS, 0, 1);
+    if (k > 0) return v.maxSpeed + (Math.max(v.maxSpeed, v.turboFade.from) - v.maxSpeed) * k;
+    v.turboFade = null;
+  }
+  return v.maxSpeed;
 }
 function applyRayEffect(v, id) {
-  v.rayEffect = { id, until: eventClock + RAY_EFFECT_SECONDS, nextHop: 0 };
-  say(RAY_EFFECTS[id].name, 2400);
+  const fx = RAY_EFFECTS[id];
+  v.rayEffect = { id, until: eventClock + (fx.seconds || RAY_EFFECT_SECONDS), nextHop: 0, nextBoing: 0 };
+  v.turboFade = null;
+  say(fx.name, 2400);
+}
+// Boing Bumpers: called by the wall and vehicle collisions in collisions.js with the
+// direction pointing away from what was hit. Bounces the car off hard and adds a small hop.
+function rayBounce(v, awayX, awayZ, impact) {
+  const fx = rayFx(v);
+  if (!fx || !fx.bounce || impact < BOING_MIN_IMPACT || eventClock < v.rayEffect.nextBoing) return;
+  v.rayEffect.nextBoing = eventClock + 0.25;
+  const push = BOING_BOUNCE + impact * 0.6;
+  v.vx += awayX * push;
+  v.vz += awayZ * push;
+  if (v.grounded !== false) {
+    v.grounded = false;
+    v.vy = 3.6;
+    v.airTime = 0;
+    v.lastRampId = null;
+    v.rayHopActive = true;
+  }
+  v.suspensionVelocity -= 0.5;
+  if (v === controlled) say("BOING!", 500);
 }
 function updateRayEffects(dt) {
   for (const v of vehicles) {
     if (!v.rayEffect) continue;
     if (eventClock >= v.rayEffect.until) {
+      if (v.rayEffect.id === "turboOverload")
+        v.turboFade = { from: TURBO_TOP_SPEED, until: eventClock + TURBO_FADE_SECONDS };
       v.rayEffect = null;
       if (v === controlled && !onFoot) say("Back to normal!", 1400);
       continue;
     }
-    // Super Springs: small automatic hops while driving. Hops stay under the airtime bonus
-    // threshold, and they clear lastRampId so they never count as a stunt-ramp jump.
+    // Super Springs: automatic hops while driving. rayHopActive stops a hop from paying the
+    // airtime bonus, and clearing lastRampId stops it counting as a stunt-ramp jump.
     if (RAY_EFFECTS[v.rayEffect.id].hop && v === controlled && !onFoot && v.grounded !== false) {
       if (Math.hypot(v.vx, v.vz) > 2.5 && eventClock >= v.rayEffect.nextHop) {
         v.grounded = false;
-        v.vy = 3.2;
+        v.vy = SPRING_HOP_SPEED;
         v.airTime = 0;
         v.lastRampId = null;
+        v.rayHopActive = true;
         v.suspensionVelocity -= 0.6;
-        v.rayEffect.nextHop = eventClock + 0.75;
+        v.rayEffect.nextHop = eventClock + 0.85;
       }
     }
   }
@@ -415,7 +460,7 @@ function rollEvent() {
 // Test switch (T-039), for playtests only: add ?event=cityAttack, ?event=tuningRay or
 // ?event=rewardRing to the page address to start that event as soon as play begins.
 // Optional extras: &tier=small|medium|large (creature) and
-// &effect=soapTires|superSprings|turboOverload|tankTreads (ray). Normal play is unchanged.
+// &effect=soapTires|superSprings|turboOverload|boingBumpers (ray). Normal play is unchanged.
 let eventTestSwitchChecked = false;
 function applyEventTestSwitch(search) {
   const q = new URLSearchParams(search || "");

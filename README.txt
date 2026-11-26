@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.19.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.20.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -102,3 +102,10 @@ Version 0.19.0 (T-038, T-039):
 - Only three activity markers are on the map at a time: one delivery, one smash and one stunt, spread out across the city. Finishing or skipping one brings up a new three.
 - Toybox Events now take turns better: once an event has appeared it becomes less likely until every option has had a turn, so none goes missing for long.
 - For testing: add ?event=tuningRay (or cityAttack, rewardRing) to the page address to start that event right away. Extras: &effect=soapTires, superSprings, turboOverload or tankTreads for the ray, and &tier=small, medium or large for the creature.
+
+Version 0.20.0 (T-040 Tuning Ray rework):
+- Turbo Overload is now wild: 100 mph and huge acceleration for 6 seconds, then the car eases back to normal speed.
+- Super Springs hops about twice as high.
+- Tank Treads is gone. New: Boing Bumpers. Hit a wall or another car and you bounce off with a BOING.
+- Dr. BadDude's Tuning Ray line now reads: "This will make your car at least 37% better. I just need to measure at what!"
+- Test switch effect names: soapTires, superSprings, turboOverload, boingBumpers.
