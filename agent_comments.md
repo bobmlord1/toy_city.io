@@ -561,3 +561,27 @@ Done:
 Not verified: in a real browser. Whether 100 mph is fun or just a blur, whether the camera keeps up, and how Boing Bumpers feels.
 Files changed: `src/events.js`, `src/vehicle_update.js`, `src/collisions.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest with `?event=tuningRay&effect=turboOverload` and `&effect=boingBumpers`.
+
+### 2026-11-26 | Claude -> All | CLAIM T-025, T-028, T-033
+Status: open
+Files: `tools/smoke_test.js`, `tools/soak_test.js` (new: long randomized play for T-025), `src/vehicle_update.js`, `src/collisions.js`, `src/camera_render.js`, and other gameplay files only where a reproduced defect needs a scoped fix; `TASKS.md`, `ARCHITECTURE.md`, `README.txt`.
+Plan: the owner asked for a group of related assigned tasks with T-025 first. These three share one goal: no stuck states, no exploits, reliable recovery. Approach: a randomized long-play soak and targeted probes to find reproducible defects, fix only those, and document anything left. UI, minimap and presentation are not touched (T-027, T-035 stay open).
+
+### 2026-11-26 | Claude -> All | HANDOFF T-025, T-028, T-033
+Status: partial (code complete and tested headless; owner playtest needed)
+Done:
+- New `tools/soak_test.js`: long randomized play (random inputs, objective seeking, boost, handbrake, vehicle switching, skip, events) with checks for errors, non-finite state, money by source, hard-stuck episodes, unreachable objectives, camera inside buildings and lag, and wedged traffic. Two early "stuck" results were bugs in the tool (it pressed W and S together, and later reversed into the wall it was stuck on); both fixed.
+- T-025 fix 1 (critical): the walking player was clamped to +/-106, the original map size. Getting out anywhere else put the player up to about 200 units from the car with an invisible wall in between, so that car could never be used again. Now shares the vehicles' limit (`PLAY_LIMIT`).
+- T-025 fix 2: props had no edge limit. A pushed barrel ended at x = 442 and a hard hit sent the event creature to x = 449, beyond the ground (440) and the car's reach (436), so a smash activity or the creature event could become unfinishable. Props now stop at `PLAY_LIMIT`.
+- T-028: traffic slows for turns (`trafficTurnLimit`). Every mid-block head-on contact in a 10-minute sample involved a car that had swung wide out of a turn, because tight turns need about 6.7 m/s and traffic took them at 7 to 13.5 m/s. Over four 10-minute seeds: collisions 107 to 75, opposite-direction 49 to 25, lawn excursions 225 to 98; held-back time unchanged (2 to 3%).
+- T-033: camera lag cap (Turbo Overload camera distance 23 to 15 units; normal 13 unchanged) and walls: the camera moves in front of a building instead of ending up inside it (soak: 1 to 1.6% of frames to 0).
+- Smoke test additions: props at the edge, getting out far from the center, a delivery across a vehicle switch, walking through a ray gate, smash activity and creature kept separate, Turbo camera distance, camera with the car's back to a wall, traffic wrong-side samples and turn speeds. 10 deliberate breakages (each fix undone, plus related rules) each failed the test.
+- Final check: four 20-minute soaks, no errors, no stuck episodes, no unreachable objectives, camera never inside a building, no wedged traffic.
+Known issues, not fixed (documented for the owner):
+- Left turns at intersections still meet oncoming cars (about 7 contacts per 10 minutes across 24 cars). Fixing it needs simple yielding, which T-028 says to add only with a demonstrated need; owner's call after playtest.
+- There is no manual "reset vehicle" control. No stuck state was found in 80 soak minutes after the fixes, so I did not add one.
+- Economy: in soak play, crash bonuses earn about as much per minute as activities (roughly $60 to $110 against $50 to $90). Not an exploit, but relevant to the economy pass the owner noted.
+- Kicked props and the creature can be pinned against the map edge; they stay reachable.
+Not verified: in a real browser. Camera comfort is a feel judgment; the lag cap and wall pull-in can produce small sudden camera moves near walls.
+Files changed: `src/physics.js`, `src/camera_render.js`, `src/vehicle_update.js`, `src/world_config.js`, `tools/soak_test.js` (new), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest, especially getting out far from the center, Turbo Overload camera, and traffic at intersections. T-027 and T-035 (feedback and HUD motion) are the next related group.

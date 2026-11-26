@@ -72,6 +72,7 @@ const allRamps = [upgradeRamp, ...stuntRamps];
 // City-wide coordinate grid and shared street-kit dimensions.
 const WORLD_HALF = 440,
   WORLD_SIZE = 880;
+const PLAY_LIMIT = WORLD_HALF - 4; // vehicles and props stay within this (the ground ends at WORLD_HALF)
 const streetLines = [];
 for (let n = -3.5; n <= 3.5001; n += 1) streetLines.push(n * 110);
 const ROAD_WIDTH = 14,

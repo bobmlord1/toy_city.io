@@ -13,8 +13,10 @@ function updateFoot(dt) {
     (pressed("w") || pressed("arrowup") || pressed("gas") ? 1 : 0) - (pressed("s") || pressed("arrowdown") || pressed("brake") ? 1 : 0);
   player.x += f[0] * move * 6.2 * dt;
   player.z += f[1] * move * 6.2 * dt;
-  player.x = clamp(player.x, -106, 106);
-  player.z = clamp(player.z, -106, 106);
+  // T-025: the walking player shares the vehicles' limit. This was +/-106 (the original small
+  // map), which put a player who got out anywhere else far from their car with no way back.
+  player.x = clamp(player.x, -PLAY_LIMIT, PLAY_LIMIT);
+  player.z = clamp(player.z, -PLAY_LIMIT, PLAY_LIMIT);
   // Keep the on-foot character out of buildings.
   for (const box of buildingColliders) {
     const dx = player.x - box.x,
@@ -52,6 +54,16 @@ function updateProps(dt) {
     if (p.broken) continue;
     p.x += p.vx * dt;
     p.z += p.vz * dt;
+    // T-025: props stay inside the same limit as vehicles (vehicle_update.js), so nothing,
+    // smash targets and the event creature included, can be pushed off the playable ground.
+    if (Math.abs(p.x) > PLAY_LIMIT) {
+      p.x = Math.sign(p.x) * PLAY_LIMIT;
+      p.vx = 0;
+    }
+    if (Math.abs(p.z) > PLAY_LIMIT) {
+      p.z = Math.sign(p.z) * PLAY_LIMIT;
+      p.vz = 0;
+    }
     p.vx *= Math.exp(-2.35 * dt);
     p.vz *= Math.exp(-2.35 * dt);
     // Props at rest do not move, so their ground height does not change either.

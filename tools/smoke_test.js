@@ -1116,6 +1116,118 @@ const ringTiers = get(`(() => { const seen = new Set(); for (let i = 0; i < 30; 
   after.forEach((a, k) => { if (a > before[k]) seen.add(k); }); if (currentEvent) endEvent(); } return [...seen]; })()`);
 if (ringTiers.length !== 3) failures.push("Reward Ring: not every upgrade type was given (" + ringTiers + ")");
 
+// ---- T-025: cross-system checks ----
+run("if (currentEvent) endEvent(); if (currentActivity) skipActivity(); eventNextRollAt = Infinity; playerCar.rayEffect = null; playerCar.turboFade = null; onFoot = false; controlled = playerCar;", "sweep-reset");
+step(200);
+// Props stay on the playable ground: push a barrel at the edge and hit the creature at 100 mph.
+const edgeProps = get(`(() => {
+  const p = {type: "barrel", x: 430, z: 10, y: 0, vx: 30, vz: 0, yaw: 0, roll: 0, mass: 16, radius: 0.62, hp: 5, broken: false};
+  props.push(p);
+  startEvent("cityAttack"); const m = currentEvent.monster; m.x = 432; m.z = -10; m.vx = 24; m.vz = 0;
+  for (let i = 0; i < 120; i++) updateProps(1 / 60);
+  const out = {barrel: p.x, creature: m.x};
+  props.splice(props.indexOf(p), 1); endEvent();
+  return out; })()`);
+if (edgeProps.barrel > get("PLAY_LIMIT") + 1e-6 || edgeProps.creature > get("PLAY_LIMIT") + 1e-6)
+  failures.push("Props: pushed past the edge of the playable ground (" + JSON.stringify(edgeProps) + ")");
+// A delivery keeps going after switching vehicles, and pays once.
+const swapDef = get(`(() => { const d = activityDefs.find(q => q.id === "south-to-pink-house"); return {pickup: d.pickup, dropoff: d.dropoff, payout: d.payout}; })()`);
+run(`activityBoard = ["south-to-pink-house"];`, "board");
+teleport(swapDef.pickup);
+step(3);
+const otherCar = get(`(() => { const v = vehicles.find(q => !q.ai && q !== playerCar); return v && {name: v.name}; })()`);
+if (get("currentActivity && currentActivity.def.id") !== "south-to-pink-house" || !otherCar)
+  failures.push("Sweep: could not start the vehicle-switch delivery check");
+else {
+  run(`(() => { const other = vehicles.find(q => !q.ai && q !== playerCar); other.x = playerCar.x + 12; other.z = playerCar.z; other.vx = other.vz = 0; })()`, "q");
+  key("keydown", "e", "KeyE"); step(1); key("keyup", "e", "KeyE"); step(2);
+  run(`(() => { const other = vehicles.find(q => !q.ai && q !== playerCar); player.x = other.x - 2.5; player.z = other.z; })()`, "q");
+  key("keydown", "e", "KeyE"); step(1); key("keyup", "e", "KeyE"); step(2);
+  const swapped = get("!onFoot && controlled !== playerCar && controlled.name");
+  const cashSwap = get("cash");
+  run(`controlled.x = ${swapDef.dropoff.x}; controlled.z = ${swapDef.dropoff.z}; controlled.vx = controlled.vz = 0;`, "q");
+  step(3);
+  if (!swapped) failures.push("Sweep: the vehicle switch did not happen");
+  else if (get("cash") !== cashSwap + swapDef.payout || get("currentActivity") !== null)
+    failures.push("Sweep: a delivery did not finish (once) after switching vehicles");
+  run("onFoot = false; controlled = playerCar;", "q");
+  step(3);
+}
+// Getting out anywhere in the city leaves the player next to the car, able to get back in.
+run("controlled.x = 300; controlled.z = 56.5; controlled.vx = controlled.vz = 0; controlled.grounded = true;", "q");
+step(5);
+key("keydown", "e", "KeyE"); step(1); key("keyup", "e", "KeyE"); step(30);
+const exitGap = get("Math.hypot(player.x - playerCar.x, player.z - playerCar.z)");
+key("keydown", "e", "KeyE"); step(1); key("keyup", "e", "KeyE"); step(5);
+if (exitGap > 5 || get("onFoot")) failures.push("Sweep: getting out at (300, 56.5) left the player " + exitGap.toFixed(0) + " units from the car and unable to get back in");
+run("onFoot = false; controlled = playerCar;", "q");
+// Walking through a ray gate does nothing.
+run(`startEvent("tuningRay"); (() => { const ev = currentEvent; onFoot = true;
+  // Stand 3 units before the gate line, facing through it.
+  player.x = ev.x - (ev.axis === "x" ? 3 : 0) + (ev.axis === "z" ? 0.3 : 0); player.z = ev.z - (ev.axis === "z" ? 3 : 0) + (ev.axis === "x" ? 0.3 : 0);
+  player.yaw = ev.axis === "z" ? 0 : Math.PI / 2; })()`, "q");
+step(2);
+key("keydown", "w", "KeyW"); step(90); key("keyup", "w", "KeyW");
+const walkedThrough = get("currentEvent && (currentEvent.axis === 'z' ? player.z - currentEvent.z : player.x - currentEvent.x)");
+if (!(walkedThrough > 2)) failures.push("Sweep: the on-foot gate check did not walk through the gate (" + walkedThrough + ")");
+if (get("currentEvent && currentEvent.type") !== "tuningRay" || get("(playerCar.rayEffect || null) !== null"))
+  failures.push("Sweep: walking through the ray gate used it");
+run("endEvent(); onFoot = false; controlled = playerCar;", "q");
+step(3);
+// A smash activity and the event creature do not count toward each other.
+run(`activityBoard = ["smash-northwest"];`, "q");
+const smashDefS = get(`(() => { const d = activityDefs.find(q => q.id === "smash-northwest"); return {start: d.start}; })()`);
+run(`controlled.x = -12; controlled.z = -45;`, "q");
+step(200);
+run(`controlled.x = ${smashDefS.start.x}; controlled.z = ${smashDefS.start.z}; controlled.vx = controlled.vz = 0;`, "q");
+step(3);
+run(`startEvent("cityAttack"); for (let i = 0; i < 40 && !currentEvent.monster.broken; i++) { currentEvent.monster._damageContactCooldowns = new Map(); damageProp(currentEvent.monster, 30, controlled); }`, "q");
+step(3);
+const mixed = get(`({activity: currentActivity && currentActivity.def.id, broken: currentActivity ? currentActivity.targets.filter(p => p.broken).length : -1, event: currentEvent})`);
+if (mixed.activity !== "smash-northwest" || mixed.broken !== 0 || mixed.event !== null)
+  failures.push("Sweep: smashing the event creature affected the smash activity (" + JSON.stringify(mixed) + ")");
+run("if (currentActivity) skipActivity();", "q");
+step(5);
+
+// ---- T-033: camera ----
+// Full Turbo: the camera stays close (chase distance plus the lag cap), not twice as far back.
+run(`controlled.x = -420; controlled.z = -56.5; controlled.yaw = Math.PI / 2; controlled.vx = 0; controlled.vz = 0; controlled.yawRate = 0; controlled.grounded = true; cameraMode = 0; applyRayEffect(controlled, "turboOverload");`, "cam");
+step(30);
+key("keydown", "w", "KeyW");
+let camFar = 0;
+for (let i = 0; i < 240; i++) { step(1); camFar = Math.max(camFar, get("Math.hypot(camera.x - controlled.x, camera.z - controlled.z)")); }
+key("keyup", "w", "KeyW");
+if (camFar > 10.5 + get("CAMERA_MAX_LAG") + 1) failures.push("Camera: fell " + camFar.toFixed(1) + " units behind the car at Turbo speed");
+run("controlled.rayEffect = null; controlled.turboFade = null; controlled.vx = controlled.vz = 0;", "q");
+step(120);
+// Parked with its back to a wall: the camera must not end up inside the building.
+const wallCam = get(`(() => { const b = buildingColliders.find(q => q.kind === "building" && q.hw > 6 && q.hl > 6);
+  const v = controlled; v.x = b.x; v.z = b.z + b.hl + 3; v.yaw = 0; v.vx = v.vz = 0; v.yawRate = 0; v.grounded = true; v.y = driveSurfaceH(v.x, v.z);
+  return {x: b.x, z: b.z, hw: b.hw, hl: b.hl, topY: b.topY}; })()`);
+let camInside = 0;
+for (let i = 0; i < 120; i++) { step(1);
+  if (get(`Math.abs(camera.x - ${wallCam.x}) < ${wallCam.hw} && Math.abs(camera.z - ${wallCam.z}) < ${wallCam.hl} && camera.y < ${wallCam.topY}`)) camInside++; }
+if (camInside) failures.push("Camera: inside a building for " + camInside + " frames with the car's back to a wall");
+run("controlled.x = -12; controlled.z = -45;", "q");
+step(60);
+
+// ---- T-028: traffic slows for turns and stays on its own side after them ----
+const turnCheck = get(`(() => { const near = (val) => streetLines.reduce((b, l) => Math.abs(val - l) < Math.abs(val - b) ? l : b, streetLines[0]);
+  let samples = 0, wrong = 0, fastTurns = 0, turnSamples = 0;
+  for (let f = 0; f < 2 * 3600; f++) { updatePhysics(1 / 60); if (f % 6) continue;
+    for (const v of trafficFleet) { if (v.aiKnockTime > 0) continue;
+      const leg = v.trafficLeg;
+      if (leg.turn && v.trafficProgress > leg.lineLength + 1) { turnSamples++; if (Math.hypot(v.vx, v.vz) > TRAFFIC_YAW_RATE * ((leg.length - leg.lineLength) / (Math.PI / 2)) + 0.5) fastTurns++; }
+      const s = Math.sin(v.yaw), c = Math.cos(v.yaw), alongZ = Math.abs(c) >= Math.abs(s);
+      const along = alongZ ? Math.abs(v.z - near(v.z)) : Math.abs(v.x - near(v.x));
+      if (along < 9 || along > 30) continue;
+      samples++; if ((alongZ ? (v.x - near(v.x)) * Math.sign(c) : -(v.z - near(v.z)) * Math.sign(s)) > 0) wrong++; } }
+  return {samples, wrong, fastTurns, turnSamples}; })()`);
+// Measured over 2 minutes: about 780 wrong-side samples before the turn limit, about 60 after.
+if (turnCheck.wrong > 200) failures.push("Traffic: " + turnCheck.wrong + " samples on the wrong side of the road just past intersections");
+if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples * 0.05)
+  failures.push("Traffic: cars take turns faster than they can steer (" + JSON.stringify(turnCheck) + ")");
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

@@ -5,6 +5,24 @@
 // The big per-frame vehicle simulation function.
 // =============================================================================
 
+// T-028: traffic slows for turns. It steers at most TRAFFIC_YAW_RATE, so a turn taken faster
+// than (yaw rate x radius) swings wide into the oncoming lane. Measured before this change:
+// every mid-block head-on contact involved a car that had swung wide out of a turn.
+const TRAFFIC_YAW_RATE = 1.55; // radians per second
+const TRAFFIC_TURN_SPEED_MARGIN = 0.75; // the Bezier turn is tighter than its average radius
+const TRAFFIC_TURN_BRAKE = 5.5; // gentle braking toward the turn speed (TRAFFIC_BRAKE is 9)
+function trafficTurnLimit(v) {
+  const leg = v.trafficLeg;
+  if (!leg || !leg.turn) return Infinity;
+  if (leg.turnSpeed === undefined) {
+    const radius = (leg.length - leg.lineLength) / (Math.PI / 2); // average radius of the curve
+    leg.turnSpeed = TRAFFIC_YAW_RATE * radius * TRAFFIC_TURN_SPEED_MARGIN;
+  }
+  const toCurve = leg.lineLength - v.trafficProgress;
+  if (toCurve <= 0) return leg.turnSpeed;
+  // Highest speed from which the car can still slow to the turn speed by the curve.
+  return Math.sqrt(leg.turnSpeed * leg.turnSpeed + 2 * TRAFFIC_TURN_BRAKE * toCurve);
+}
 // True when a traffic car has left the street corridors far enough to touch a building or rock.
 function trafficOffStreet(v) {
   const reach = SIDEWALK_OUTER - Math.hypot(v.width, v.length) * 0.5;
@@ -26,7 +44,7 @@ function updateVehicle(v, dt) {
       // Cruise speed is the speed the car is trying to hold. It brakes hard for a slower car ahead
       // and recovers gently once the road is clear. The route progresses at this speed.
       if (v.trafficCruise === undefined) v.trafficCruise = v.maxSpeed;
-      const wanted = Math.min(v.maxSpeed, trafficFollowLimit(v));
+      const wanted = Math.min(v.maxSpeed, trafficFollowLimit(v), trafficTurnLimit(v));
       if (wanted < v.trafficCruise)
         v.trafficCruise = Math.max(wanted, v.trafficCruise - TRAFFIC_BRAKE * dt);
       else v.trafficCruise = Math.min(wanted, v.trafficCruise + TRAFFIC_ACCEL * dt);
@@ -54,7 +72,7 @@ function updateVehicle(v, dt) {
       );
       const desiredYaw = Math.atan2(target.x - v.x, target.z - v.z);
       let yawError = ((desiredYaw - v.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      const steeringLimit = clamp(yawError, -1.55 * dt, 1.55 * dt);
+      const steeringLimit = clamp(yawError, -TRAFFIC_YAW_RATE * dt, TRAFFIC_YAW_RATE * dt);
       v.yaw += steeringLimit;
       v.yawRate = dt > 0 ? steeringLimit / dt : 0;
       v.aiWheelSteer = clamp(yawError * 0.42, -0.48, 0.48);
@@ -158,11 +176,11 @@ function updateVehicle(v, dt) {
   v.x += v.vx * dt;
   v.z += v.vz * dt;
   if (v.x < -436 || v.x > 436) {
-    v.x = clamp(v.x, -436, 436);
+    v.x = clamp(v.x, -PLAY_LIMIT, PLAY_LIMIT);
     v.vx *= -0.35;
   }
   if (v.z < -436 || v.z > 436) {
-    v.z = clamp(v.z, -436, 436);
+    v.z = clamp(v.z, -PLAY_LIMIT, PLAY_LIMIT);
     v.vz *= -0.35;
   }
   for (const box of buildingColliders) resolveVehicleBuilding(v, box);

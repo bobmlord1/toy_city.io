@@ -6,6 +6,51 @@
 // =============================================================================
 
 let camera = { x: 0, y: 8, z: -12 };
+const CAMERA_MAX_LAG = 4.5;
+// T-033: if a building stands between the target and the camera, move the camera in to just
+// in front of the nearest wall, so the view never ends up inside or behind a building.
+function keepCameraOutOfBuildings(target) {
+  const dx = camera.x - target[0],
+    dy = camera.y - target[1],
+    dz = camera.z - target[2];
+  const len = Math.hypot(dx, dz);
+  if (len < 0.5) return;
+  let nearest = 1;
+  for (const b of buildingColliders) {
+    if (b.kind !== "building") continue;
+    if (farApart(target[0], target[2], len, b.x, b.z, b.hw + b.hl)) continue;
+    // Ray (target -> camera) against the box footprint, below the roof (slab method).
+    let t0 = 0,
+      t1 = 1;
+    for (const [o, d, lo, hi] of [
+      [target[0], dx, b.x - b.hw, b.x + b.hw],
+      [target[2], dz, b.z - b.hl, b.z + b.hl],
+    ]) {
+      if (Math.abs(d) < 1e-9) {
+        if (o < lo || o > hi) {
+          t0 = 2;
+          break;
+        }
+        continue;
+      }
+      let a = (lo - o) / d,
+        c = (hi - o) / d;
+      if (a > c) [a, c] = [c, a];
+      t0 = Math.max(t0, a);
+      t1 = Math.min(t1, c);
+      if (t0 > t1) break;
+    }
+    if (t0 > t1 || t0 >= nearest) continue;
+    // Above the roof at that point: the view passes over the building.
+    if (b.topY !== undefined && target[1] + dy * t0 > b.topY) continue;
+    nearest = t0;
+  }
+  if (nearest >= 1) return;
+  const k = Math.max(0, nearest - 0.6 / len); // stop just short of the wall
+  camera.x = target[0] + dx * k;
+  camera.y = target[1] + dy * k;
+  camera.z = target[2] + dz * k;
+}
 function updateCamera(dt) {
   let target, desired;
   if (onFoot) {
@@ -26,6 +71,19 @@ function updateCamera(dt) {
   camera.x = lerp(camera.x, desired[0], smooth);
   camera.y = lerp(camera.y, desired[1], smooth);
   camera.z = lerp(camera.z, desired[2], smooth);
+  // T-033: at very high speed (Turbo Overload) the smoothing alone left the camera up to 13
+  // units behind its spot. Normal driving lags about 2.5, so this cap only affects fast travel.
+  const lagX = camera.x - desired[0],
+    lagY = camera.y - desired[1],
+    lagZ = camera.z - desired[2];
+  const lag = Math.hypot(lagX, lagY, lagZ);
+  if (lag > CAMERA_MAX_LAG) {
+    const k = CAMERA_MAX_LAG / lag;
+    camera.x = desired[0] + lagX * k;
+    camera.y = desired[1] + lagY * k;
+    camera.z = desired[2] + lagZ * k;
+  }
+  keepCameraOutOfBuildings(target);
   return { target, desired };
 }
 function drawWorld(dt) {
