@@ -272,3 +272,12 @@ Status: code complete in v0.21.3 (headless), waiting on owner playtest on a phon
 - **T-013 — Compact dashboard and objective strip:** First compact stacked layout; superseded by T-014's side-by-side map/objective arrangement.
 - **T-014 — Side-by-side minimap and objective panel:** Enlarged the minimap and placed objective details beside it; merged as v0.16.4 in PR #8 and approved by the owner.
 - **2026-11-23 — Source refactor:** Split the monolithic `game.js` into 18 files under `src/`, added smoke-test tooling and project documentation; gameplay behavior was preserved in headless comparison.
+
+
+### T-044 Economy progression rebalance
+Assigned to: ChatGPT (direct implementation); project owner playtests.
+Files: `src/economy.js`, `src/activities.js`, `src/events.js`, `TASKS.md`.
+Why: Upgrade prices outpaced flat activity and event rewards, making higher-tier progression increasingly slow.
+Done when: upgrade prices use a gentle geometric curve; session-wide paid upgrade milestones scale activity and City Under Attack cash rewards; activity base payouts and event rewards are tuned; crash bonus caps are reduced; prop destruction reward and exploit protections remain unchanged.
+Status: implemented on main; awaiting owner playtest. 2026-11-26.
+Notes: Free Reward Ring upgrades do not count as paid progression milestones. Session multiplier tiers: 1.00x (0-2), 1.35x (3-5), 1.70x (6-8), 2.10x (9-11), 2.50x (12+). Crash bonuses are not scaled.
