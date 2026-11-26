@@ -231,6 +231,13 @@ Why: Turbo Overload's speed was right but too short; Super Springs and Boing Bum
 Done when: Turbo Overload lasts three times as long (18 s); Super Springs hops at least three times as high; Boing Bumpers throws the car away from what it hit clearly harder and faster.
 Status: code complete in v0.21.2 (headless), waiting on owner playtest.
 
+### T-043 Tuning pad: gentle stop, and a close button
+Assigned to: Claude. Owner approved 2026-11-26 (mobile playtest notes).
+Files: `src/economy.js`, `src/vehicle_update.js` (one hook), `index.html` (close button, its style, version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Why: it is hard to stop on the gold pad, and on some screen sizes the tuning panel covers the touch controls so the player cannot drive away.
+Done when: near the pad, a coasting car is gently pulled onto it and slowed to a stop; any gas, reverse or boost breaks free with no resistance; the panel has a close (X) button that hides it until the car leaves the pad area.
+Status: code complete in v0.21.3 (headless), waiting on owner playtest on a phone.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.

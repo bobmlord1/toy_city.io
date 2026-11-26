@@ -68,18 +68,69 @@ function atUpgradePad() {
   const r = upgradeRamp;
   return Math.abs(controlled.x - r.x) < 3.55 && controlled.z > 32.0 && controlled.z < 37.8;
 }
+// ---------------------------------------------------------------------------
+// T-043: gentle help to stop on the gold pad, and a close button for the panel.
+// The assist only works while the player is coasting slowly near the pad: any gas, reverse,
+// boost, or arriving fast (jumping the ramp) switches it off, so it never traps the car.
+// ---------------------------------------------------------------------------
+const PAD_ASSIST_MAX_SPEED = 12; // m/s (27 mph); faster coasting cars pass through untouched
+const PAD_ASSIST_PULL = 1.4; // m/s^2 per unit of distance from the pad center
+const PAD_ASSIST_MAX_PULL = 2.2; // m/s^2
+const PAD_ASSIST_REST_RADIUS = 2.2; // most of the pad: the car stops where it is (pad is about 2.9 each way)
+const PAD_ASSIST_SIDE_RATE = 0.7; // units/s sideways drift toward the center line
+const PAD_ASSIST_DAMPING = 1.6; // 1/s slowing everywhere in range...
+const PAD_ASSIST_DAMPING_CENTER = 2.6; // ...plus up to this much more near the center
+const padCenter = { x: upgradeRamp.x, z: 34.9 }; // middle of the area atUpgradePad() accepts
+let upgradePanelDismissed = false;
+function nearUpgradePad(v) {
+  return (
+    !!v &&
+    Math.abs(v.x - upgradeRamp.x) < 6.3 &&
+    v.z > 28.5 &&
+    v.z < 41.5
+  );
+}
+// The assist area starts at the top of the ramp (a little before the panel appears), so a car
+// that rolls slowly over the crest is helped onto the pad sooner.
+function inPadAssistArea(v) {
+  return Math.abs(v.x - upgradeRamp.x) < 6.3 && v.z > upgradeRamp.crestZ && v.z < 41.5;
+}
+function upgradePadAssist(v, dt, driving) {
+  if (driving || onFoot || v !== controlled || v.grounded === false || upgradePanelDismissed) return;
+  if (!inPadAssistArea(v) || Math.hypot(v.vx, v.vz) > PAD_ASSIST_MAX_SPEED) return;
+  const dx = padCenter.x - v.x,
+    dz = padCenter.z - v.z,
+    d = Math.hypot(dx, dz);
+  // No pull once close to the center, so the car comes to rest instead of creeping.
+  const pull = Math.min(PAD_ASSIST_MAX_PULL, PAD_ASSIST_PULL * Math.max(0, d - PAD_ASSIST_REST_RADIUS));
+  if (d > 1e-3) {
+    v.vx += (dx / d) * pull * dt;
+    v.vz += (dz / d) * pull * dt;
+  }
+  // Cars barely slide sideways, so the sideways part is a slow direct drift.
+  const side = clamp(dx, -PAD_ASSIST_SIDE_RATE * dt, PAD_ASSIST_SIDE_RATE * dt);
+  v.x += side;
+  const damping = PAD_ASSIST_DAMPING + PAD_ASSIST_DAMPING_CENTER * (1 - Math.min(d / 4, 1));
+  const keep = Math.exp(-damping * dt);
+  v.vx *= keep;
+  v.vz *= keep;
+}
+function dismissUpgradePanel() {
+  upgradePanelDismissed = true;
+  $("upgradePanel").classList.remove("show");
+}
 function refreshUpgradePanel() {
   const panel = $("upgradePanel"),
     speedButton = $("upgradeButton"),
     accelButton = $("accelerationButton"),
     impactButton = $("impactButton");
-  const near =
-    !onFoot &&
-    controlled &&
-    Math.abs(controlled.x - upgradeRamp.x) < 6.3 &&
-    controlled.z > 28.5 &&
-    controlled.z < 41.5;
+  const near = !onFoot && nearUpgradePad(controlled);
   if (!near) {
+    upgradePanelDismissed = false; // closing lasts until the car leaves the pad area
+    panel.classList.remove("show");
+    return;
+  }
+  if (upgradePanelDismissed) {
     panel.classList.remove("show");
     return;
   }
@@ -214,3 +265,12 @@ function purchaseImpactUpgrade() {
 }
 $("impactButton").addEventListener("click", purchaseImpactUpgrade);
 updateCashUI();
+
+// Close button (X) on the tuning panel, and Escape on a keyboard.
+$("upgradeClose").addEventListener("click", (e) => {
+  e.preventDefault();
+  dismissUpgradePanel();
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("upgradePanel").classList.contains("show")) dismissUpgradePanel();
+});

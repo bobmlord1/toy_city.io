@@ -158,6 +158,8 @@ function updateVehicle(v, dt) {
     forwardSpeed = clamp(forwardSpeed, -rayReverseCap(v, topSpeed), rayForwardCap(v, boostTopSpeed));
     v.vx = nf[0] * forwardSpeed + nr[0] * sideSpeed;
     v.vz = nf[1] * forwardSpeed + nr[1] * sideSpeed;
+    // T-043: gentle help stopping on the tuning pad; off while any drive input is held.
+    upgradePadAssist(v, dt, throttle || brakeInput || boostActive);
     v.longAccel = (forwardSpeed - previousForwardSpeed) / Math.max(dt, 0.001);
     v.lateralAccel = (sideSpeed - (v.previousSideSpeed || 0)) / Math.max(dt, 0.001);
     v.previousSideSpeed = sideSpeed;

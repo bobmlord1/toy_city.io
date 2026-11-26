@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.21.2
+FREE ROAM CAR PLAYGROUND - VERSION 0.21.3
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -124,3 +124,7 @@ Version 0.21.2 (T-042):
 - Turbo Overload lasts 18 seconds (three times as long).
 - Super Springs hops about three times higher.
 - Boing Bumpers throws you back much harder and farther when you hit something.
+
+Version 0.21.3 (T-043):
+- The tuning pad now helps you stop on it: let go of the gas near the pad and the car gently rolls onto it and stops. Press gas or reverse to drive away any time.
+- The tuning panel has an X button (or press Escape) to close it, so it never blocks the touch controls. It comes back the next time you drive onto the pad.
