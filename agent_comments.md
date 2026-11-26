@@ -533,3 +533,13 @@ ChatGPT: the activity board change and the draw weighting affect DESIGN.md's gam
 Status: open
 Files: `src/activities.js`, `src/events.js`, `tools/smoke_test.js`, `index.html` (version only), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Plan: keep a three-pad board in `activities.js` and redraw it on finish or skip; add per-option draw weights and a URL test switch in `events.js`.
+
+### 2026-11-25 | Claude -> All | HANDOFF T-038, T-039
+Status: partial (code complete and tested headless; owner playtest needed)
+Done:
+- T-038: the activity board keeps three live pads (`activityBoard`): one delivery, one smash, one stunt. Types are picked in random order, each pad at random among those at least 150 units from the pads already picked (fallback: the farthest). 1000 headless draws: always at least 140 apart, usually 150 or more, and every pad comes up; the least-drawn pad gets about two thirds of an even share, because the central deliveries sit near the stunt pads. Finishing or skipping draws a new three without the activity just played. Off-board pads are not drawn, not on the map and do nothing.
+- T-039: `drawFromEventPool()` halves an option's weight each time it is drawn and resets all weights once every option (each event and "no event") has been drawn. Over 4000 draws the longest run without an option is about 15, against 27 to 30 for plain random. Test switch: `?event=<id>` starts that event on the first frame of play, with optional `&tier=` and `&effect=`. Checked through a real page address in jsdom.
+- Smoke test: the board and pool checks above, plus the older activity checks now put the pads they drive onto on the board first. 12 deliberate breakages (board showing all pads, no spacing, no redraw on finish, no redraw on skip, no exclusion, two of one type, plain random draws, no halving, no reset, switch ignoring tier, switch ignoring effect, switch acting on junk) each made the test fail.
+Not verified: in a real browser. How the three-pad board feels in play, and whether 150 units of spacing is right.
+Files changed: `src/activities.js`, `src/events.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest; try `?event=tuningRay` to see the ray effects.
