@@ -359,6 +359,11 @@ for (const problem of get("validateActivityDefs()")) failures.push("Activity dat
 const actId = () => get("currentActivity && currentActivity.def.id");
 const actPhase = () => get("currentActivity && currentActivity.phase");
 const skipVisible = () => w.document.getElementById("activitySkip").style.visibility !== "hidden";
+// The board (T-038) only has three live pads; put the pads a check needs on it first.
+const onBoard = (...ids) => run(`activityBoard = ${JSON.stringify(ids)}; lastActivityHud = "";`, "board");
+const boardInfo = () => get(`(() => { const d = activityBoardDefs(); let m = Infinity;
+  for (let a = 0; a < d.length; a++) for (let b = a + 1; b < d.length; b++) { const p = activityStart(d[a]), q = activityStart(d[b]); m = Math.min(m, Math.hypot(p.x - q.x, p.z - q.z)); }
+  return {ids: d.map(x => x.id), types: d.map(x => x.type).sort().join(","), spread: m}; })()`);
 const defOf = (id) => get(`(() => { const d = activityDefs.find(q => q.id === "${id}"); return Object.assign({}, d, {startPad: activityStart(d)}); })()`);
 // The leftover activity-free spot is the empty middle of the central block.
 const idleSpot = { x: -12, z: -45 };
@@ -367,8 +372,8 @@ teleport(idleSpot);
 step(300);
 if (actId() !== null) failures.push("Activity board: an activity started without driving onto its pad");
 const idleMarkers = get("activeMarkers()");
-if (idleMarkers.length !== get("activityDefs.length") || !idleMarkers.every((m) => m.start))
-  failures.push("Activity board: not every start pad is on the map while idle");
+if (idleMarkers.length !== 3 || !idleMarkers.every((m) => m.start) || new Set(idleMarkers.map((m) => m.kind)).size !== 3)
+  failures.push("Activity board: expected exactly three start pads on the map, one of each type");
 if (idleMarkers.filter((m) => m.pin).length !== 3)
   failures.push("Activity board: expected the nearest pad of each of the 3 types to be pinned");
 if (get("new Set(activityDefs.map(d => d.type)).size") !== 3)
@@ -383,8 +388,35 @@ step(2);
 if (!activityPanel.classList.contains("show") || skipVisible())
   failures.push("Activity HUD: idle panel should point at the nearest pad with SKIP hidden");
 
+// ---- T-038: the board draws one pad of each type, spread apart, and every pad gets a turn ----
+if (boardInfo().types !== "delivery,smash,stunt") failures.push("Activity board: the first board is not one of each type");
+const boardStats = get(`(() => { let minSpread = Infinity, spreadOk = 0, bad = 0; const seen = new Set();
+  for (let i = 0; i < 600; i++) { drawActivityBoard(null); const d = activityBoardDefs();
+    if (d.map(x => x.type).sort().join(",") !== "delivery,smash,stunt") bad++;
+    d.forEach(x => seen.add(x.id)); let m = Infinity;
+    for (let a = 0; a < 3; a++) for (let b = a + 1; b < 3; b++) { const p = activityStart(d[a]), q = activityStart(d[b]); m = Math.min(m, Math.hypot(p.x - q.x, p.z - q.z)); }
+    minSpread = Math.min(minSpread, m); if (m >= ACTIVITY_BOARD_SPACING) spreadOk++; }
+  return {minSpread, spreadOk, bad, unseen: activityDefs.filter(d => !seen.has(d.id)).map(d => d.id)}; })()`);
+if (boardStats.bad) failures.push("Activity board: " + boardStats.bad + " draws were not one of each type");
+if (boardStats.minSpread < 120 || boardStats.spreadOk < 540)
+  failures.push("Activity board: pads not spread apart (closest " + boardStats.minSpread.toFixed(0) + ", " + boardStats.spreadOk + "/600 at full spacing)");
+if (boardStats.unseen.length) failures.push("Activity board: some pads never came up: " + boardStats.unseen.join(", "));
+// The activity just played is never in the next board.
+const excludedSeen = get(`(() => { let n = 0; for (let i = 0; i < 300; i++) { drawActivityBoard("stunt-west"); if (activityBoard.includes("stunt-west")) n++; } drawActivityBoard(null); return n; })()`);
+if (excludedSeen) failures.push("Activity board: the activity just played came back in " + excludedSeen + " of 300 redraws");
+// A pad that is not on the board does nothing.
+const offBoard = get(`(() => { const d = activityDefs.find(q => !activityBoard.includes(q.id)); return activityStart(d); })()`);
+teleport(offBoard);
+step(5);
+if (actId() !== null) failures.push("Activity board: a pad that is not on the board started an activity");
+if (get("activeMarkers().some(m => Math.hypot(m.x - " + offBoard.x + ", m.z - " + offBoard.z + ") < 0.1)"))
+  failures.push("Activity board: a pad that is not on the board is shown on the map");
+teleport(idleSpot);
+step(200);
+
 // On foot never starts an activity.
 const delivery1 = defOf("south-to-pink-house");
+onBoard(delivery1.id, "smash-west");
 run(`onFoot=true;player.x=${delivery1.pickup.x};player.z=${delivery1.pickup.z};`, "foot");
 step(5);
 if (actId() !== null) failures.push("Activity board: walking onto a pad started an activity");
@@ -394,6 +426,7 @@ step(3);
 
 // ---- Delivery ----
 let cash0 = get("cash");
+onBoard(delivery1.id, "smash-west");
 teleport(delivery1.pickup);
 step(3);
 if (actId() !== delivery1.id || actPhase() !== "carrying")
@@ -417,10 +450,14 @@ if (get("cash") !== cash0 + delivery1.payout)
 if (actId() !== null) failures.push("Delivery: still active after completion");
 step(10);
 if (get("cash") !== cash0 + delivery1.payout) failures.push("Delivery: paid more than once");
+const boardAfterFinish = boardInfo();
+if (boardAfterFinish.types !== "delivery,smash,stunt" || boardAfterFinish.ids.includes(delivery1.id))
+  failures.push("Activity board: finishing did not draw a fresh board without the finished activity");
 
 // A pad entered during the short pause after a finish does not start, and waiting on it does
 // not start it either. Driving off and back on does.
 const delivery2 = defOf("cross-town-to-pink-house");
+onBoard(delivery2.id);
 teleport(delivery2.pickup);
 step(3);
 if (actId() !== null) failures.push("Activity board: a pad started during the pause after a finish");
@@ -435,6 +472,9 @@ cash0 = get("cash");
 run("skipActivity()", "skip");
 step(2);
 if (actId() !== null || get("cash") !== cash0) failures.push("Skip: did not clear the activity or changed cash");
+const boardAfterSkip = boardInfo();
+if (boardAfterSkip.types !== "delivery,smash,stunt" || boardAfterSkip.ids.includes(delivery2.id))
+  failures.push("Activity board: skipping did not draw a fresh board without the skipped activity");
 step(60);
 if (actId() !== null) failures.push("Skip: an activity started again on its own");
 
@@ -443,6 +483,7 @@ const smash = defOf("smash-northeast");
 teleport(idleSpot);
 step(60);
 const propsBefore = get("props.length");
+onBoard(smash.id);
 teleport(smash.startPad);
 step(3);
 if (actId() !== smash.id || actPhase() !== "smashing") failures.push("Smash: driving onto the pad did not start it");
@@ -456,6 +497,7 @@ step(2);
 if (get("props.length") !== propsBefore) failures.push("Smash: skipping left target props behind");
 teleport(idleSpot);
 step(60);
+onBoard(smash.id);
 teleport(smash.startPad);
 step(3);
 teleport(idleSpot); // the car leaves so only the scripted breaks below damage the targets
@@ -496,6 +538,7 @@ const aimAtRamp = (speed) =>
       `controlled.vx=0;controlled.vz=${(stunt.startPad.z < stuntRamp.startZ ? 1 : -1) * speed};controlled.grounded=true;`, "aim");
 teleport(idleSpot);
 step(200);
+onBoard(stunt.id);
 teleport(stunt.startPad);
 step(2);
 if (actId() !== stunt.id || actPhase() !== "jumping") failures.push("Stunt: driving onto the pad did not start it");
@@ -526,6 +569,7 @@ if (get("cash") - cash0 !== stuntGain) failures.push("Stunt: paid more than once
 const stuntW = defOf("stunt-west");
 teleport(idleSpot);
 step(200);
+onBoard(stuntW.id);
 teleport(stuntW.startPad);
 step(2);
 const eastRamp = get(`allRamps.find(r => r.id === "east-stunt")`);
@@ -830,6 +874,38 @@ const poolCounts = get(`(() => {
 for (const id of ["cityAttack", "tuningRay", "rewardRing", "none"])
   if (!(poolCounts[id] > 800 * 0.18 && poolCounts[id] < 800 * 0.32))
     failures.push("Events: pool weights are not equal (" + JSON.stringify(poolCounts) + ")");
+// T-039: each draw halves the drawn option's weight until every option has come up, then all reset.
+const weightCheck = get(`(() => {
+  eventPoolWeights = EVENT_POOL.map(() => 1); eventPoolDrawn = EVENT_POOL.map(() => false);
+  const first = EVENT_POOL.indexOf(drawFromEventPool());
+  const afterOne = eventPoolWeights.slice();
+  let guard = 0; while (eventPoolDrawn.some(Boolean) && guard++ < 100) drawFromEventPool();
+  return {first, afterOne, reset: eventPoolWeights.every(w => w === 1) && eventPoolDrawn.every(d => !d)};
+})()`);
+if (weightCheck.afterOne[weightCheck.first] !== 0.5 || weightCheck.afterOne.filter((w) => w === 1).length !== 3)
+  failures.push("Events: drawing an option did not halve only its weight (" + JSON.stringify(weightCheck.afterOne) + ")");
+if (!weightCheck.reset) failures.push("Events: weights did not reset once every option had been drawn");
+// The point of the weights: no option goes missing for long.
+const longestGap = get(`(() => { const last = {}, gap = {}; for (let i = 0; i < 4000; i++) { const k = String(rollEvent()); if (currentEvent) endEvent();
+  gap[k] = Math.max(gap[k] || 0, i - (k in last ? last[k] : -1)); last[k] = i; } return Math.max(...Object.values(gap)); })()`);
+// Measured over 4000 draws: about 15 at most with the weights, 27 to 30 with plain random draws.
+if (longestGap > 20) failures.push("Events: an option went " + longestGap + " draws without coming up");
+// Test switch: ?event= starts an event, with optional tier/effect; bad ids do nothing.
+run(`startEvent("rewardRing")`, "q");
+if (get(`applyEventTestSwitch("?event=nonsense")`) !== false || get("currentEvent && currentEvent.type") !== "rewardRing")
+  failures.push("Events: the test switch acted on an unknown event");
+run("endEvent();", "q");
+if (get(`applyEventTestSwitch("")`) !== false) failures.push("Events: the test switch did something without ?event=");
+if (get(`applyEventTestSwitch("?event=cityAttack&tier=large")`) !== true || get("currentEvent.tier.id") !== "large")
+  failures.push("Events: ?event=cityAttack&tier=large did not start the large creature");
+run("endEvent();", "q");
+if (get(`applyEventTestSwitch("?event=tuningRay&effect=soapTires")`) !== true || get("currentEvent.type") !== "tuningRay")
+  failures.push("Events: ?event=tuningRay did not start the Tuning Ray");
+const forcedRay = get(`(() => { const ev = currentEvent, v = playerCar; controlled = v; onFoot = false; ev.prevSide = -1;
+  v.x = ev.x + (ev.axis === "z" ? 0.5 : 0.3); v.z = ev.z + (ev.axis === "x" ? 0.5 : 0.3); updateEvents(0.016);
+  const id = v.rayEffect && v.rayEffect.id; v.rayEffect = null; return id; })()`);
+if (forcedRay !== "soapTires") failures.push("Events: &effect=soapTires gave " + forcedRay);
+run("if (currentEvent) endEvent(); controlled.x = -12; controlled.z = -45;", "q");
 run("eventNextRollAt = eventClock + 1;", "ev-roll");
 step(70);
 if (get("eventNextRollAt - eventClock") < get("EVENT_ROLL_INTERVAL") - 3)
@@ -857,6 +933,7 @@ if (get("eventMarkers().length") !== 0) failures.push("Events: a map symbol was 
 const evDelivery = get(`(() => { const d = activityDefs.find(q => q.id === "south-to-pink-house"); return {pickup: d.pickup, dropoff: d.dropoff, payout: d.payout}; })()`);
 run("eventNextRollAt = Infinity;", "q");
 step(200);
+run(`activityBoard = ["south-to-pink-house"];`, "board");
 teleport(evDelivery.pickup);
 step(3);
 const evActivityId = get("currentActivity && currentActivity.def.id");

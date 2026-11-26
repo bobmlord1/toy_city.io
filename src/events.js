@@ -268,7 +268,7 @@ const eventSpawners = {
   cityAttack(ev) {
     const site = pickEventSite(eventLawnSites, false);
     if (!site) return false;
-    const tier = MONSTER_TIERS[Math.floor(Math.random() * MONSTER_TIERS.length)];
+    const tier = ev.force.tier || MONSTER_TIERS[Math.floor(Math.random() * MONSTER_TIERS.length)];
     ev.tier = tier;
     ev.monster = {
       type: "monster",
@@ -340,7 +340,10 @@ const eventUpdaters = {
   },
   tuningRay(ev) {
     if (!eventGateCrossed(ev, ROAD_HALF_WIDTH + 1.6)) return null;
-    applyRayEffect(controlled, RAY_EFFECT_IDS[Math.floor(Math.random() * RAY_EFFECT_IDS.length)]);
+    applyRayEffect(
+      controlled,
+      ev.force.effect || RAY_EFFECT_IDS[Math.floor(Math.random() * RAY_EFFECT_IDS.length)],
+    );
     spawnConfetti(controlled.x, controlled.z, 24);
     return "done";
   },
@@ -369,9 +372,9 @@ function cleanupEvent(ev) {
   }
 }
 
-function startEvent(typeId) {
+function startEvent(typeId, force) {
   if (currentEvent || !eventTypes[typeId]) return false;
-  const ev = { type: typeId, t: 0 };
+  const ev = { type: typeId, t: 0, force: force || {} };
   if (!eventSpawners[typeId](ev)) return false;
   currentEvent = ev;
   showEventComms(eventTypes[typeId]);
@@ -384,14 +387,51 @@ function endEvent() {
   cleanupEvent(ev);
   eventNextRollAt = eventClock + EVENT_ROLL_INTERVAL;
 }
+// Draw weights (T-039): every option starts at 1. Each draw halves the drawn option's weight,
+// and once every option (including "no event") has been drawn, all weights reset to 1.
+// This keeps the options equal overall while making a long run without one option unlikely.
+let eventPoolWeights = EVENT_POOL.map(() => 1);
+let eventPoolDrawn = EVENT_POOL.map(() => false);
+function drawFromEventPool() {
+  const total = eventPoolWeights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total,
+    i = 0;
+  while (i < EVENT_POOL.length - 1 && r >= eventPoolWeights[i]) r -= eventPoolWeights[i++];
+  eventPoolWeights[i] *= 0.5;
+  eventPoolDrawn[i] = true;
+  if (eventPoolDrawn.every(Boolean)) {
+    eventPoolWeights = EVENT_POOL.map(() => 1);
+    eventPoolDrawn = EVENT_POOL.map(() => false);
+  }
+  return EVENT_POOL[i];
+}
 function rollEvent() {
   eventNextRollAt = eventClock + EVENT_ROLL_INTERVAL;
-  const pick = EVENT_POOL[Math.floor(Math.random() * EVENT_POOL.length)];
+  const pick = drawFromEventPool();
   if (pick) startEvent(pick);
   return pick;
 }
+
+// Test switch (T-039), for playtests only: add ?event=cityAttack, ?event=tuningRay or
+// ?event=rewardRing to the page address to start that event as soon as play begins.
+// Optional extras: &tier=small|medium|large (creature) and
+// &effect=soapTires|superSprings|turboOverload|tankTreads (ray). Normal play is unchanged.
+let eventTestSwitchChecked = false;
+function applyEventTestSwitch(search) {
+  const q = new URLSearchParams(search || "");
+  const id = q.get("event");
+  if (!id || !eventTypes[id]) return false;
+  const tier = MONSTER_TIERS.find((t) => t.id === q.get("tier"));
+  const effect = RAY_EFFECTS[q.get("effect")] ? q.get("effect") : null;
+  if (currentEvent) endEvent();
+  return startEvent(id, { tier, effect });
+}
 function updateEvents(dt) {
   eventClock += dt;
+  if (!eventTestSwitchChecked) {
+    eventTestSwitchChecked = true;
+    applyEventTestSwitch(typeof location !== "undefined" ? location.search : "");
+  }
   updateRayEffects(dt);
   updateEventComms();
   if (!currentEvent) {

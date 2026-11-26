@@ -316,6 +316,46 @@ let activityReadyAt = 0; // pads are inactive until this time (short pause after
 let activityPadsInside = null; // ids of pads the vehicle is on; a pad starts only on entry
 let completedActivities = 0;
 
+// ---------------------------------------------------------------------------
+// The board (T-038): only three pads are active at a time, one of each type, picked at random
+// and spread apart. Finishing or skipping an activity draws a new three, leaving out the one
+// just played. Every def stays in activityDefs; the board only chooses which ones are live.
+// ---------------------------------------------------------------------------
+const ACTIVITY_BOARD_SPACING = 150; // preferred minimum distance between the three pads
+let activityBoard = []; // ids of the active defs
+function activityBoardDefs() {
+  return activityDefs.filter((d) => activityBoard.includes(d.id));
+}
+function drawActivityBoard(excludeId) {
+  const byType = {};
+  for (const def of activityDefs)
+    if (def.id !== excludeId) (byType[def.type] = byType[def.type] || []).push(def);
+  // Types in random order; each pad is random among those far enough from the pads already
+  // picked (or the farthest one if none is). This keeps every pad in play, central ones too.
+  const types = Object.keys(byType).sort(() => Math.random() - 0.5);
+  const picked = [];
+  const gap = (def) =>
+    Math.min(
+      Infinity,
+      ...picked.map((q) => {
+        const a = activityStart(def),
+          b = activityStart(q);
+        return Math.hypot(a.x - b.x, a.z - b.z);
+      }),
+    );
+  for (const t of types) {
+    const options = byType[t];
+    const spread = options.filter((d) => gap(d) >= ACTIVITY_BOARD_SPACING);
+    picked.push(
+      spread.length
+        ? spread[Math.floor(Math.random() * spread.length)]
+        : options.reduce((a, b) => (gap(b) > gap(a) ? b : a)),
+    );
+  }
+  activityBoard = picked.map((d) => d.id);
+  lastActivityHud = ""; // the idle hint may now point at a different pad
+}
+
 function activityStart(def) {
   return activityTypes[def.type].start(def);
 }
@@ -335,6 +375,7 @@ function completeActivity() {
   spawnConfetti(f.x, f.z, 44);
   say(f.text + "  +$" + act.def.payout, 2600);
   activityReadyAt = activityClock + ACTIVITY_RESTART_DELAY;
+  drawActivityBoard(act.def.id);
 }
 function skipActivity() {
   const act = currentActivity;
@@ -344,6 +385,7 @@ function skipActivity() {
   if (type.cleanup) type.cleanup(act);
   say("No problem! Pick another marker.", 1500);
   activityReadyAt = activityClock + 0.4;
+  drawActivityBoard(act.def.id);
 }
 function updateActivities(dt) {
   activityClock += dt;
@@ -351,7 +393,7 @@ function updateActivities(dt) {
   // so finishing on top of another pad (or spawning on one) never starts it by accident.
   const inside = new Set();
   if (!onFoot && controlled)
-    for (const def of activityDefs) {
+    for (const def of activityBoardDefs()) {
       const s = activityStart(def);
       if (Math.hypot(controlled.x - s.x, controlled.z - s.z) <= ACTIVITY_ZONE_RADIUS)
         inside.add(def.id);
@@ -401,7 +443,7 @@ function activeMarkers() {
   const p = onFoot ? player : controlled;
   const out = [];
   const nearest = {};
-  for (const def of activityDefs) {
+  for (const def of activityBoardDefs()) {
     const type = activityTypes[def.type],
       s = type.start(def);
     const m = { kind: type.startKind, x: s.x, z: s.z, pin: false, start: true };
@@ -474,7 +516,7 @@ function updateActivityHud() {
     // No activity running: point at the nearest start pad.
     let best = null,
       bestD = Infinity;
-    for (const def of activityDefs) {
+    for (const def of activityBoardDefs()) {
       const s = activityStart(def),
         d = p ? Math.hypot(p.x - s.x, p.z - s.z) : 0;
       if (d < bestD) {
@@ -596,3 +638,6 @@ function validateActivityDefs() {
     }
   return problems;
 }
+
+// First board of the session.
+drawActivityBoard(null);

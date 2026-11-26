@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.18.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.19.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -97,3 +97,8 @@ Version 0.18.0 (T-020 to T-022 Toybox Events):
 - Tuning Ray: drive through the ray gate for 25 seconds of Soap Tires, Super Springs, Turbo Overload or Tank Treads.
 - Reward Ring: drive through the golden ring for a free permanent upgrade.
 - Traffic cars knocked onto the grass no longer drive through buildings.
+
+Version 0.19.0 (T-038, T-039):
+- Only three activity markers are on the map at a time: one delivery, one smash and one stunt, spread out across the city. Finishing or skipping one brings up a new three.
+- Toybox Events now take turns better: once an event has appeared it becomes less likely until every option has had a turn, so none goes missing for long.
+- For testing: add ?event=tuningRay (or cityAttack, rewardRing) to the page address to start that event right away. Extras: &effect=soapTires, superSprings, turboOverload or tankTreads for the ray, and &tier=small, medium or large for the creature.
