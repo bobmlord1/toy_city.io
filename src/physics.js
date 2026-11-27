@@ -66,6 +66,8 @@ function updateProps(dt) {
     }
     p.vx *= Math.exp(-2.35 * dt);
     p.vz *= Math.exp(-2.35 * dt);
+    // T-048: settle leftover drift so resting props stop exactly (it decays forever otherwise).
+    if (Math.abs(p.vx) < 0.01 && Math.abs(p.vz) < 0.01) p.vx = p.vz = 0;
     // Props at rest do not move, so their ground height does not change either.
     if (p.surfaceX !== p.x || p.surfaceZ !== p.z) {
       p.y = driveSurfaceH(p.x, p.z);
@@ -74,6 +76,9 @@ function updateProps(dt) {
     }
     p.yaw += p.roll * dt;
     p.roll *= Math.exp(-2.0 * dt);
+    // T-048: a prop that has not moved since its last building check cannot have newly hit one.
+    // With about 200 props this check was most of the physics time.
+    if (p.buildingCheckX === p.x && p.buildingCheckZ === p.z) continue;
     for (const box of buildingColliders) {
       const dx = p.x - box.x,
         dz = p.z - box.z;
@@ -92,6 +97,8 @@ function updateProps(dt) {
         p.vz *= 0.35;
       }
     }
+    p.buildingCheckX = p.x;
+    p.buildingCheckZ = p.z;
   }
   for (let i = props.length - 1; i >= 0; i--) if (props[i].broken) props.splice(i, 1);
 }

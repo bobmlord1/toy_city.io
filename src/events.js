@@ -14,7 +14,7 @@
 
 const EVENT_FIRST_ROLL = 45; // seconds of play before the first draw
 const EVENT_ROLL_INTERVAL = 75; // seconds between draws while no event runs
-const EVENT_POOL = ["cityAttack", "tuningRay", "rewardRing", null]; // null = no event this time
+const EVENT_POOL = ["cityAttack", "tuningRay", "rewardRing", "treasure", "rival", null]; // null = no event
 const EVENT_COMMS_SECONDS = 7;
 const EVENT_SPAWN_MIN = 60; // events appear this far from the player...
 const EVENT_SPAWN_MAX = 200; // ...but not farther, when a site allows it
@@ -58,7 +58,28 @@ const eventTypes = {
     mapShape: "ring",
     mapColor: "#F4CF59",
   },
+  treasure: {
+    name: "Treasure!",
+    line: "Someone asked about my research fund: What research fund?!",
+    duration: 90,
+    mapShape: "square",
+    mapColor: "#F4CF59",
+  },
+  rival: {
+    name: "Rival",
+    line: "I've maxed out my crash insurance! Let's see what it pays out!",
+    duration: 90,
+    mapShape: "triangle",
+    mapColor: "#F28F73",
+  },
 };
+const TREASURE_PAYOUT = 1000; // owner decision 2026-11-26
+const RIVAL_PAYOUT = 350; // between the small and medium creature (T-044 scale); tune with T-044
+const RIVAL_HITS = 3; // rams needed to wreck the rival
+const RIVAL_MIN_IMPACT = 2.2; // m/s closing speed (about 5 mph): gentle touches do not count
+// While marked, the rival cruises at most this fast (about 12 mph), so a stock car (20 mph) closes
+// on it at a speed that counts as a hit. Applied in vehicle_update.js (traffic speed).
+const RIVAL_MAX_CRUISE = 5.5;
 
 // ---------------------------------------------------------------------------
 // Where events can appear. Both lists are built once, deterministically, from the world.
@@ -66,12 +87,12 @@ const eventTypes = {
 // ramps, props and activity pads. Road spots (Tuning Ray, Reward Ring): street centerlines away
 // from intersections, ramps and activity pads.
 // ---------------------------------------------------------------------------
-const EVENT_LAWN_CLEARANCE = 9;
+const EVENT_LAWN_CLEARANCE = 12; // room for the large creature (radius 8.6) plus a car
 function eventLawnSiteClear(x, z) {
   if (Math.abs(x) > WORLD_HALF - 30 || Math.abs(z) > WORLD_HALF - 30) return false;
   if (!propSpotAllowed(x, z) || isNearAnyRamp(x, z, EVENT_LAWN_CLEARANCE)) return false;
   for (const line of streetLines)
-    if (Math.abs(x - line) < SIDEWALK_OUTER + 4 || Math.abs(z - line) < SIDEWALK_OUTER + 4)
+    if (Math.abs(x - line) < SIDEWALK_OUTER + 10 || Math.abs(z - line) < SIDEWALK_OUTER + 10)
       return false;
   for (const b of buildingColliders) {
     const dx = Math.max(Math.abs(x - b.x) - b.hw, 0),
@@ -161,10 +182,13 @@ function buildMonsterMesh(s, body, accent) {
   return b.finish();
 }
 // City Under Attack difficulty tiers (chosen with equal weight).
+// T-045: about 12, 18 and 28 units tall (the child found the old 5 to 8 "tiny"; buildings are
+// 9 to 55, median 18). Radius covers the arms. Payouts are T-044's; health is about 5, 8 and 12
+// stock hits (a 20 mph hit does about 4.5).
 const MONSTER_TIERS = [
-  { id: "small", scale: 1.0, radius: 1.7, hp: 8, payout: 250, body: [0.36, 0.82, 0.4], accent: [0.98, 0.78, 0.22] },
-  { id: "medium", scale: 1.35, radius: 2.2, hp: 15, payout: 375, body: [0.62, 0.42, 0.92], accent: [0.98, 0.5, 0.75] },
-  { id: "large", scale: 1.75, radius: 2.9, hp: 24, payout: 550, body: [0.95, 0.38, 0.28], accent: [0.25, 0.75, 0.95] },
+  { id: "small", scale: 2.55, radius: 3.7, hp: 22, payout: 250, body: [0.36, 0.82, 0.4], accent: [0.98, 0.78, 0.22] },
+  { id: "medium", scale: 3.83, radius: 5.6, hp: 36, payout: 375, body: [0.62, 0.42, 0.92], accent: [0.98, 0.5, 0.75] },
+  { id: "large", scale: 5.96, radius: 8.6, hp: 55, payout: 550, body: [0.95, 0.38, 0.28], accent: [0.25, 0.75, 0.95] },
 ];
 for (const tier of MONSTER_TIERS) tier.model = buildMonsterMesh(tier.scale, tier.body, tier.accent);
 
@@ -178,7 +202,34 @@ const eventBeacons = {
   cityAttack: buildEventBeaconMesh([0.96, 0.34, 0.27]),
   tuningRay: buildEventBeaconMesh([0.2, 0.85, 0.95]),
   rewardRing: buildEventBeaconMesh([1.0, 0.8, 0.2]),
+  treasure: buildEventBeaconMesh([1.0, 0.85, 0.3]),
+  rival: buildEventBeaconMesh([0.98, 0.45, 0.4]),
 };
+// T-046: a toy treasure chest: wooden box and lid, gold bands, lock and a heap of coins and gems.
+const treasureChestMesh = (() => {
+  const b = new MeshBuilder();
+  const s = 1.8;
+  const box = (x0, y0, z0, x1, y1, z1, c) => b.box(x0 * s, y0 * s, z0 * s, x1 * s, y1 * s, z1 * s, c);
+  const wood = [0.62, 0.36, 0.16],
+    darkWood = [0.48, 0.27, 0.12],
+    gold = [1.0, 0.78, 0.2];
+  b.useMaterial(0.55, 0, 0);
+  box(-1.2, 0, -0.75, 1.2, 0.9, 0.75, wood); // chest body
+  box(-1.24, 0.9, -0.79, 1.24, 1.35, 0.79, darkWood); // lid
+  box(-1.0, 1.35, -0.6, 1.0, 1.5, 0.6, darkWood); // lid top
+  b.useMaterial(0.2, 0.85, 0);
+  for (const x of [-0.95, 0, 0.95]) box(x - 0.1, -0.01, -0.8, x + 0.1, 1.52, 0.8, gold); // bands
+  box(-1.26, 0.82, -0.81, 1.26, 0.95, 0.81, gold); // rim
+  box(-0.2, 0.55, 0.76, 0.2, 1.05, 0.86, gold); // lock
+  box(-0.06, 0.66, 0.85, 0.06, 0.82, 0.9, [0.15, 0.1, 0.05]); // keyhole
+  for (const [x, z, h] of [[-0.5, -0.2, 0.18], [0.1, 0.15, 0.24], [0.55, -0.15, 0.16], [-0.1, -0.35, 0.12]])
+    box(x - 0.28, 1.5, z - 0.28, x + 0.28, 1.5 + h, z + 0.28, gold); // coin heap
+  b.useMaterial(0.15, 0.3, 0);
+  box(-0.75, 1.6, 0.1, -0.5, 1.85, 0.35, [0.3, 0.85, 0.45]); // gems
+  box(0.35, 1.62, 0.2, 0.6, 1.87, 0.45, [0.9, 0.25, 0.4]);
+  box(0.0, 1.72, -0.3, 0.25, 1.97, -0.05, [0.3, 0.6, 1.0]);
+  return b.finish();
+})();
 const monsterHealthPip = (() => {
   const b = new MeshBuilder();
   b.useMaterial(0.3, 0, 0);
@@ -370,6 +421,48 @@ const eventSpawners = {
     ev.z = site.z;
     return true;
   },
+  treasure(ev) {
+    const site = pickEventSite(eventLawnSites, false);
+    if (!site) return false;
+    ev.chest = {
+      type: "treasure",
+      model: treasureChestMesh,
+      x: site.x,
+      z: site.z,
+      y: driveSurfaceH(site.x, site.z),
+      vx: 0,
+      vz: 0,
+      yaw: Math.random() * Math.PI * 2,
+      roll: 0,
+      mass: 20,
+      radius: 2.3,
+      height: 3.4,
+      kickScale: 1.5,
+      hp: 0.5, // one-hit: any real ram (about 7 mph or more) breaks it
+      maxHp: 0.5,
+      smashCash: 0, // the event pays instead of the ordinary prop reward
+      broken: false,
+    };
+    props.push(ev.chest);
+    ev.x = site.x;
+    ev.z = site.z;
+    return true;
+  },
+  rival(ev) {
+    // A traffic car on the road, not already knocked, in the usual distance band.
+    const p = onFoot ? player : controlled;
+    if (!p) return false;
+    const onRoad = trafficFleet.filter((v) => !v.aiKnockTime && !trafficOffStreet(v));
+    const pick = pickEventSite(onRoad.map((v) => ({ x: v.x, z: v.z, v })), false);
+    if (!pick) return false;
+    ev.rival = pick.v;
+    ev.rival.isRival = true;
+    ev.hits = 0;
+    ev.hitCooldown = 0;
+    ev.x = ev.rival.x;
+    ev.z = ev.rival.z;
+    return true;
+  },
   tuningRay(ev) {
     const spot = pickEventSite(eventRoadSpots, true);
     if (!spot) return false;
@@ -414,6 +507,26 @@ const eventUpdaters = {
     say("MONSTER SMASHED!  +$" + ev.tier.payout, 2800);
     return "done";
   },
+  treasure(ev) {
+    if (!ev.chest.broken) {
+      ev.x = ev.chest.x;
+      ev.z = ev.chest.z;
+      return null;
+    }
+    awardCash(TREASURE_PAYOUT);
+    spawnConfetti(ev.chest.x, ev.chest.z, 90);
+    say("TREASURE!  +$" + TREASURE_PAYOUT, 3200);
+    return "done";
+  },
+  rival(ev) {
+    ev.x = ev.rival.x;
+    ev.z = ev.rival.z;
+    if (ev.hits < RIVAL_HITS) return null;
+    awardCash(RIVAL_PAYOUT);
+    spawnConfetti(ev.rival.x, ev.rival.z, 60);
+    say("RIVAL WRECKED!  +$" + RIVAL_PAYOUT, 2800);
+    return "done";
+  },
   tuningRay(ev) {
     if (!eventGateCrossed(ev, ROAD_HALF_WIDTH + 1.6)) return null;
     applyRayEffect(
@@ -442,10 +555,22 @@ const eventUpdaters = {
 
 // Removes what an event placed, without any message. Used for timeouts and after success.
 function cleanupEvent(ev) {
-  if (ev.monster && !ev.monster.broken) {
-    const i = props.indexOf(ev.monster);
+  for (const p of [ev.monster, ev.chest]) {
+    if (!p || p.broken) continue;
+    const i = props.indexOf(p);
     if (i >= 0) props.splice(i, 1);
   }
+  if (ev.rival) ev.rival.isRival = false; // back to ordinary traffic
+}
+// Rival hits (T-047): called from resolveVehiclePair() in collisions.js for every vehicle contact.
+function eventVehicleHit(a, b, impact) {
+  const ev = currentEvent;
+  if (!ev || ev.type !== "rival" || onFoot || !controlled) return;
+  const other = a === ev.rival ? b : b === ev.rival ? a : null;
+  if (other !== controlled || impact < RIVAL_MIN_IMPACT || eventClock < ev.hitCooldown) return;
+  ev.hitCooldown = eventClock + 0.5;
+  ev.hits++;
+  if (ev.hits < RIVAL_HITS) say("RIVAL HIT!  " + ev.hits + " / " + RIVAL_HITS, 900);
 }
 
 function startEvent(typeId, force) {
@@ -568,10 +693,29 @@ function drawEvents(vp) {
     for (let i = 0; i < pips; i++)
       draw(
         monsterHealthPip,
-        modelMatrix(m.x + (i - (pips - 1) / 2) * 0.62, m.y + m.height + 0.6 + Math.sin(t * 3 + i) * 0.08, m.z, t),
+        modelMatrix(
+          m.x + (i - (pips - 1) / 2) * 0.62 * ev.tier.scale,
+          m.y + m.height + 0.6 * ev.tier.scale + Math.sin(t * 3 + i) * 0.08 * ev.tier.scale,
+          m.z,
+          t,
+          ev.tier.scale,
+        ),
         vp,
         cam,
       );
+    return;
+  }
+  if (ev.type === "treasure") {
+    const c = ev.chest;
+    draw(eventBeacons.treasure, modelMatrix(c.x, c.y + c.height + 1.5, c.z, 0, 1 + Math.sin(t * 5) * 0.12), vp, cam);
+    return;
+  }
+  if (ev.type === "rival") {
+    const r = ev.rival;
+    const top = (Number.isFinite(r.y) ? r.y : driveSurfaceH(r.x, r.z)) + 3.2;
+    draw(eventBeacons.rival, modelMatrix(r.x, top + 1.5, r.z, 0, 0.8), vp, cam);
+    for (let i = 0; i < RIVAL_HITS - ev.hits; i++)
+      draw(monsterHealthPip, modelMatrix(r.x + (i - (RIVAL_HITS - ev.hits - 1) / 2) * 0.7, top + Math.sin(t * 3 + i) * 0.08, r.z, t, 1.3), vp, cam);
     return;
   }
   const yaw = ev.axis === "z" ? 0 : Math.PI / 2; // local Z points along the road

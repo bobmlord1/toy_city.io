@@ -641,3 +641,31 @@ Known: the upgrade ramp launches cars at its crest like every ramp, so a heavily
 Not verified: on a real phone, including where the X sits on small screens.
 Files changed: `src/economy.js`, `src/vehicle_update.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest on mobile.
+
+### 2026-11-26 | Project Owner (relayed by Claude) -> All | Child playtest and approvals
+Status: answered
+Body: the child played for a long time and wanted to play again later. His only note: the creatures are "tiny". Owner approved as done after playtest: T-017 to T-022, T-025, T-028, T-033, T-038 to T-043 (steering, Tuning Ray, tuning pad, events and the sweep). Next: bigger creatures with more health and the same bump behavior (T-045), Treasure with a treasure-chest model and $1,000 (T-046), Rival (T-047), more props across the map (T-048), and more automated economy testing (T-049). Economy (T-044) looks good to the owner but needs more testing.
+
+### 2026-11-26 | Claude -> All | CLAIM T-045, T-046, T-047, T-048, T-049
+Status: open
+Files: `src/events.js`, `src/props.js`, `src/collisions.js` (rival hit hook), `src/hud.js` (event map symbols only), `src/camera_render.js` and `src/shadows.js` (prop distance culling, only if measured cost needs it), `tools/smoke_test.js`, `tools/economy_report.js` (new), `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: keep T-044 payout numbers; T-049 reports on balance without changing it.
+
+### 2026-11-26 | Claude -> All | HANDOFF T-045, T-046, T-047, T-048, T-049
+Status: partial (code complete and tested headless; owner playtest needed)
+Done:
+- T-045: creatures about 12, 18 and 28 units tall (were 5, 6 and 8; buildings are 9 to 55, median 18), radius 3.7/5.6/8.6 to cover the arms, health 22/36/55 (headless: 5, 9 and 13 full-speed stock rams). Bump behavior unchanged. Spawn clearance raised; 46 lawn sites remain. T-044 payouts kept ($250/$375/$550).
+- T-046 Treasure: new treasure-chest model (wooden chest, gold bands and lock, coins and gems), one-hit (any ram of about 7 mph), $1,000, no ordinary prop cash, square map symbol, 90 s, gold beacon. Line: "Someone asked about my research fund: What research fund?!"
+- T-047 Rival: one on-road traffic car in the usual distance band is marked (beacon and three pips). While marked it cruises at about 12 mph so a stock car can catch it; ramming it three times (closing speed about 5 mph or more, from the controlled vehicle only) pays $350 (my number, sized between the small and medium creature; ChatGPT please fold into T-044). Headless chase from behind with ram-and-back-off: wrecked in about 12 s on five seeds. On timeout the car becomes normal traffic again. Line: "I've maxed out my crash insurance! Let's see what it pays out!" Needed a one-line speed cap in `vehicle_update.js` (not in my claim; noted here).
+- Pool is now five events plus "no event", still equal weight with the halving rule. Longest gap over 4000 draws: 22 to 26 (plain random 36 to 54).
+- T-048: 168 new crates and barrels in 48 groups, one per block outside the center (196 total), placed by a one-off script that checked streets, ramps, buildings, rocks, activity pads, smash and drop-off spots and creature spawn sites; the smoke test re-checks placement. To keep phones smooth I added two small changes: far ordinary props are not drawn (draw calls 195 instead of about 349) and resting props skip the per-frame building check (physics 0.48 ms/frame instead of 1.39).
+- T-049: `tools/economy_report.js`. Findings below.
+- Smoke test: bigger creatures and stock hits to smash, spawn site count, Treasure (one hit, exact payout, nudge, timeout, symbol), Rival (speed cap, gentle and other-car hits ignored, real chase, unmark on finish and timeout), props (spread, placement, real-frame culling, resting prop still pushed out of a building), six-option pool. 14 deliberate breakages each failed the test. Two 12-minute soaks with the full pool: clean.
+Economy findings (T-049, headless, `node tools/economy_report.js 3 1`), for the owner and ChatGPT:
+- Earnings per minute: ramming one wall repeatedly $738; head-on at traffic up to $443 (no travel time); focused activities about $260 at x1 (about $650 at the x2.5 stage); mixed random play $217; ramp jumping up to $181; the event pool about $173 if every event is finished; props $60 (all props in the city hold about $3,350 and do not respawn).
+- Wall ramming is the outlier: each new contact pays up to $45 with no cooldown per surface, so backing up and hitting the same wall every 2.5 s buys 12 upgrades in under 3 minutes. Options: a cooldown per surface (for example, the same wall pays once per 10 s), diminishing returns for repeated hits, or a lower cap. Not changed here.
+- Treasure goes through `awardCash()`, so the progression multiplier lifts it to $2,500 after 12 paid upgrades. Decide whether Treasure should be exempt.
+- Minutes to afford 12 upgrades: walls 2.7, traffic 4.3, activities 4.8, mixed 6.7, events 7.3, ramps 10.3, props 31.
+Not verified: in a real browser. Giant creature looks and camera framing near them (the camera's wall pull-in only knows buildings, so it can end up inside a creature); the chest model; how findable the rival is; performance with 196 props on a real phone.
+Files changed: `src/events.js`, `src/props.js`, `src/physics.js`, `src/camera_render.js`, `src/collisions.js`, `src/hud.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `tools/economy_report.js` (new), `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Next agent should: owner playtest (`?event=cityAttack&tier=large`, `?event=treasure`, `?event=rival`). ChatGPT: review the economy findings for T-044.

@@ -871,8 +871,10 @@ const poolCounts = get(`(() => {
   }
   return counts;
 })()`);
-for (const id of ["cityAttack", "tuningRay", "rewardRing", "none"])
-  if (!(poolCounts[id] > 800 * 0.18 && poolCounts[id] < 800 * 0.32))
+const poolIds = get("EVENT_POOL.map(id => id || 'none')");
+if (poolIds.length !== 6) failures.push("Events: expected five events plus 'no event' in the pool, got " + poolIds);
+for (const id of poolIds)
+  if (!(poolCounts[id] > (800 / poolIds.length) * 0.7 && poolCounts[id] < (800 / poolIds.length) * 1.3))
     failures.push("Events: pool weights are not equal (" + JSON.stringify(poolCounts) + ")");
 // T-039: each draw halves the drawn option's weight until every option has come up, then all reset.
 const weightCheck = get(`(() => {
@@ -882,14 +884,14 @@ const weightCheck = get(`(() => {
   let guard = 0; while (eventPoolDrawn.some(Boolean) && guard++ < 100) drawFromEventPool();
   return {first, afterOne, reset: eventPoolWeights.every(w => w === 1) && eventPoolDrawn.every(d => !d)};
 })()`);
-if (weightCheck.afterOne[weightCheck.first] !== 0.5 || weightCheck.afterOne.filter((w) => w === 1).length !== 3)
+if (weightCheck.afterOne[weightCheck.first] !== 0.5 || weightCheck.afterOne.filter((w) => w === 1).length !== weightCheck.afterOne.length - 1)
   failures.push("Events: drawing an option did not halve only its weight (" + JSON.stringify(weightCheck.afterOne) + ")");
 if (!weightCheck.reset) failures.push("Events: weights did not reset once every option had been drawn");
 // The point of the weights: no option goes missing for long.
 const longestGap = get(`(() => { const last = {}, gap = {}; for (let i = 0; i < 4000; i++) { const k = String(rollEvent()); if (currentEvent) endEvent();
   gap[k] = Math.max(gap[k] || 0, i - (k in last ? last[k] : -1)); last[k] = i; } return Math.max(...Object.values(gap)); })()`);
-// Measured over 4000 draws: about 15 at most with the weights, 27 to 30 with plain random draws.
-if (longestGap > 20) failures.push("Events: an option went " + longestGap + " draws without coming up");
+// Measured over 4000 draws with six options: 22 to 26 at most with the weights, 36 to 54 plain random.
+if (longestGap > 30) failures.push("Events: an option went " + longestGap + " draws without coming up");
 // Test switch: ?event= starts an event, with optional tier/effect; bad ids do nothing.
 run(`startEvent("rewardRing")`, "q");
 if (get(`applyEventTestSwitch("?event=nonsense")`) !== false || get("currentEvent && currentEvent.type") !== "rewardRing")
@@ -1339,6 +1341,116 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   if (closeBtn.tagName !== "BUTTON" || !closeBtn.getAttribute("aria-label")) failures.push("Tuning pad: the close control is not a labelled button");
   run(`playerCar.x = -12; playerCar.z = -45; playerCar.vx = playerCar.vz = 0;
     playerCar.maxSpeed = __padSaved.maxSpeed; playerCar.accel = __padSaved.accel; playerCar.topSpeedLevel = __padSaved.top; playerCar.accelerationLevel = __padSaved.acc;`, "pad"); step(5);
+}
+
+// ---- T-045: creatures are building-sized and take several hits ----
+{
+  run("if (currentActivity) skipActivity(); if (currentEvent) endEvent(); eventNextRollAt = Infinity; onFoot = false; controlled = playerCar; playerCar.rayEffect = null;", "q");
+  const tiers = get("MONSTER_TIERS.map(t => ({id: t.id, tall: 4.7 * t.scale, radius: t.radius, hp: t.hp}))");
+  const wantTall = { small: 11, medium: 17, large: 26 };
+  for (const t of tiers)
+    if (t.tall < wantTall[t.id] || t.hp < 20 || t.radius < t.tall * 0.25)
+      failures.push("City Under Attack: the " + t.id + " creature is too small or too weak (" + JSON.stringify(t) + ")");
+  if (get("eventLawnSites.length") < 30) failures.push("City Under Attack: only " + get("eventLawnSites.length") + " spawn spots for the bigger creatures");
+  // A full-speed stock ram takes several hits to smash the small one.
+  run(`applyEventTestSwitch("?event=cityAttack&tier=small")`, "q");
+  let monsterRams = 0;
+  const savedLv = get("({m: playerCar.maxSpeed, a: playerCar.accel, i: playerCar.impactMultiplier})");
+  run("playerCar.maxSpeed = 20 * MPH_TO_MS; playerCar.accel = playerCar.baseAccel; playerCar.impactMultiplier = 1;", "q");
+  while (monsterRams < 20 && get("currentEvent !== null")) {
+    run(`(() => { const m = currentEvent.monster, v = controlled; v.x = m.x - m.radius - 14; v.z = m.z; v.yaw = Math.PI / 2; v.vx = v.vz = 0; v.yawRate = 0; v.grounded = true; v.y = driveSurfaceH(v.x, v.z); })()`, "q");
+    key("keydown", "w", "KeyW"); step(150); key("keyup", "w", "KeyW"); step(20); monsterRams++;
+  }
+  run(`playerCar.maxSpeed = ${savedLv.m}; playerCar.accel = ${savedLv.a}; playerCar.impactMultiplier = ${savedLv.i};`, "q");
+  if (monsterRams < 4 || get("currentEvent !== null")) failures.push("City Under Attack: the small creature took " + monsterRams + " stock rams (expected about 5)");
+  run("if (currentEvent) endEvent(); controlled.x = -12; controlled.z = -45; controlled.vx = controlled.vz = 0;", "q");
+  step(5);
+}
+// ---- T-046: Treasure ----
+{
+  if (get(`applyEventTestSwitch("?event=treasure")`) !== true || get("eventMarkers()[0].shape") !== "square" || get("currentEvent.chest.model !== undefined") !== true)
+    failures.push("Treasure: did not start with its chest model and square map symbol");
+  if (get("currentEvent.chest.hp") > 1) failures.push("Treasure: the chest should break in one hit (hp " + get("currentEvent.chest.hp") + ")");
+  const savedT = get("({m: playerCar.maxSpeed, a: playerCar.accel, i: playerCar.impactMultiplier})");
+  run("playerCar.maxSpeed = 20 * MPH_TO_MS; playerCar.accel = playerCar.baseAccel; playerCar.impactMultiplier = 1;", "q");
+  run(`(() => { const c = currentEvent.chest, v = controlled; v.x = c.x - c.radius - 3; v.z = c.z; v.yaw = Math.PI / 2; v.vx = 1.6; v.vz = 0; v.grounded = true; v.yawRate = 0; })()`, "q");
+  step(90);
+  if (get("currentEvent && currentEvent.chest.broken") !== false) failures.push("Treasure: a gentle nudge broke the chest");
+  const cashT = get("cash");
+  run(`(() => { const c = currentEvent.chest, v = controlled; v.x = c.x - c.radius - 12; v.z = c.z; v.yaw = Math.PI / 2; v.vx = v.vz = 0; v.grounded = true; v.yawRate = 0; })()`, "q");
+  key("keydown", "w", "KeyW"); step(120); key("keyup", "w", "KeyW"); step(20);
+  if (get("cash") - cashT !== 1000 || get("currentEvent") !== null) failures.push("Treasure: one ram should pay exactly $1,000 (got +" + (get("cash") - cashT) + ")");
+  step(10);
+  if (get("cash") - cashT !== 1000) failures.push("Treasure: paid more than once");
+  run(`playerCar.maxSpeed = ${savedT.m}; playerCar.accel = ${savedT.a}; playerCar.impactMultiplier = ${savedT.i};`, "q");
+  run(`applyEventTestSwitch("?event=treasure")`, "q");
+  step(91 * 60);
+  if (get("currentEvent") !== null || get("props.some(p => p.type === 'treasure')")) failures.push("Treasure: the chest was not removed when the timer ran out");
+  run("controlled.x = -12; controlled.z = -45; controlled.vx = controlled.vz = 0;", "q");
+  step(5);
+}
+// ---- T-047: Rival ----
+{
+  if (get(`applyEventTestSwitch("?event=rival")`) !== true || get("eventMarkers()[0].shape") !== "triangle")
+    failures.push("Rival: did not start with its arrowhead map symbol");
+  const rivalId = get("currentEvent.rival.id");
+  step(240);
+  if (get("Math.hypot(currentEvent.rival.vx, currentEvent.rival.vz)") > get("RIVAL_MAX_CRUISE") + 0.3)
+    failures.push("Rival: the marked car is faster than RIVAL_MAX_CRUISE");
+  // Gentle touches and other traffic do not count.
+  run(`(() => { const r = currentEvent.rival; eventVehicleHit(controlled, r, 1.0); const other = trafficFleet.find(v => v !== r); eventVehicleHit(other, r, 9); })()`, "q");
+  if (get("currentEvent.hits") !== 0) failures.push("Rival: a gentle touch or another car's hit counted");
+  // Chase from behind: ram, back off, ram again.
+  run(`(() => { const r = currentEvent.rival, v = controlled; const f = [Math.sin(r.yaw), Math.cos(r.yaw)]; v.x = r.x - f[0] * 15; v.z = r.z - f[1] * 15; v.yaw = r.yaw; v.vx = f[0] * 4; v.vz = f[1] * 4; v.yawRate = 0; v.grounded = true; })()`, "q");
+  const cashR = get("cash"), payoutR = get("RIVAL_PAYOUT");
+  let mode = "chase", until = 0, last = 0;
+  for (let t = 0; t < 40 * 60 && get("currentEvent !== null"); t += 3) {
+    const st = get("(() => { const r = currentEvent.rival, v = controlled; let e = Math.atan2(r.x - v.x, r.z - v.z) - v.yaw; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return {e, d: Math.hypot(r.x - v.x, r.z - v.z), hits: currentEvent.hits}; })()");
+    if (st.hits !== last || (mode === "chase" && st.d < 4.4)) { last = st.hits; mode = "back"; until = t + 45; }
+    if (mode === "back" && t >= until) mode = "chase";
+    const ch = mode === "chase";
+    key(ch ? "keydown" : "keyup", "w", "KeyW"); key(ch ? "keyup" : "keydown", "s", "KeyS");
+    key(ch && st.e > 0.08 ? "keydown" : "keyup", "a", "KeyA"); key(ch && st.e < -0.08 ? "keydown" : "keyup", "d", "KeyD");
+    step(3);
+  }
+  for (const k of ["w", "s", "a", "d"]) key("keyup", k, "Key" + k.toUpperCase());
+  const gotR = get("cash") - cashR;
+  if (get("currentEvent") !== null || gotR < payoutR || gotR > payoutR + 300)
+    failures.push("Rival: ramming from behind did not wreck it within 40 s (got +" + gotR + ")");
+  if (get(`trafficFleet.find(v => v.id === "${rivalId}").isRival`)) failures.push("Rival: the car stayed marked after the event");
+  run(`applyEventTestSwitch("?event=rival")`, "q");
+  const rival2 = get("currentEvent.rival.id");
+  step(91 * 60);
+  if (get("currentEvent") !== null || get(`trafficFleet.find(v => v.id === "${rival2}").isRival`)) failures.push("Rival: the timeout did not return the car to normal traffic");
+  run("controlled.x = -12; controlled.z = -45; controlled.vx = controlled.vz = 0;", "q");
+  step(5);
+}
+// ---- T-048: props across the city ----
+{
+  const propInfo = get(`(() => { const ordinary = props.filter(p => !p.model);
+    const quads = new Set(ordinary.map(p => (p.x < -165 ? "W" : p.x > 165 ? "E" : "C") + (p.z < -165 ? "S" : p.z > 165 ? "N" : "C")));
+    const bad = [];
+    for (const p of ordinary) { if (!propSpotAllowed(p.x, p.z)) bad.push("street/ramp " + p.x + "," + p.z);
+      for (const b of buildingColliders) if (Math.abs(p.x - b.x) < b.hw + p.radius - 0.05 && Math.abs(p.z - b.z) < b.hl + p.radius - 0.05) bad.push("inside " + b.kind + " " + p.x.toFixed(1) + "," + p.z.toFixed(1)); }
+    return {count: ordinary.length, zones: quads.size, bad: bad.slice(0, 5)}; })()`);
+  if (propInfo.count < 150 || propInfo.zones < 9) failures.push("Props: expected groups in every part of the city (" + JSON.stringify(propInfo) + ")");
+  if (propInfo.bad.length) failures.push("Props: badly placed: " + propInfo.bad.join("; "));
+  // Far ordinary props are not drawn in a real frame; event props always are.
+  run(`controlled.x = -12; controlled.z = -45; startEvent("treasure"); window.__propDraws = 0; window.__chestDraws = 0; window.__realDraw = draw;
+    draw = function (mesh, ...rest) { if (mesh === barrelModel || mesh === crateModel) __propDraws++; if (mesh === treasureChestMesh) __chestDraws++; return __realDraw.call(this, mesh, ...rest); };
+    currentEvent.chest.x = 400; currentEvent.chest.z = 400;`, "cull");
+  step(1);
+  const cull = get("({drawn: __propDraws, chest: __chestDraws, ordinary: props.filter(p => !p.model && !p.broken).length})");
+  run("draw = __realDraw; endEvent();", "cull");
+  if (!(cull.drawn > 0 && cull.drawn < cull.ordinary - 50) || cull.chest < 1)
+    failures.push("Props: distance culling is wrong in a real frame (" + JSON.stringify(cull) + ")");
+  // A resting prop that gets pushed into a building is still pushed back out.
+  const pushed = get(`(() => { const b = buildingColliders.find(q => q.kind === "building" && q.hw > 6);
+    const p = {type: "crate", x: b.x - b.hw - 0.8, z: b.z, y: 0, vx: 0, vz: 0, yaw: 0, roll: 0, mass: 34, radius: 0.72, hp: 9.5, broken: false};
+    props.push(p); for (let i = 0; i < 30; i++) updateProps(1 / 60);
+    p.vx = 12; for (let i = 0; i < 60; i++) updateProps(1 / 60);
+    const inside = Math.abs(p.x - b.x) < b.hw && Math.abs(p.z - b.z) < b.hl; props.splice(props.indexOf(p), 1); return inside; })()`);
+  if (pushed) failures.push("Props: a resting prop pushed toward a building ended up inside it");
 }
 
 if (failures.length) {

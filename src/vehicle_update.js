@@ -44,7 +44,8 @@ function updateVehicle(v, dt) {
       // Cruise speed is the speed the car is trying to hold. It brakes hard for a slower car ahead
       // and recovers gently once the road is clear. The route progresses at this speed.
       if (v.trafficCruise === undefined) v.trafficCruise = v.maxSpeed;
-      const wanted = Math.min(v.maxSpeed, trafficFollowLimit(v), trafficTurnLimit(v));
+      // isRival: the Rival event's marked car cruises slower so it can be caught (src/events.js).
+      const wanted = Math.min(v.maxSpeed, trafficFollowLimit(v), trafficTurnLimit(v), v.isRival ? RIVAL_MAX_CRUISE : Infinity);
       if (wanted < v.trafficCruise)
         v.trafficCruise = Math.max(wanted, v.trafficCruise - TRAFFIC_BRAKE * dt);
       else v.trafficCruise = Math.min(wanted, v.trafficCruise + TRAFFIC_ACCEL * dt);

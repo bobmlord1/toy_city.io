@@ -221,6 +221,7 @@ function resolveVehiclePair(a, b) {
     addCollisionBodyReaction(b, impact, -nx, -nz);
     rayBounce(a, -nx, -nz, impact); // Boing Bumpers (src/events.js); no-op otherwise
     rayBounce(b, nx, nz, impact);
+    eventVehicleHit(a, b, impact); // Rival event hits (src/events.js); no-op otherwise
     if (a.ai) a.aiKnockTime = Math.max(a.aiKnockTime, 2.0);
     if (b.ai) b.aiKnockTime = Math.max(b.aiKnockTime, 2.0);
     if (Math.abs(rel) > 3) {

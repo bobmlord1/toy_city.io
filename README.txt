@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.21.3
+FREE ROAM CAR PLAYGROUND - VERSION 0.22.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -128,3 +128,11 @@ Version 0.21.2 (T-042):
 Version 0.21.3 (T-043):
 - The tuning pad now helps you stop on it: let go of the gas near the pad and the car gently rolls onto it and stops. Press gas or reverse to drive away any time.
 - The tuning panel has an X button (or press Escape) to close it, so it never blocks the touch controls. It comes back the next time you drive onto the pad.
+
+Version 0.22.0 (T-045 to T-049):
+- City Under Attack creatures are now giant: about as tall as a house, an apartment block, or most of a tower. They take more hits to smash but still slide around when you bump them.
+- New Toybox Event, Treasure: smash Dr. BadDude's treasure chest in one hit for $1,000.
+- New Toybox Event, Rival: one traffic car is marked. Ram it three times before time runs out.
+- Crates and barrels now stand in every part of the city, not just the center.
+- Test switch: ?event=treasure and ?event=rival also work.
+- For developers: tools/economy_report.js measures how fast each way of playing earns money.

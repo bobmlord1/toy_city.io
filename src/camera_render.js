@@ -9,6 +9,7 @@ let camera = { x: 0, y: 8, z: -12 };
 const CAMERA_MAX_LAG = 4.5;
 // T-033: if a building stands between the target and the camera, move the camera in to just
 // in front of the nearest wall, so the view never ends up inside or behind a building.
+const PROP_DRAW_DISTANCE = 170; // Manhattan distance from the camera, cheap to test
 function keepCameraOutOfBuildings(target) {
   const dx = camera.x - target[0],
     dy = camera.y - target[1],
@@ -110,6 +111,9 @@ function drawWorld(dt) {
   // Props are individually movable and have simple momentum.
   for (const p of props) {
     if (p.broken) continue;
+    // T-048: ordinary crates and barrels beyond PROP_DRAW_DISTANCE are a pixel or two; skip them.
+    // Event props (they have p.model: the creature, the chest) are always drawn.
+    if (!p.model && Math.abs(p.x - camera.x) + Math.abs(p.z - camera.z) > PROP_DRAW_DISTANCE) continue;
     const mesh = p.model || (p.type === "barrel" ? barrelModel : crateModel); // p.model: event props
     draw(mesh, modelMatrix(p.x, p.y, p.z, p.yaw), vp, [camera.x, camera.y, camera.z]);
   }
