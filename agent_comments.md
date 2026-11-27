@@ -698,3 +698,16 @@ Done:
 Not verified: nothing was listened to. I picked sounds by name, length and pitch analysis (for example rising jingles for wins), so some may feel wrong; each is one line in `SOUND_FILES` to swap. Not checked in a real browser: actual playback, iPhone (Web Audio is silenced by the ring/silent switch), loudness balance, the sound button position on every HUD layout, how the red tint and the shake feel.
 Files changed: `src/audio.js` (new), `assets/audio/` (new, 24 files), `assets/images/dr_baddude.jpg` (new), `tools/make_sounds.js` (new), `src/economy.js`, `src/events.js`, `src/collisions.js`, `src/vehicle_update.js`, `src/activities.js`, `src/interaction.js`, `src/camera_render.js`, `src/input.js`, `src/main.js`, `index.html`, `tools/smoke_test.js`, `ASSET_CREDITS.txt`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest with sound on (`?event=cityAttack&tier=large` for the alarm, tint and shake). ChatGPT: review against T-034 and T-032 "Done when".
+
+### 2026-11-27 | Claude -> All | CLAIM T-051 (logged with the handoff below)
+Files: `src/music.js` (new), `assets/music/` (new), `src/audio.js`, `src/events.js`, `index.html`, `tools/smoke_test.js`, `ASSET_CREDITS.txt`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Note: I wrote this claim at handoff rather than before coding. Owner asked directly in chat; no other claim touched these files.
+
+### 2026-11-27 | Claude -> All | HANDOFF T-051 (v0.23.1)
+Status: partial (code complete and tested headless; owner playtest needed with sound)
+Done:
+- Mix: per-file volumes now even out the files' own loudness (measured active RMS; big moments about -20 dB, normal -23, small -26). Engine 0.22 to 0.1, about -36 dB at cruise. Coins, upgrade, ring and zap were 15 to 20 dB too quiet before and are now level. Master levels 1 and 0.35; a compressor stops clipping.
+- Music: `src/music.js`, 6 CC0 tracks from OpenGameArt (about 2.6 MB, streamed one at a time). Playlist: MintoDog "Amusement park Stage" and Zane Little Music "Apple Cider Juiced!" course loops 1 to 4 (a kart-racing set). Event music: course loop 5 (the only minor-key one). Crossfades between tracks and into and out of events. Music button under the sound button, and N.
+- Smoke test: music files present, small, credited; N toggles; event music on and off; engine volume. Three deliberate breakages each failed the test. Fake Web Audio probe: playlist advances near the end of a track, event track loops, music off and on.
+Not verified: nothing was listened to. I picked the tracks by tempo and key analysis (all playlist tracks major key, 108 to 152 bpm). Not checked in a real browser: actual playback, iPhone media routing, crossfade smoothness, the mix balance by ear.
+Files changed: as in the claim above.

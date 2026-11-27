@@ -15,6 +15,7 @@ index.html          UI markup, CSS, and the boot script (loads assets, then src/
 assets/             vehicle_meshes.json + .bin (CC0 models from Grab3D, see ASSET_CREDITS.txt)
 assets/audio/       sound effects (Kenney CC0 plus two made by tools/make_sounds.js)
 assets/images/      dr_baddude.jpg, the comms portrait (160 x 160)
+assets/music/       background music (CC0, OpenGameArt), streamed
 src/                all game code, one concern per file
 tools/smoke_test.js headless check, run before every handoff
 tools/make_sounds.js rebuilds the made-from-code sounds and the loops (needs ffmpeg)
@@ -35,6 +36,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | --- | --- |
 | `core.js` | Canvas, WebGL context, start button, fatal error screen, math helpers. Loads first. |
 | `audio.js` | Web Audio sound effects (`sfx()`), engine and skid loops (`updateAudio()`), sound button and M key (T-034). |
+| `music.js` | Background music playlist, event music, music button and N key (T-051). |
 | `renderer.js` | `MeshBuilder`, shaders, lighting modes, matrices, `draw()`. |
 | `world_config.js` | World size, street dimensions, ramp definitions, ground height (`driveSurfaceH`). |
 | `world_streets.js` | Data-driven street kit and its colliders. |
@@ -148,6 +150,11 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 - **Level.** Three levels (on 0.55, quiet 0.2, off) on the master gain, cycled by `#soundToggle` or M and kept in localStorage. The button sits just under the dashboard; `placeSoundButton()` re-measures every 0.5 s because the dashboard height changes with the HUD layout. The context is suspended while the tab is hidden.
 - **Hooks.** Crash (every new hit, even when the cooldown blocks the cash), coins for cash, prop smash, creature hit and smash, landing thump, boost, car door, upgrade purchase, activity start, pickup and finish, skip click, event klaxon, comms, ray zap, Turbo, Super Springs hop, Boing bounce, Reward Ring and event wins.
 - **Assets.** MP3 (mono, 56 kbps) for one-shots because every browser decodes it; the two loops are short WAVs so they loop without the MP3 gap. About 290 KB in all. `tools/make_sounds.js` rebuilds the klaxon, boing and both loops; sources are in `ASSET_CREDITS.txt`.
+
+## Mix and music (T-051)
+
+- **Mix (v0.23.1).** The volume in `SOUND_FILES` now evens out each file's own loudness, measured as RMS while it plays: big moments about -20 dB, ordinary effects about -23 dB, small ones about -26 dB. `ENGINE_VOLUME` dropped from 0.22 to 0.1 (about -36 dB at cruise), so the engine sits under everything. Sound levels are 1 (on) and 0.35 (quiet). A gentle `DynamicsCompressor` after the master gain stops stacked sounds from clipping.
+- **Music.** `src/music.js` streams `assets/music/*.mp3` through two `<audio>` elements routed into the master gain with `createMediaElementSource`, so the sound level covers music. Decoding whole songs would cost about 20 MB each on a phone. `MUSIC_TRACKS` (five upbeat major-key tracks, mastered to about -18 LUFS, then `MUSIC_VOLUME` 0.35) play in order from a random start, crossfading over `MUSIC_FADE_SECONDS` a little before each ends. `setEventAlert()` in `events.js` calls `setEventMusic()`, which crossfades to `EVENT_MUSIC` (looped) for the event and back to the playlist after. Music starts with the audio context on the first tap or key press. `#musicToggle` (under the sound button) and N turn music on or off, remembered in localStorage. Media elements keep playing while the context is suspended, so `pauseMusicForHiddenTab()` pauses them with the tab. If media routing fails the element's own volume is used.
 
 ## Crash bonus cooldown (T-050)
 

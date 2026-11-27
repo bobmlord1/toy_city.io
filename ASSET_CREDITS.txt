@@ -12,3 +12,8 @@ Sound effects (assets/audio/), all CC0 1.0 public domain unless noted. Converted
 The OpenGameArt files were taken from a GitHub copy (https://github.com/zuujis-cc0/opengameart-kenney-sound-effect) that includes Kenney's own license files.
 
 Dr. BadDude portrait (assets/images/dr_baddude.jpg): supplied by the project owner for this game; cropped and resized to 160 x 160 JPG.
+
+Music (assets/music/), all CC0 1.0 public domain from OpenGameArt. Converted with ffmpeg to 64 kbps stereo MP3 and evened out to about -18 LUFS; the short loops are written out twice in a row so they repeat without a gap:
+- MintoDog, "Amusement park Stage" (https://opengameart.org/content/amusement-park-stage): amusement_park.mp3.
+- Zane Little Music, "Apple Cider Juiced!" (https://opengameart.org/content/apple-cider-juiced): cider_course_1.mp3, cider_course_2.mp3, cider_course_3.mp3 and cider_course_4.mp3 (course_1_loop to course_4_loop), event_theme.mp3 (course_5_loop, played during Dr. BadDude's events).
+Taken from a GitHub copy (https://github.com/zuujis-cc0/opengameart-music) that lists the CC0 source of every file.

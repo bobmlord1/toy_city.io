@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.23.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.23.1
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -145,3 +145,7 @@ Version 0.23.0:
 - Dr. BadDude now has a portrait in his messages. When one of his events starts, an alarm sounds and the screen turns dark red until the event ends. A monster arriving shakes the screen.
 - Ramming the same wall or car again only pays a crash bonus after 8 seconds.
 - Treasure line: "The government asked about my research fund: What research fund?!"
+
+Version 0.23.1:
+- Music: five upbeat tracks that blend into each other, and a tenser one while Dr. BadDude's events run. The note button under the sound button (or the N key) turns music on or off. Free CC0 music from OpenGameArt; see ASSET_CREDITS.txt.
+- Sound mix: the engine is much quieter, and quiet effects such as coins, upgrades and the Reward Ring are louder, so everything sits at a similar level.

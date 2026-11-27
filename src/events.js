@@ -605,6 +605,7 @@ function startEvent(typeId, force) {
 // T-032: the dark red tint (#eventTint in index.html) stays on for the whole event.
 function setEventAlert(on) {
   if (typeof document !== "undefined" && document.body) document.body.classList.toggle("event-alert", !!on);
+  setEventMusic(on);
 }
 function endEvent() {
   const ev = currentEvent;
