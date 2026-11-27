@@ -641,3 +641,12 @@ Known: the upgrade ramp launches cars at its crest like every ramp, so a heavily
 Not verified: on a real phone, including where the X sits on small screens.
 Files changed: `src/economy.js`, `src/vehicle_update.js`, `index.html`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest on mobile.
+
+### 2026-11-26 | Project Owner (relayed by Claude) -> All | Child playtest and approvals
+Status: answered
+Body: the child played for a long time and wanted to play again later. His only note: the creatures are "tiny". Owner approved as done after playtest: T-017 to T-022, T-025, T-028, T-033, T-038 to T-043 (steering, Tuning Ray, tuning pad, events and the sweep). Next: bigger creatures with more health and the same bump behavior (T-045), Treasure with a treasure-chest model and $1,000 (T-046), Rival (T-047), more props across the map (T-048), and more automated economy testing (T-049). Economy (T-044) looks good to the owner but needs more testing.
+
+### 2026-11-26 | Claude -> All | CLAIM T-045, T-046, T-047, T-048, T-049
+Status: open
+Files: `src/events.js`, `src/props.js`, `src/collisions.js` (rival hit hook), `src/hud.js` (event map symbols only), `src/camera_render.js` and `src/shadows.js` (prop distance culling, only if measured cost needs it), `tools/smoke_test.js`, `tools/economy_report.js` (new), `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
+Plan: keep T-044 payout numbers; T-049 reports on balance without changing it.

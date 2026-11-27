@@ -62,28 +62,28 @@ Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/activities.js`, `src/props.js` (return the placed prop), `src/vehicle_update.js` (record the launch ramp id), `src/hud.js` (map marker color and edge pins only), `index.html` (skip button label and version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: the owner wants every activity to sit on the map as a marked start pad that the player drives onto, instead of the game assigning the next one.
 Done when: with no activity running, every activity's start pad shows in the world and on the minimap; driving onto one starts it; SKIP stops it with no penalty; nothing starts on its own; still only one activity at a time.
-Status: code complete in v0.17.0, waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-018 Smash targets and stunt jump activity types
 Assigned to: Claude. Owner approved 2026-11-25.
 Files: same as T-017.
 Why: the remaining two approved activity types from T-001.
 Done when: smash targets spawns a few marked barrels and crates near its pad and pays once when all are broken; stunt jump asks for a jump off one marked ramp with modest airtime and pays once on landing; neither has a timer or a fail state.
-Status: code complete in v0.17.0, waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-019 More delivery locations across the city
 Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/activities.js`, `tools/smoke_test.js`.
 Why: the five deliveries all sit in the middle of the city.
 Done when: deliveries start and end in every part of the city, payouts stay in the $75 to $150 range and grow with distance, and the smoke test rejects pads that overlap buildings, rocks, ramps or each other.
-Status: code complete in v0.17.0, waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-020 Traffic must not drive through buildings
 Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/vehicle_update.js`, `tools/smoke_test.js`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: a traffic car knocked off its lane can drive straight through buildings, because the traffic branch of `updateVehicle()` never runs building collisions.
 Done when: a traffic car aimed at a building from the lawn never ends up inside it, and `tools/traffic_report.js` shows no new stuck cars.
-Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-021 Toybox Events framework
 Assigned to: Claude. Owner approved 2026-11-25. Part of T-015.
@@ -91,7 +91,7 @@ Files: `src/events.js` (new), `index.html` (script list, comms panel, version), 
 Why: shared timing, announcement, map marking and cleanup for occasional optional events.
 Done when: on a fixed interval the game draws from a pool of every event plus "no event", all with equal weight; at most one event at a time; a comms panel slides out with the event name and Dr. BadDude's line; the event has a unique minimap symbol; when its timer runs out it disappears cleanly with no fail message or penalty; activities in progress keep going.
 Notes (owner decisions 2026-11-25): timers only make an event vanish, never a fail state. One-liners stay; the child does not need to read them. Events appear on a timer from a pool that includes "no event", all equal weight.
-Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-022 Toybox Events: City Under Attack, Tuning Ray, Reward Ring
 Assigned to: Claude. Owner approved 2026-11-25. Events 1 to 3 of T-015.
@@ -99,7 +99,7 @@ Files: same as T-021.
 Why: the first three approved Toybox Events.
 Done when: City Under Attack places a blocky stationary creature in one of three tiers that light bumps visibly shove and that pays once when smashed; Tuning Ray places a hard-to-miss ray gate on a road near the player, and driving through it gives one of four temporary handling effects that undo cleanly without touching upgrades; Reward Ring places a golden ring on a road and driving through it gives a random permanent upgrade to the current vehicle.
 Notes (owner decisions 2026-11-25): Reward Ring upgrades are permanent. Tuning Ray is opt-in (drive through it) but must be hard to miss.
-Status: code complete in v0.18.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-025 Gameplay regression and integration sweep
 Assigned to: Claude; project owner playtests.
@@ -108,7 +108,7 @@ Why: With all activity types and Toybox Events arriving, ensure the core systems
 Done when: smoke tests cover critical activity/event transitions and regressions; owner can test free roam, all activities, events, vehicle collisions, reset/recovery and rewards without encountering a critical issue; remaining known issues are documented rather than hidden.
 Notes: Fix only scoped, reproducible defects; avoid broad architecture changes.
 
-Status: code complete in v0.21.0 (headless), waiting on owner playtest. Fixed: walking player was clamped to the original small map (+/-106) and could be stranded far from their car; props (including smash targets and the event creature) could be pushed off the playable ground. Added `tools/soak_test.js` and cross-system smoke checks. Known, not fixed: see the HANDOFF entry of 2026-11-26.
+Status: done. Owner approved after playtest on 2026-11-26.
 ### T-026 Backyard equirectangular skybox
 Assigned to: Claude; project owner supplies and playtests the texture.
 Files: rendering/environment files as required, startup/settings UI only if needed, asset(s) (new), `tools/smoke_test.js` where applicable, `TASKS.md`.
@@ -130,7 +130,7 @@ Why: Address visible traffic routing, spacing, intersection incidents, post-coll
 Done when: traffic recovers reliably from bumps and route deviations, does not routinely drive through buildings or remain wedged, and intersections/spacing feel credible in owner playtesting; regression checks cover fixes.
 Notes: Avoid adding traffic vehicles or complex right-of-way simulation without a demonstrated need. Resolve the known post-knock building traversal if reproducible.
 
-Status: code complete in v0.21.0 (headless), waiting on owner playtest. Traffic now slows for turns: wrong-side driving just past intersections fell about 93%, collisions about 30%, lawn trips about 60%. Left-turn conflicts with oncoming traffic at intersections remain (no yielding).
+Status: done. Owner approved after playtest on 2026-11-26.
 ### T-029 Toy-playset material and lighting consistency
 Assigned to: Claude; project owner reviews visually.
 Files: rendering/material files and affected assets as required, `TASKS.md`.
@@ -166,7 +166,7 @@ Why: Improve camera comfort and robustness during driving, collisions, jumps, ve
 Done when: camera smoothing and positioning are comfortable, avoid persistent clipping or disorienting transitions, and recovery returns the player to a usable state; owner playtests representative situations.
 Notes: Keep the current camera design; avoid a camera-system rewrite.
 
-Status: code complete in v0.21.0 (headless), waiting on owner playtest. Camera lag is capped (Turbo Overload no longer leaves the camera twice as far back) and the camera moves in front of walls instead of ending up inside buildings.
+Status: done. Owner approved after playtest on 2026-11-26.
 ### T-034 Lightweight sound-effects pass
 Assigned to: project owner / ChatGPT (asset/design); Claude (integration).
 Files: sound assets (new), audio/gameplay/UI files as required, `TASKS.md`.
@@ -200,14 +200,14 @@ Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/activities.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: owner playtest found pads too close together in some areas. Instead of moving them, show fewer at once.
 Done when: only three start pads are active and shown at a time, one delivery, one smash and one stunt, chosen at random and spread apart; finishing or skipping an activity draws a new three; the activity just finished or skipped is not in the next draw.
-Status: code complete in v0.19.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-039 Event draw weighting and a test switch
 Assigned to: Claude. Owner approved 2026-11-25.
 Files: `src/events.js`, `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: in playtest the Tuning Ray never came up. Purely random draws can leave one option out for a long time, and there was no quick way to test a specific event.
 Done when: every option in the pool (each event and "no event") starts at equal weight; each time an option is drawn its weight halves; once every option has been drawn at least once, all weights reset. Adding `?event=<id>` to the page address starts that event as soon as play begins (optionally `&effect=` for the ray and `&tier=` for the creature), with no visible change for normal play.
-Status: code complete in v0.19.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-040 Tuning Ray rework after playtest
 Assigned to: Claude. Owner approved 2026-11-25.
@@ -215,28 +215,63 @@ Files: `src/events.js`, `src/vehicle_update.js`, `src/collisions.js`, `tools/smo
 Why: owner playtest of the ray effects. Turbo Overload felt slow, Tank Treads felt like a downgrade, Super Springs should hop higher, and Dr. BadDude's line implied the effect applied without driving through anything.
 Done when: the line reads "This will make your car at least 37% better. I just need to measure at what!"; Turbo Overload gives 100 mph and huge acceleration for a few seconds, then eases back down; Tank Treads is replaced by a more fun modifier; Super Springs hops about twice as high; Soap Tires is unchanged.
 Notes (owner decisions 2026-11-25): Soap Tires is fun as is. Replacement modifier chosen by Claude: Boing Bumpers (walls and vehicles bounce the car off hard with a hop); the owner can swap it after playtest.
-Status: code complete in v0.20.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-041 Mobile steering is too touchy
 Assigned to: Claude. Owner approved 2026-11-26 (bug found in mobile playtest; fix before new tasks).
 Files: `src/input.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: on touch, steering jumps from straight to full lock, so driving straight is nearly impossible. The swipe stick was on/off: about 10 px of sideways drift gave full steering, the same as holding A or D.
 Done when: the touch stick steers in proportion to how far it is pushed sideways, with a dead zone large enough for a wobbling thumb to drive straight and a gentle curve near center; keyboard steering is unchanged.
-Status: code complete in v0.21.1 (headless), waiting on owner playtest on a phone.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-042 Tuning Ray: more dramatic effects
 Assigned to: Claude. Owner approved 2026-11-26 (mobile playtest notes).
 Files: `src/events.js`, `src/vehicle_update.js` (speed limit hook), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: Turbo Overload's speed was right but too short; Super Springs and Boing Bumpers were not dramatic enough.
 Done when: Turbo Overload lasts three times as long (18 s); Super Springs hops at least three times as high; Boing Bumpers throws the car away from what it hit clearly harder and faster.
-Status: code complete in v0.21.2 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-26.
 
 ### T-043 Tuning pad: gentle stop, and a close button
 Assigned to: Claude. Owner approved 2026-11-26 (mobile playtest notes).
 Files: `src/economy.js`, `src/vehicle_update.js` (one hook), `index.html` (close button, its style, version), `tools/smoke_test.js`, `README.txt`, `ARCHITECTURE.md`, `TASKS.md`.
 Why: it is hard to stop on the gold pad, and on some screen sizes the tuning panel covers the touch controls so the player cannot drive away.
 Done when: near the pad, a coasting car is gently pulled onto it and slowed to a stop; any gas, reverse or boost breaks free with no resistance; the panel has a close (X) button that hides it until the car leaves the pad area.
-Status: code complete in v0.21.3 (headless), waiting on owner playtest on a phone.
+Status: done. Owner approved after playtest on 2026-11-26.
+
+### T-045 Bigger City Under Attack creatures
+Assigned to: Claude. Owner approved 2026-11-26.
+Files: `src/events.js`, `tools/smoke_test.js`, docs.
+Why: playtest: the child called the creatures "tiny". The large one (about 8 units) was shorter than the smallest building (9; median 18).
+Done when: creatures are about 12, 18 and 28 units tall (small, medium, large) with colliders to match, take more hits to smash, keep the light bump behavior, and still find spawn spots clear of buildings and streets. Payouts stay as set in T-044.
+Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+
+### T-046 Toybox Event: Treasure
+Assigned to: Claude. Owner approved 2026-11-26. Event 5 of T-015.
+Files: `src/events.js`, `src/hud.js` (map symbol), `tools/smoke_test.js`, docs.
+Why: the last two T-015 events. Owner: unique treasure-chest model, $1,000 payout.
+Done when: a treasure chest appears on open ground with one-hit health; smashing it pays $1,000 once with no ordinary prop cash; it has its own map symbol; it joins the equal-weight pool and vanishes cleanly on its timer.
+Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+
+### T-047 Toybox Event: Rival
+Assigned to: Claude. Owner approved 2026-11-26. Event 4 of T-015.
+Files: `src/events.js`, `src/collisions.js` (one hook), `src/hud.js` (map symbol), `tools/smoke_test.js`, docs.
+Why: the last two T-015 events.
+Done when: one traffic car becomes a marked rival; wrecking into it enough times before the timer runs out pays once; it reuses normal vehicle collisions; on timeout it quietly becomes ordinary traffic again.
+Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+
+### T-048 More physics props across the city
+Assigned to: Claude. Owner approved 2026-11-26.
+Files: `src/props.js` (placement data), `src/camera_render.js` and `src/shadows.js` only if draw cost needs distance culling, `tools/smoke_test.js`, docs.
+Why: all 28 props were in the city center.
+Done when: crates and barrels stand in small groups in every district, off streets, ramps, buildings and activity pads, without starving creature spawn spots or hurting frame cost noticeably.
+Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+
+### T-049 Economy automated testing
+Assigned to: Claude. Owner approved 2026-11-26.
+Files: `tools/economy_report.js` (new), docs.
+Why: the T-044 rebalance needs more thorough testing; the soak test showed crashing earning about as much as activities.
+Done when: a headless tool reports earnings per minute by source for several play styles, time to afford each upgrade, and checks for exploits; findings are logged for the owner and ChatGPT. Balance numbers are not changed in this task (T-044 is ChatGPT's).
+Status: tool and findings in v0.22.0.
 
 ## Unnumbered backlog
 
