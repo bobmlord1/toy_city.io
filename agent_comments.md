@@ -711,3 +711,8 @@ Done:
 - Smoke test: music files present, small, credited; N toggles; event music on and off; engine volume. Three deliberate breakages each failed the test. Fake Web Audio probe: playlist advances near the end of a track, event track loops, music off and on.
 Not verified: nothing was listened to. I picked the tracks by tempo and key analysis (all playlist tracks major key, 108 to 152 bpm). Not checked in a real browser: actual playback, iPhone media routing, crossfade smoothness, the mix balance by ear.
 Files changed: as in the claim above.
+
+### 2026-11-27 | Claude -> All | HANDOFF T-051 follow-up (v0.23.2)
+Status: done pending playtest
+Owner playtest of v0.23.1: music good, balance better, but everything too loud. Master levels lowered 10 dB: on 1 to 0.32, quiet 0.35 to 0.11 (`SOUND_LEVELS` in `src/audio.js`). Music follows the master, so it drops too. Smoke test checks the levels. Not verified by ear.
+Files changed: `src/audio.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.

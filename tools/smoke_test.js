@@ -1542,6 +1542,8 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
     if (fs.statSync(p).size > 700000) failures.push("Music: " + t + ".mp3 is too big to stream on phones");
     if (!credits.includes(t + ".mp3")) failures.push("Music: " + t + ".mp3 is not listed in ASSET_CREDITS.txt");
   }
+  const levels = get("SOUND_LEVELS.map(l => l.gain)");
+  if (!(levels[0] <= 0.32 && levels[1] <= 0.112 && levels[2] === 0)) failures.push("Mix: master levels should be at least 10 dB under 1 and 0.35 (" + levels + ")");
   if (!(get("ENGINE_VOLUME") <= 0.12)) failures.push("Mix: the engine is louder than the v0.23.1 mix (" + get("ENGINE_VOLUME") + ")");
   const m0 = get("musicState.on");
   key("keydown", "n", "KeyN"); key("keyup", "n", "KeyN");
