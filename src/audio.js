@@ -40,8 +40,9 @@ const SOUND_FILES = {
   skid: ["skid.wav", 1],
 };
 const SOUND_LEVELS = [
-  { id: "on", gain: 1, icon: "\u{1F50A}", label: "Sound on" },
-  { id: "low", gain: 0.35, icon: "\u{1F509}", label: "Sound quiet" },
+  // v0.23.2: both levels 10 dB lower (owner: everything too loud). 10 dB = x0.316.
+  { id: "on", gain: 0.32, icon: "\u{1F50A}", label: "Sound on" },
+  { id: "low", gain: 0.11, icon: "\u{1F509}", label: "Sound quiet" },
   { id: "off", gain: 0, icon: "\u{1F507}", label: "Sound off" },
 ];
 const SOUND_MIN_GAP = 0.06; // seconds between two plays of the same sound

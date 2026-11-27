@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.23.1
+FREE ROAM CAR PLAYGROUND - VERSION 0.23.2
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -149,3 +149,6 @@ Version 0.23.0:
 Version 0.23.1:
 - Music: five upbeat tracks that blend into each other, and a tenser one while Dr. BadDude's events run. The note button under the sound button (or the N key) turns music on or off. Free CC0 music from OpenGameArt; see ASSET_CREDITS.txt.
 - Sound mix: the engine is much quieter, and quiet effects such as coins, upgrades and the Reward Ring are louder, so everything sits at a similar level.
+
+Version 0.23.2:
+- Everything (sounds and music) is 10 dB quieter on both the normal and quiet settings.
