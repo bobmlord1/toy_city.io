@@ -73,7 +73,7 @@ const eventTypes = {
     mapColor: "#F28F73",
   },
 };
-const TREASURE_PAYOUT = 1000; // owner decision 2026-11-26
+const TREASURE_PAYOUT = 500; // owner: $1,000 (2026-11-26) was too strong; two chests bought 70 mph (2026-11-27)
 const RIVAL_PAYOUT = 350; // between the small and medium creature (T-044 scale); tune with T-044
 const RIVAL_HITS = 3; // rams needed to wreck the rival
 const RIVAL_MIN_IMPACT = 2.2; // m/s closing speed (about 5 mph): gentle touches do not count

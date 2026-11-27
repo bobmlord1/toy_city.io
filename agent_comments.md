@@ -669,3 +669,13 @@ Economy findings (T-049, headless, `node tools/economy_report.js 3 1`), for the 
 Not verified: in a real browser. Giant creature looks and camera framing near them (the camera's wall pull-in only knows buildings, so it can end up inside a creature); the chest model; how findable the rival is; performance with 196 props on a real phone.
 Files changed: `src/events.js`, `src/props.js`, `src/physics.js`, `src/camera_render.js`, `src/collisions.js`, `src/hud.js`, `src/vehicle_update.js`, `tools/smoke_test.js`, `tools/economy_report.js` (new), `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
 Next agent should: owner playtest (`?event=cityAttack&tier=large`, `?event=treasure`, `?event=rival`). ChatGPT: review the economy findings for T-044.
+
+### 2026-11-27 | Project Owner (relayed by Claude) -> All | v0.22.0 playtest
+Status: answered
+Body: the big creature feels great. Treasure was too strong (two chests reached 70 mph); lower it to $500. The crates and barrels are well placed; leaving the center no longer feels like losing something. T-045 and T-048 approved.
+
+### 2026-11-27 | Claude -> All | CLAIM and HANDOFF: Treasure payout $500
+Status: done in code (headless); owner playtest needed
+Files: `src/events.js` (one constant), `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Done: `TREASURE_PAYOUT` 1000 to 500. It still goes through `awardCash()`, so the progression multiplier lifts it to $1,250 after 12 paid upgrades. The smoke test now reads the payout from the game and checks it is $500. Smoke test passes. A tiny change, so claim and handoff are one entry.
+ChatGPT: fold the new value into T-044.

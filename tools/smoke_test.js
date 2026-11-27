@@ -1379,9 +1379,11 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   const cashT = get("cash");
   run(`(() => { const c = currentEvent.chest, v = controlled; v.x = c.x - c.radius - 12; v.z = c.z; v.yaw = Math.PI / 2; v.vx = v.vz = 0; v.grounded = true; v.yawRate = 0; })()`, "q");
   key("keydown", "w", "KeyW"); step(120); key("keyup", "w", "KeyW"); step(20);
-  if (get("cash") - cashT !== 1000 || get("currentEvent") !== null) failures.push("Treasure: one ram should pay exactly $1,000 (got +" + (get("cash") - cashT) + ")");
+  const treasurePay = get("TREASURE_PAYOUT");
+  if (treasurePay !== 500) failures.push("Treasure: payout should be $500 (owner, 2026-11-27), is $" + treasurePay);
+  if (get("cash") - cashT !== treasurePay || get("currentEvent") !== null) failures.push("Treasure: one ram should pay exactly $" + treasurePay + " (got +" + (get("cash") - cashT) + ")");
   step(10);
-  if (get("cash") - cashT !== 1000) failures.push("Treasure: paid more than once");
+  if (get("cash") - cashT !== treasurePay) failures.push("Treasure: paid more than once");
   run(`playerCar.maxSpeed = ${savedT.m}; playerCar.accel = ${savedT.a}; playerCar.impactMultiplier = ${savedT.i};`, "q");
   run(`applyEventTestSwitch("?event=treasure")`, "q");
   step(91 * 60);
