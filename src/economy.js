@@ -38,9 +38,21 @@ function updateCashUI() {
 // Single entry point for cash that does not come from crashes (activities use this).
 function awardCash(amount) {
   const paid = scaledReward(amount);
+  sfx("coins_big", 0.7);
   cash += paid;
   updateCashUI();
   return paid;
+}
+// T-050: one surface (a building, or a pair of vehicles) pays a crash bonus at most once per
+// CRASH_REWARD_COOLDOWN seconds. Ramming the same wall over and over paid about $738 a minute.
+// The crash sound still plays on every new hit. Times use the game clock (eventClock).
+const CRASH_REWARD_COOLDOWN = 8;
+const crashRewardPaidAt = new Map(); // surface key -> eventClock of the last payout
+function crashSurfaceKey(key) {
+  // The cab ("building:<vehicle>:<box>") and the trailer ("trailer-building:<box>") share a wall.
+  const m = /^(?:trailer-)?building:(?:[^:]+:)?(.+)$/.exec(key);
+  if (m) return "building:" + m[1];
+  return key.replace(/^trailer-vehicle:/, "vehicle-pair:");
 }
 function registerCrashReward(key, impact) {
   if (!currentCrashContacts) return;
@@ -49,9 +61,15 @@ function registerCrashReward(key, impact) {
   if (typeof key === "string" && (key.startsWith("prop:") || key.startsWith("trailer-prop:"))) return;
   currentCrashContacts.add(key);
   if (previousCrashContacts.has(key) || onFoot || !controlled || impact < 2.25) return;
+  playCrashSound(impact);
+  const surface = crashSurfaceKey(key);
+  const last = crashRewardPaidAt.get(surface);
+  if (last !== undefined && eventClock - last < CRASH_REWARD_COOLDOWN) return;
+  crashRewardPaidAt.set(surface, eventClock);
   const payout = clamp(Math.round(impact * 7.5), 8, 45);
   cash += payout;
   updateCashUI();
+  sfx("coin", 0.5);
   say("CRASH BONUS  +$" + payout, 1150);
 }
 // One upgrade level for a vehicle. Used by the tuning pad and by the Reward Ring event.
@@ -214,6 +232,7 @@ function purchaseTopSpeedUpgrade() {
     return;
   }
   cash -= cost;
+  sfx("upgrade", 0.8);
   paidUpgradeCount++;
   applyUpgrade(controlled, "speed");
   updateCashUI();
@@ -238,6 +257,7 @@ function purchaseAccelerationUpgrade() {
     return;
   }
   cash -= cost;
+  sfx("upgrade", 0.8);
   paidUpgradeCount++;
   applyUpgrade(controlled, "acceleration");
   updateCashUI();
@@ -261,6 +281,7 @@ function purchaseImpactUpgrade() {
     return;
   }
   cash -= cost;
+  sfx("upgrade", 0.8);
   paidUpgradeCount++;
   applyUpgrade(controlled, "impact");
   updateCashUI();

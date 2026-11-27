@@ -16,6 +16,8 @@ const EVENT_FIRST_ROLL = 45; // seconds of play before the first draw
 const EVENT_ROLL_INTERVAL = 75; // seconds between draws while no event runs
 const EVENT_POOL = ["cityAttack", "tuningRay", "rewardRing", "treasure", "rival", null]; // null = no event
 const EVENT_COMMS_SECONDS = 7;
+const EVENT_SHAKE = { small: 0.35, medium: 0.55, large: 0.8 }; // camera shake (units) when a creature appears
+const EVENT_SHAKE_SECONDS = 1.4;
 const EVENT_SPAWN_MIN = 60; // events appear this far from the player...
 const EVENT_SPAWN_MAX = 200; // ...but not farther, when a site allows it
 const RAY_EFFECT_SECONDS = 25; // default length of a Tuning Ray effect
@@ -60,7 +62,7 @@ const eventTypes = {
   },
   treasure: {
     name: "Treasure!",
-    line: "Someone asked about my research fund: What research fund?!",
+    line: "The government asked about my research fund: What research fund?!",
     duration: 90,
     mapShape: "square",
     mapColor: "#F4CF59",
@@ -330,6 +332,10 @@ function applyRayEffect(v, id) {
   const fx = RAY_EFFECTS[id];
   v.rayEffect = { id, until: eventClock + (fx.seconds || RAY_EFFECT_SECONDS), nextHop: 0, nextBoing: 0 };
   v.turboFade = null;
+  if (v === controlled) {
+    sfx("zap");
+    if (id === "turboOverload") sfx("turbo");
+  }
   say(fx.name, 2400);
 }
 // Boing Bumpers: called by the wall and vehicle collisions in collisions.js with the
@@ -350,7 +356,10 @@ function rayBounce(v, awayX, awayZ, impact) {
     v.rayHopActive = true;
   }
   v.suspensionVelocity -= 0.5;
-  if (v === controlled) say("BOING!", 500);
+  if (v === controlled) {
+    sfxVaried("boing");
+    say("BOING!", 500);
+  }
 }
 function updateRayEffects(dt) {
   for (const v of vehicles) {
@@ -376,6 +385,7 @@ function updateRayEffects(dt) {
         v.rayHopActive = true;
         v.suspensionVelocity -= 0.6;
         v.rayEffect.nextHop = eventClock + 0.85;
+        sfxVaried("hop");
         v.rayEffect.groundSince = null;
       }
     }
@@ -503,6 +513,8 @@ const eventUpdaters = {
       return null;
     }
     awardCash(ev.tier.payout);
+    sfx("monster_smash");
+    sfx("event_win");
     spawnConfetti(ev.monster.x, ev.monster.z, 60);
     say("MONSTER SMASHED!  +$" + ev.tier.payout, 2800);
     return "done";
@@ -514,6 +526,7 @@ const eventUpdaters = {
       return null;
     }
     awardCash(TREASURE_PAYOUT);
+    sfx("event_win");
     spawnConfetti(ev.chest.x, ev.chest.z, 90);
     say("TREASURE!  +$" + TREASURE_PAYOUT, 3200);
     return "done";
@@ -523,6 +536,7 @@ const eventUpdaters = {
     ev.z = ev.rival.z;
     if (ev.hits < RIVAL_HITS) return null;
     awardCash(RIVAL_PAYOUT);
+    sfx("event_win");
     spawnConfetti(ev.rival.x, ev.rival.z, 60);
     say("RIVAL WRECKED!  +$" + RIVAL_PAYOUT, 2800);
     return "done";
@@ -547,6 +561,8 @@ const eventUpdaters = {
       impact: "IMPACT POWER +20%",
     }[tier];
     spawnConfetti(controlled.x, controlled.z, 50);
+    sfx("ring");
+    sfx("event_win");
     say("REWARD RING!  " + text, 2800);
     ev.reward = tier;
     return "done";
@@ -579,12 +595,22 @@ function startEvent(typeId, force) {
   if (!eventSpawners[typeId](ev)) return false;
   currentEvent = ev;
   showEventComms(eventTypes[typeId]);
+  setEventAlert(true);
+  sfx("klaxon");
+  sfx("comms");
+  // A creature arriving shakes the screen (T-032). Bigger creatures shake harder.
+  if (typeId === "cityAttack") startScreenShake(EVENT_SHAKE[ev.tier.id] || 0.5, EVENT_SHAKE_SECONDS);
   return true;
+}
+// T-032: the dark red tint (#eventTint in index.html) stays on for the whole event.
+function setEventAlert(on) {
+  if (typeof document !== "undefined" && document.body) document.body.classList.toggle("event-alert", !!on);
 }
 function endEvent() {
   const ev = currentEvent;
   if (!ev) return;
   currentEvent = null;
+  setEventAlert(false);
   cleanupEvent(ev);
   eventNextRollAt = eventClock + EVENT_ROLL_INTERVAL;
 }

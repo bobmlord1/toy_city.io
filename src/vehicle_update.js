@@ -121,6 +121,7 @@ function updateVehicle(v, dt) {
       hand = pressed(" "),
       throttle = forwardInput;
     wheelSteeringInput = steerInput;
+    v.audioThrottle = throttle; // read by updateAudio() for the engine sound
     if (throttle) {
       const airTraction = v.grounded === false ? 0.2 : 1;
       const boostMultiplier = boostActive ? 2.25 : 1;
@@ -230,6 +231,7 @@ function updateVehicle(v, dt) {
         v.suspensionVelocity -= Math.min(landingImpact * 0.17, 0.8);
         v.pitchVelocity += clamp(-landingImpact * 0.025, -0.22, 0.22);
         if (!v.rayEffect) say("Nice landing!", 650); // Super Springs hops would spam it
+        if (landingImpact > 4) sfx("crash", clamp((landingImpact - 4) / 8, 0.2, 0.7), 0.8);
       } else v.airTime = (v.airTime || 0) + dt;
     }
     if (landed) {

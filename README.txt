@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.22.1
+FREE ROAM CAR PLAYGROUND - VERSION 0.23.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -139,3 +139,9 @@ Version 0.22.0 (T-045 to T-049):
 
 Version 0.22.1:
 - Treasure now pays $500 (was $1,000, which bought upgrades too quickly).
+
+Version 0.23.0:
+- Sound effects: engine and tire skid, crashes, smashes, coins, upgrades, activities, Dr. BadDude's events and more. The round button under the dashboard (or the M key) switches between normal, quiet and off. Free CC0 sounds, mostly by Kenney; see ASSET_CREDITS.txt.
+- Dr. BadDude now has a portrait in his messages. When one of his events starts, an alarm sounds and the screen turns dark red until the event ends. A monster arriving shakes the screen.
+- Ramming the same wall or car again only pays a crash bonus after 8 seconds.
+- Treasure line: "The government asked about my research fund: What research fund?!"

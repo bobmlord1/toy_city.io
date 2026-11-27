@@ -100,14 +100,20 @@ function damageProp(p, impact, rammer) {
   // A clean, meaningful hit should make visible progress without requiring an impact upgrade.
   // Contact latching below prevents sustained pushing from applying this repeatedly.
   p.hp -= Math.max(0, impact - 2.35) * 0.68 * multiplier;
+  if (rammer === controlled) {
+    if (p.type === "monster") sfxVaried("monster_hit", clamp(impact / 10, 0.4, 1));
+    else if (p.hp > 0) sfxVaried("crash", clamp(impact / 14, 0.2, 0.6));
+  }
   if (p.hp <= 0) {
     p.broken = true;
+    if (rammer === controlled && p.type !== "monster") sfxVaried("smash", clamp(impact / 10, 0.5, 1));
     spawnPropDebris(p, p.type, impact);
     // Event props (the City Under Attack creature) set smashCash: 0 and pay through the event.
     const reward = p.smashCash ?? 18;
     if (rammer === controlled && reward > 0) {
       cash += reward;
       updateCashUI();
+      sfx("coin", 0.6);
       say(`SMASHED ${p.type.toUpperCase()}  +$${reward}`, 1150);
     }
     return true;
@@ -424,6 +430,7 @@ function awardAirTime(v, seconds) {
   const payout = clamp(Math.round(seconds * 24), 12, 110);
   cash += payout;
   updateCashUI();
+  sfx("coins_big", 0.7);
   say(`AIR TIME BONUS  +$${payout} · ${seconds.toFixed(1)}s`, 1700);
 }
 function updateVehicleWheelAnimation(v, dt, steerInput = 0) {

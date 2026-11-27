@@ -16,6 +16,7 @@ function frame(t) {
     updatePhysics(dt);
     updateActivities(dt);
     updateEvents(dt);
+    updateAudio(dt);
     drawWorld(dt);
     updateUI();
     drawMap();

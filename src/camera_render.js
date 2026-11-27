@@ -52,6 +52,22 @@ function keepCameraOutOfBuildings(target) {
   camera.y = target[1] + dy * k;
   camera.z = target[2] + dz * k;
 }
+// T-032: short screen shake (a creature arriving). Only the drawn view moves; the camera's
+// own position, and so its smoothing, is untouched. Fades out over the shake time.
+const screenShake = { amp: 0, time: 0, left: 0 };
+function startScreenShake(amp, seconds) {
+  const reduced =
+    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  screenShake.amp = reduced ? amp * 0.3 : amp;
+  screenShake.time = screenShake.left = seconds;
+}
+function screenShakeOffset(dt) {
+  if (screenShake.left <= 0) return [0, 0, 0];
+  screenShake.left = Math.max(0, screenShake.left - dt);
+  const k = screenShake.amp * (screenShake.left / screenShake.time);
+  const t = screenShake.time - screenShake.left;
+  return [k * Math.sin(t * 47), k * 0.7 * Math.sin(t * 61 + 1.3), k * Math.sin(t * 53 + 2.1)];
+}
 function updateCamera(dt) {
   let target, desired;
   if (onFoot) {
@@ -99,7 +115,12 @@ function drawWorld(dt) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   const c = updateCamera(dt),
     target = c.target;
-  const view = lookAt([camera.x, camera.y, camera.z], target, [0, 1, 0]);
+  const shake = screenShakeOffset(dt);
+  const view = lookAt(
+    [camera.x + shake[0], camera.y + shake[1], camera.z + shake[2]],
+    [target[0] + shake[0] * 0.5, target[1] + shake[1] * 0.5, target[2] + shake[2] * 0.5],
+    [0, 1, 0],
+  );
   const proj = perspective((58 * Math.PI) / 180, canvas.width / canvas.height, 0.1, 1400);
   const vp = matMul(proj, view);
   gl.uniformMatrix4fv(loc.vp, false, vp);

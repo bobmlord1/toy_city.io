@@ -1,2 +1,14 @@
 Vehicle models: Grab3D Cozy Vehicles collection. Compact Car, Pickup Truck, Semi Truck and trailer geometry. CC0 1.0 public-domain dedication. https://grab3d.com/kits/cozy-vehicles/
 CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+
+Sound effects (assets/audio/), all CC0 1.0 public domain unless noted. Converted to mono MP3 or WAV with ffmpeg (trimmed, no other changes):
+- Kenney, Starter Kit Racing (https://github.com/KenneyNL/Starter-Kit-Racing, sounds CC0): crash.mp3 (impact.ogg), engine.wav (seamless loop cut from engine.ogg). skid.wav (loop cut from skid.ogg) was made by Landeplage for that kit, also CC0.
+- Kenney, Sci-Fi Sounds (https://opengameart.org/content/sci-fi-sounds): crash_big.mp3 (impactMetal_000), smash.mp3 (explosionCrunch_000), monster_hit.mp3 (slime_000), monster_smash.mp3 (lowFrequency_explosion_000), turbo.mp3 (thrusterFire_000), boost.mp3 (thrusterFire_001).
+- Kenney, 50 RPG Sound Effects (https://opengameart.org/content/50-rpg-sound-effects): coin.mp3 (handleCoins2), coins_big.mp3 (handleCoins), door.mp3 (metalLatch).
+- Kenney, Digital Sound Effects (https://opengameart.org/content/63-digital-sound-effects-lasers-phasers-space-etc): upgrade.mp3 (powerUp2), ring.mp3 (powerUp7), zap.mp3 (zapThreeToneUp), hop.mp3 (phaserUp1).
+- Kenney, Interface Sounds (https://opengameart.org/content/interface-sounds; copy used: https://github.com/Calinou/kenney-interface-sounds): activity_start.mp3 (confirmation_001), comms.mp3 (maximize_001), click.mp3 (click_001).
+- Kenney, Short Music Jingles (https://opengameart.org/content/85-short-music-jingles): pickup.mp3 (jingles_NES09), activity_done.mp3 (jingles_NES03), event_win.mp3 (jingles_PIZZA02).
+- Made for this game from code by tools/make_sounds.js (CC0): klaxon.mp3, boing.mp3.
+The OpenGameArt files were taken from a GitHub copy (https://github.com/zuujis-cc0/opengameart-kenney-sound-effect) that includes Kenney's own license files.
+
+Dr. BadDude portrait (assets/images/dr_baddude.jpg): supplied by the project owner for this game; cropped and resized to 160 x 160 JPG.
