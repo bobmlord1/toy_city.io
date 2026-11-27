@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.22.0
+FREE ROAM CAR PLAYGROUND - VERSION 0.22.1
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -136,3 +136,6 @@ Version 0.22.0 (T-045 to T-049):
 - Crates and barrels now stand in every part of the city, not just the center.
 - Test switch: ?event=treasure and ?event=rival also work.
 - For developers: tools/economy_report.js measures how fast each way of playing earns money.
+
+Version 0.22.1:
+- Treasure now pays $500 (was $1,000, which bought upgrades too quickly).

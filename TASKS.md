@@ -243,14 +243,14 @@ Assigned to: Claude. Owner approved 2026-11-26.
 Files: `src/events.js`, `tools/smoke_test.js`, docs.
 Why: playtest: the child called the creatures "tiny". The large one (about 8 units) was shorter than the smallest building (9; median 18).
 Done when: creatures are about 12, 18 and 28 units tall (small, medium, large) with colliders to match, take more hits to smash, keep the light bump behavior, and still find spawn spots clear of buildings and streets. Payouts stay as set in T-044.
-Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-27.
 
 ### T-046 Toybox Event: Treasure
 Assigned to: Claude. Owner approved 2026-11-26. Event 5 of T-015.
 Files: `src/events.js`, `src/hud.js` (map symbol), `tools/smoke_test.js`, docs.
-Why: the last two T-015 events. Owner: unique treasure-chest model, $1,000 payout.
-Done when: a treasure chest appears on open ground with one-hit health; smashing it pays $1,000 once with no ordinary prop cash; it has its own map symbol; it joins the equal-weight pool and vanishes cleanly on its timer.
-Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+Why: the last two T-015 events. Owner: unique treasure-chest model, $1,000 payout; lowered to $500 on 2026-11-27 after playtest (two chests bought 70 mph).
+Done when: a treasure chest appears on open ground with one-hit health; smashing it pays $500 once with no ordinary prop cash; it has its own map symbol; it joins the equal-weight pool and vanishes cleanly on its timer.
+Status: code complete in v0.22.1 (headless), waiting on owner playtest.
 
 ### T-047 Toybox Event: Rival
 Assigned to: Claude. Owner approved 2026-11-26. Event 4 of T-015.
@@ -264,7 +264,7 @@ Assigned to: Claude. Owner approved 2026-11-26.
 Files: `src/props.js` (placement data), `src/camera_render.js` and `src/shadows.js` only if draw cost needs distance culling, `tools/smoke_test.js`, docs.
 Why: all 28 props were in the city center.
 Done when: crates and barrels stand in small groups in every district, off streets, ramps, buildings and activity pads, without starving creature spawn spots or hurting frame cost noticeably.
-Status: code complete in v0.22.0 (headless), waiting on owner playtest.
+Status: done. Owner approved after playtest on 2026-11-27.
 
 ### T-049 Economy automated testing
 Assigned to: Claude. Owner approved 2026-11-26.
