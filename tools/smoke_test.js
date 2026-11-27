@@ -1532,6 +1532,26 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   if (get("screenShake.left") !== 0) failures.push("Dr. BadDude: the screen shake did not end");
 }
 
+// ---- T-051: music and the v0.23.1 mix ----
+{
+  const tracks = get("MUSIC_TRACKS.concat([EVENT_MUSIC])");
+  const credits = read("ASSET_CREDITS.txt");
+  for (const t of tracks) {
+    const p = path.join(root, "assets/music", t + ".mp3");
+    if (!fs.existsSync(p)) { failures.push("Music: missing assets/music/" + t + ".mp3"); continue; }
+    if (fs.statSync(p).size > 700000) failures.push("Music: " + t + ".mp3 is too big to stream on phones");
+    if (!credits.includes(t + ".mp3")) failures.push("Music: " + t + ".mp3 is not listed in ASSET_CREDITS.txt");
+  }
+  if (!(get("ENGINE_VOLUME") <= 0.12)) failures.push("Mix: the engine is louder than the v0.23.1 mix (" + get("ENGINE_VOLUME") + ")");
+  const m0 = get("musicState.on");
+  key("keydown", "n", "KeyN"); key("keyup", "n", "KeyN");
+  const m1 = get("({ on: musicState.on, label: document.getElementById('musicToggle').getAttribute('aria-label') })");
+  if (m1.on === m0 || !/^Music (on|off)/.test(m1.label)) failures.push("Music: N did not toggle music (" + JSON.stringify(m1) + ")");
+  run("setMusicOn(true);", "q");
+  const ev = get(`(() => { if (currentEvent) endEvent(); startEvent("rewardRing"); const during = musicState.event; endEvent(); return { during, after: musicState.event }; })()`);
+  if (!ev.during || ev.after) failures.push("Music: event music should switch on for an event and off after (" + JSON.stringify(ev) + ")");
+}
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

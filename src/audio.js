@@ -9,45 +9,47 @@
 // that sfx() still records the name in soundLog so the smoke test can check the hooks.
 // =============================================================================
 
-// name: [file, volume]. Volumes are relative; the master level keeps everything conservative.
-// To swap a sound, change the file here (any MP3 or WAV in assets/audio/).
+// name: [file, volume]. The volume evens out the files' own loudness (v0.23.1 mix): big moments
+// (wins, activity done, klaxon, creature smash) about -20 dB, ordinary effects about -23 dB, small
+// ones (coins, clicks, zaps, door) about -26 dB, measured as RMS while the sound plays.
+// The engine sits well under all of them. To swap a sound, change the file here and re-measure.
 const SOUND_FILES = {
-  crash: ["crash.mp3", 0.9],
-  crash_big: ["crash_big.mp3", 0.55],
-  smash: ["smash.mp3", 0.45],
-  monster_hit: ["monster_hit.mp3", 0.8],
-  monster_smash: ["monster_smash.mp3", 0.9],
-  coin: ["coin.mp3", 0.6],
-  coins_big: ["coins_big.mp3", 0.7],
-  upgrade: ["upgrade.mp3", 0.6],
-  ring: ["ring.mp3", 0.6],
-  zap: ["zap.mp3", 0.5],
-  hop: ["hop.mp3", 0.35],
-  boing: ["boing.mp3", 0.6],
-  turbo: ["turbo.mp3", 0.55],
-  boost: ["boost.mp3", 0.4],
-  activity_start: ["activity_start.mp3", 0.6],
-  pickup: ["pickup.mp3", 0.5],
-  activity_done: ["activity_done.mp3", 0.55],
-  event_win: ["event_win.mp3", 0.6],
-  comms: ["comms.mp3", 0.5],
-  klaxon: ["klaxon.mp3", 0.55],
-  click: ["click.mp3", 0.5],
-  door: ["door.mp3", 0.6],
+  crash: ["crash.mp3", 0.47],
+  crash_big: ["crash_big.mp3", 0.42],
+  smash: ["smash.mp3", 0.36],
+  monster_hit: ["monster_hit.mp3", 1.46],
+  monster_smash: ["monster_smash.mp3", 0.43],
+  coin: ["coin.mp3", 1.72],
+  coins_big: ["coins_big.mp3", 1.05],
+  upgrade: ["upgrade.mp3", 2.51],
+  ring: ["ring.mp3", 2.02],
+  zap: ["zap.mp3", 1.58],
+  hop: ["hop.mp3", 0.97],
+  boing: ["boing.mp3", 0.47],
+  turbo: ["turbo.mp3", 0.72],
+  boost: ["boost.mp3", 0.46],
+  activity_start: ["activity_start.mp3", 0.25],
+  pickup: ["pickup.mp3", 0.27],
+  activity_done: ["activity_done.mp3", 0.35],
+  event_win: ["event_win.mp3", 0.37],
+  comms: ["comms.mp3", 0.34],
+  klaxon: ["klaxon.mp3", 0.26],
+  click: ["click.mp3", 0.79],
+  door: ["door.mp3", 0.35],
   engine: ["engine.wav", 1],
   skid: ["skid.wav", 1],
 };
 const SOUND_LEVELS = [
-  { id: "on", gain: 0.55, icon: "\u{1F50A}", label: "Sound on" },
-  { id: "low", gain: 0.2, icon: "\u{1F509}", label: "Sound quiet" },
+  { id: "on", gain: 1, icon: "\u{1F50A}", label: "Sound on" },
+  { id: "low", gain: 0.35, icon: "\u{1F509}", label: "Sound quiet" },
   { id: "off", gain: 0, icon: "\u{1F507}", label: "Sound off" },
 ];
 const SOUND_MIN_GAP = 0.06; // seconds between two plays of the same sound
 const SOUND_MAX_VOICES = 10; // one-shots playing at once
 // Engine pitch per vehicle: the small car buzzes, the semi rumbles.
 const ENGINE_PITCH = { compact: 1.15, pickup: 0.95, semi: 0.72 };
-const ENGINE_VOLUME = 0.22;
-const SKID_VOLUME = 0.3;
+const ENGINE_VOLUME = 0.1; // about -36 dB at cruise, -33 dB flat out (was 0.22, louder than most effects)
+const SKID_VOLUME = 0.4;
 
 let audioCtx = null,
   masterGain = null,
@@ -84,7 +86,20 @@ function startAudio() {
   }
   masterGain = audioCtx.createGain();
   masterGain.gain.value = SOUND_LEVELS[soundLevel].gain;
-  masterGain.connect(audioCtx.destination);
+  // A gentle compressor keeps stacked sounds (crash + coins + jingle over music) from clipping.
+  let out = audioCtx.destination;
+  if (audioCtx.createDynamicsCompressor) {
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -14;
+    comp.knee.value = 10;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.005;
+    comp.release.value = 0.2;
+    comp.connect(audioCtx.destination);
+    out = comp;
+  }
+  masterGain.connect(out);
+  startMusic();
   for (const [name, [file]] of Object.entries(SOUND_FILES)) {
     fetch("assets/audio/" + file)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(file))))
@@ -178,6 +193,7 @@ function setSoundLevel(i) {
   soundLevel = ((i % SOUND_LEVELS.length) + SOUND_LEVELS.length) % SOUND_LEVELS.length;
   const level = SOUND_LEVELS[soundLevel];
   if (masterGain) masterGain.gain.setTargetAtTime(level.gain, audioNow(), 0.05);
+  if (typeof musicLevelChanged === "function") musicLevelChanged();
   const button = $("soundToggle");
   if (button) {
     button.textContent = level.icon;
@@ -196,6 +212,8 @@ function placeSoundButton() {
   if (!button || !dash) return;
   const r = dash.getBoundingClientRect();
   button.style.top = Math.round(r.bottom + 8) + "px";
+  const music = $("musicToggle");
+  if (music) music.style.top = Math.round(r.bottom + 8 + button.offsetHeight + 8) + "px";
 }
 setSoundLevel(soundLevel);
 if ($("soundToggle")) {
@@ -216,4 +234,5 @@ document.addEventListener("visibilitychange", () => {
   if (!audioCtx) return;
   if (document.hidden) audioCtx.suspend().catch(() => {});
   else audioCtx.resume().catch(() => {});
+  pauseMusicForHiddenTab(document.hidden);
 });

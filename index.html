@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.23.0</title>
+<title>Free Roam Car Playground · v0.23.1</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -342,9 +342,11 @@ body.event-alert #eventTint{opacity:1;animation:eventAlertFlash 1.7s ease-in-out
 @keyframes eventAlertFlash{0%,100%{filter:none}20%,60%{filter:brightness(1.9) saturate(1.4)}40%,80%{filter:brightness(1)}}
 @media (prefers-reduced-motion: reduce){body.event-alert #eventTint{animation:none}}
 /* T-034: sound level button, just under the dashboard on the right (top set by src/audio.js). */
-#soundToggle{position:fixed;right:14px;top:132px;z-index:4;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34E6;color:#F4F1E8;font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;pointer-events:auto}
-#soundToggle:active{transform:scale(.94)}
-body.hud-mobile #soundToggle{width:38px;height:38px;right:10px;font-size:16px}
+#soundToggle,#musicToggle{position:fixed;right:14px;top:132px;z-index:4;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34E6;color:#F4F1E8;font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;pointer-events:auto}
+#musicToggle{top:180px}
+#musicToggle.off{opacity:.45;text-decoration:line-through}
+#soundToggle:active,#musicToggle:active{transform:scale(.94)}
+body.hud-mobile #soundToggle,body.hud-mobile #musicToggle{width:38px;height:38px;right:10px;font-size:16px}
 
 /* T-043: close button for the tuning panel (big enough for a thumb). */
 #upgradeClose{position:absolute;top:6px;right:6px;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34;color:#F4F1E8;font-size:18px;font-weight:900;line-height:1;display:grid;place-items:center;cursor:pointer;z-index:1}
@@ -375,9 +377,10 @@ body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
   </div>
 </div>
 <button id="soundToggle" type="button" aria-label="Sound on. Change sound level">&#x1F50A;</button>
+<button id="musicToggle" type="button" aria-label="Music on. Turn music off">&#x1F3B5;</button>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
-<div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C &nbsp; <b>SOUND</b> M<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
+<div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C &nbsp; <b>SOUND</b> M &nbsp; <b>MUSIC</b> N<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
 <div id="touchActions" aria-label="Driving actions">
   <button class="actionbtn brake" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
   <button class="actionbtn boost" id="boostButton" data-action="boost" aria-label="Boost">⚡</button>
@@ -421,7 +424,7 @@ body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
   window.FREE_ROAM_VEHICLE_ASSETS={meta,buffer};
   // Game code is split into plain scripts that share one global scope, so ORDER MATTERS.
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
-  const SCRIPTS=["core", "audio", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "events", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
+  const SCRIPTS=["core", "audio", "music", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "events", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
    await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.22.1";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;

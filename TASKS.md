@@ -282,6 +282,12 @@ Why: T-049 found ramming the same wall pays about $738 a minute, roughly three t
 Done when: the same surface (one building, one vehicle pair) pays a crash bonus at most once per short cooldown; crash sounds and other rewards are unaffected; the economy report shows the new wall rate.
 Status: implemented in v0.23.0 (8 s cooldown; wall ramming $738/min to $189/min headless); awaiting owner playtest.
 
+### T-051 Background music and sound mix
+Assigned to: Claude. Owner asked 2026-11-27 after playtesting v0.23.0 ("the sounds highlight the lack of music"; "the engine noise is much louder than just about everything else").
+Files: `src/music.js` (new), `assets/music/` (new), `src/audio.js`, `src/events.js`, `index.html`, `tools/smoke_test.js`, `ASSET_CREDITS.txt`, docs.
+Done when: free-to-use (CC0) upbeat music plays and crossfades between tracks; a tenser track plays during Dr. BadDude's events; music can be turned off on its own (button and N); the engine sits under the other sounds and the effects are evened out; tracks stream rather than decode whole into memory.
+Status: implemented in v0.23.1; awaiting owner playtest.
+
 ## Unnumbered backlog
 
 - Renderer: `draw()` rebinds buffers and attribute pointers on every call (about 177 calls a frame), and the matrix helpers allocate a new array per call. Skip rebinding when consecutive draws share a mesh, or use vertex array objects. Needs a real browser to check, so only worth doing if a phone shows frame-rate problems.
