@@ -202,7 +202,7 @@ function drawMap() {
 }
 
 // Event symbols differ in shape from the round activity markers: burst (City Under Attack),
-// diamond (Tuning Ray) and hollow ring (Reward Ring).
+// diamond (Tuning Ray), hollow ring (Reward Ring), square (Treasure) and arrowhead (Rival).
 function drawMapEventSymbol(ctx, shape, x, y, r, color, scale) {
   ctx.beginPath();
   if (shape === "burst") {
@@ -211,6 +211,15 @@ function drawMapEventSymbol(ctx, shape, x, y, r, color, scale) {
         rr = i % 2 ? r * 0.55 : r;
       ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
+    ctx.closePath();
+  } else if (shape === "square") {
+    // Treasure chest
+    ctx.rect(x - r * 0.8, y - r * 0.62, r * 1.6, r * 1.24);
+  } else if (shape === "triangle") {
+    // Rival (an arrowhead)
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r * 0.9, y + r * 0.75);
+    ctx.lineTo(x - r * 0.9, y + r * 0.75);
     ctx.closePath();
   } else if (shape === "diamond") {
     ctx.moveTo(x, y - r);
