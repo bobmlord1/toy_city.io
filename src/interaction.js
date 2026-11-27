@@ -58,6 +58,7 @@ function interact() {
     controlled.vx *= 0.15;
     controlled.vz *= 0.15;
     onFoot = true;
+    sfx("door");
     say("On foot. Walk up to another vehicle and press E.");
   } else {
     const v = nearestVehicle(player.x, player.z);
@@ -69,6 +70,7 @@ function interact() {
     controlled.ai = false;
     controlled.parked = false;
     onFoot = false;
+    sfx("door");
     if (Math.hypot(controlled.vx, controlled.vz) < 0.5) {
       controlled.vx = 0;
       controlled.vz = 0;

@@ -158,6 +158,7 @@ Files: portrait asset(s) (new), event/HUD files as required, `TASKS.md`.
 Why: Give Toybox Events a recognizable character presentation using the approved Dr. BadDude design.
 Done when: the portrait is presented consistently in appropriate event announcements or results, with legible dialogue and layout on desktop and mobile; no cutscene or character animation system is introduced.
 Notes: Static portrait is the baseline; animated portrait/GIF is optional and must not block the task.
+Status: implemented in v0.23.0 (Claude, owner approved 2026-11-27 and supplied the portrait; owner also asked for an event alarm sound, a dark red tint while an event runs and a screen shake when a creature appears); awaiting owner playtest.
 
 ### T-033 Camera comfort and recovery polish
 Assigned to: Claude; project owner playtests.
@@ -173,6 +174,7 @@ Files: sound assets (new), audio/gameplay/UI files as required, `TASKS.md`.
 Why: Add restrained audio feedback to reinforce driving, collisions, prop destruction, rewards, activities, upgrades and Toybox Events.
 Done when: a small cohesive set of sounds is integrated at appropriate moments, volume is conservative, audio can be muted/adjusted, and audio does not interfere with play or performance.
 Notes: Prefer free/licensable or original assets with clear provenance. Do not make sound production a blocker for other polish.
+Status: implemented in v0.23.0 (Claude, owner approved 2026-11-27: free-to-use sounds like the CC0 car models); awaiting owner playtest.
 
 ### T-035 HUD motion and transition polish
 Assigned to: Claude; project owner reviews.
@@ -272,6 +274,13 @@ Files: `tools/economy_report.js` (new), docs.
 Why: the T-044 rebalance needs more thorough testing; the soak test showed crashing earning about as much as activities.
 Done when: a headless tool reports earnings per minute by source for several play styles, time to afford each upgrade, and checks for exploits; findings are logged for the owner and ChatGPT. Balance numbers are not changed in this task (T-044 is ChatGPT's).
 Status: tool and findings in v0.22.0.
+
+### T-050 Crash bonus cooldown per surface
+Assigned to: Claude. Owner approved 2026-11-27 (the owner asked for a short cooldown; T-044 is ChatGPT's, this is one rule added on top of it).
+Files: `src/economy.js`, `tools/smoke_test.js`, docs.
+Why: T-049 found ramming the same wall pays about $738 a minute, roughly three times activities.
+Done when: the same surface (one building, one vehicle pair) pays a crash bonus at most once per short cooldown; crash sounds and other rewards are unaffected; the economy report shows the new wall rate.
+Status: implemented in v0.23.0 (8 s cooldown; wall ramming $738/min to $189/min headless); awaiting owner playtest.
 
 ## Unnumbered backlog
 

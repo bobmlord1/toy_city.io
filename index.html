@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#152a34">
-<title>Free Roam Car Playground · v0.22.1</title>
+<title>Free Roam Car Playground · v0.23.0</title>
 <style>
   :root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
   * { box-sizing: border-box; }
@@ -326,15 +326,25 @@
 /* Toybox Events comms slide-out: slides in from the left edge, below the dashboard. */
 #comms{position:fixed;left:12px;top:34%;z-index:4;display:flex;gap:10px;align-items:flex-start;max-width:min(320px,calc(100vw - 24px));padding:10px 12px;border-radius:18px;background:#152A34F7;border:1px solid #F28F73;border-left:6px solid #F28F73;color:#F4F1E8;pointer-events:none;transform:translateX(calc(-100% - 24px));opacity:0;transition:transform .45s cubic-bezier(.2,.9,.3,1.2),opacity .3s}
 #comms.show{transform:translateX(0);opacity:1}
-#commsAvatar{flex:none;width:44px;height:44px;border-radius:12px;background:#203D48;border:1px solid #F4CF59;display:grid;place-items:center;font-size:28px;line-height:1}
+#commsAvatar{flex:none;width:72px;height:72px;border-radius:14px;overflow:hidden;background:#203D48;border:2px solid #F4CF59}
+#commsAvatar img{display:block;width:100%;height:100%;object-fit:cover}
 #commsFrom{font-size:11px;color:#AFC2C8}
 #commsTitle{font-size:16px;font-weight:900;color:#F4CF59}
 #commsLine{font-size:12px;font-style:italic;margin-top:2px}
 body.hud-mobile #comms{top:calc(max(10px, env(safe-area-inset-top)) + 122px);max-width:min(260px,calc(100vw - 24px));padding:8px 10px}
-body.hud-mobile #commsAvatar{width:36px;height:36px;font-size:22px}
+body.hud-mobile #commsAvatar{width:52px;height:52px;border-radius:12px}
 body.hud-mobile #commsTitle{font-size:14px}
 body.hud-mobile #commsLine{font-size:11px}
 @media (prefers-reduced-motion: reduce){#comms{transition:opacity .3s}}
+/* T-032: dark red tint while a Toybox Event runs (class toggled by src/events.js). */
+#eventTint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s ease;background:radial-gradient(ellipse at center,rgba(150,20,24,.10) 30%,rgba(70,0,10,.48) 100%),rgba(120,10,16,.14)}
+body.event-alert #eventTint{opacity:1;animation:eventAlertFlash 1.7s ease-in-out 1}
+@keyframes eventAlertFlash{0%,100%{filter:none}20%,60%{filter:brightness(1.9) saturate(1.4)}40%,80%{filter:brightness(1)}}
+@media (prefers-reduced-motion: reduce){body.event-alert #eventTint{animation:none}}
+/* T-034: sound level button, just under the dashboard on the right (top set by src/audio.js). */
+#soundToggle{position:fixed;right:14px;top:132px;z-index:4;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34E6;color:#F4F1E8;font-size:18px;line-height:1;display:grid;place-items:center;cursor:pointer;pointer-events:auto}
+#soundToggle:active{transform:scale(.94)}
+body.hud-mobile #soundToggle{width:38px;height:38px;right:10px;font-size:16px}
 
 /* T-043: close button for the tuning panel (big enough for a thumb). */
 #upgradeClose{position:absolute;top:6px;right:6px;width:40px;height:40px;margin:0;padding:0;border-radius:50%;border:2px solid #F4F1E8;background:#152A34;color:#F4F1E8;font-size:18px;font-weight:900;line-height:1;display:grid;place-items:center;cursor:pointer;z-index:1}
@@ -346,8 +356,9 @@ body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
 <body>
 <canvas id="game" aria-label="3D free-roam car game"></canvas>
 <div id="vignette"></div>
+<div id="eventTint" aria-hidden="true"></div>
 <!-- Toybox Events comms slide-out (src/events.js). Decorative for the child; no reading needed. -->
-<div id="comms" role="status" aria-live="polite" aria-hidden="true"><div id="commsAvatar" aria-hidden="true">👨‍🔬</div><div id="commsBody"><div id="commsFrom">Dr. BadDude</div><div id="commsTitle"></div><div id="commsLine"></div></div></div>
+<div id="comms" role="status" aria-live="polite" aria-hidden="true"><div id="commsAvatar" aria-hidden="true"><img src="assets/images/dr_baddude.jpg" width="160" height="160" alt=""></div><div id="commsBody"><div id="commsFrom">Dr. BadDude</div><div id="commsTitle"></div><div id="commsLine"></div></div></div>
 <div id="dashboard" class="panel" aria-label="Driving dashboard">
   <div class="dash-side dash-left">
     <div id="vehicleName">COMPACT</div>
@@ -363,9 +374,10 @@ body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
     <button id="profileToggle" type="button" aria-label="HUD layout: automatic. Change layout">AUTO</button>
   </div>
 </div>
+<button id="soundToggle" type="button" aria-label="Sound on. Change sound level">&#x1F50A;</button>
 <div id="message"></div>
 <div id="hint" class="panel">Explore a 4×4 toy city with 24 roaming cars and pickups, connected streets, ramps and upgrades.</div>
-<div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
+<div id="help" class="panel"><b>DRIVE</b> W/S accelerate &nbsp; A left / D right &nbsp; <b>BOOST</b> Shift<br><b>EXIT / ENTER</b> E &nbsp; <b>HANDBRAKE</b> Space &nbsp; <b>CAMERA</b> C &nbsp; <b>SOUND</b> M<br>Crashes and airtime earn cash. Use the blue tuning ramp for top-speed, acceleration and impact upgrades; Shift gives a brief turbo boost, and smashed props pay extra cash.</div>
 <div id="touchActions" aria-label="Driving actions">
   <button class="actionbtn brake" id="brakeButton" data-action="brake" aria-label="Brake">▼</button>
   <button class="actionbtn boost" id="boostButton" data-action="boost" aria-label="Boost">⚡</button>
@@ -409,7 +421,7 @@ body.hud-mobile #upgradeClose{width:44px;height:44px;top:4px;right:4px}
   window.FREE_ROAM_VEHICLE_ASSETS={meta,buffer};
   // Game code is split into plain scripts that share one global scope, so ORDER MATTERS.
   // To add a file: create it in src/ and add it to this list (see ARCHITECTURE.md).
-  const SCRIPTS=["core", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "events", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
+  const SCRIPTS=["core", "audio", "renderer", "world_config", "world_streets", "world_city", "shadows", "vehicles", "props", "state", "economy", "activities", "events", "interaction", "input", "collisions", "vehicle_update", "physics", "camera_render", "hud", "main"];
   for(const name of SCRIPTS){
    await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="src/"+name+".js?v=0.22.1";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load src/"+name+".js. Check that the src folder is next to index.html."));document.body.appendChild(s);});
    if(window.TOY_CITY_FATAL)return;

@@ -1455,6 +1455,83 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   if (pushed) failures.push("Props: a resting prop pushed toward a building ended up inside it");
 }
 
+// ---- T-050: crash bonus cooldown per surface ----
+{
+  const cd = get(`(() => {
+    const saved = { prev: previousCrashContacts, cur: currentCrashContacts, clock: eventClock, cash, foot: onFoot };
+    onFoot = false;
+    const paid = [];
+    const hit = (key, at, impact = 8) => {
+      eventClock = at; previousCrashContacts = new Set(); currentCrashContacts = new Set();
+      const before = cash; soundLog.length = 0; registerCrashReward(key, impact);
+      paid.push({ pay: cash - before, crashSound: soundLog.includes("crash") });
+    };
+    const t0 = 50000;
+    hit("building:car1:wallA", t0);                 // first hit pays
+    hit("building:car1:wallA", t0 + 1);             // same wall soon after: no pay
+    hit("trailer-building:wallA", t0 + 2);          // trailer on the same wall: no pay
+    hit("building:car1:wallB", t0 + 2.5);           // another building pays
+    hit("vehicle-pair:a:b", t0 + 3);                // a car pays
+    hit("trailer-vehicle:a:b", t0 + 3.5);           // same pair via the trailer: no pay
+    hit("building:car1:wallA", t0 + CRASH_REWARD_COOLDOWN + 0.1); // after the cooldown: pays again
+    previousCrashContacts = saved.prev; currentCrashContacts = saved.cur; eventClock = saved.clock; cash = saved.cash; onFoot = saved.foot; updateCashUI();
+    return { paid, cooldown: CRASH_REWARD_COOLDOWN };
+  })()`);
+  const pays = cd.paid.map((p) => p.pay > 0);
+  if (JSON.stringify(pays) !== JSON.stringify([true, false, false, true, true, false, true]))
+    failures.push("Crash cooldown: wrong pay pattern " + JSON.stringify(pays));
+  if (!cd.paid.every((p) => p.crashSound)) failures.push("Crash cooldown: every new hit should still play the crash sound");
+  if (!(cd.cooldown >= 4 && cd.cooldown <= 12)) failures.push("Crash cooldown: should be short (4 to 12 s), is " + cd.cooldown);
+}
+// ---- T-034: sound effects ----
+{
+  const files = get("Object.values(SOUND_FILES).map(f => f[0])");
+  const credits = read("ASSET_CREDITS.txt");
+  let total = 0;
+  for (const f of files) {
+    const p = path.join(root, "assets/audio", f);
+    if (!fs.existsSync(p)) { failures.push("Sound: missing file assets/audio/" + f); continue; }
+    const size = fs.statSync(p).size;
+    total += size;
+    if (size > 120000) failures.push("Sound: " + f + " is too big for phones (" + size + " bytes)");
+    if (!credits.includes(f)) failures.push("Sound: " + f + " is not listed in ASSET_CREDITS.txt");
+  }
+  if (total > 400000) failures.push("Sound: all sounds together should stay under 400 KB (" + total + ")");
+  // Hooks fire (headless has no Web Audio, but sfx() still records names).
+  const heard = (code) => get(`(() => { soundLog.length = 0; ${code}; return soundLog.slice(); })()`);
+  if (!heard("awardCash(10)").includes("coins_big")) failures.push("Sound: awardCash did not play the coin sound");
+  run("controlled.boostCooldown = 0;", "q");
+  if (!heard("activateBoost()").includes("boost")) failures.push("Sound: boost did not play its sound");
+  // Sound button cycles on, quiet, off with the M key, and the label follows.
+  const lv0 = get("soundLevel");
+  key("keydown", "m", "KeyM"); key("keyup", "m", "KeyM");
+  const lv1 = get("({ level: soundLevel, label: document.getElementById('soundToggle').getAttribute('aria-label') })");
+  if (lv1.level !== (lv0 + 1) % 3 || !/^Sound (on|quiet|off)/.test(lv1.label)) failures.push("Sound: M did not change the sound level (" + JSON.stringify(lv1) + ")");
+  run("setSoundLevel(0);", "q");
+  if (!/"audio"/.test(read("index.html").match(/const SCRIPTS=(\[[^\]]*\])/)[1])) failures.push("Sound: src/audio.js is not loaded");
+}
+// ---- T-032: Dr. BadDude presentation ----
+{
+  const img = get("(() => { const i = document.querySelector('#commsAvatar img'); return i ? i.getAttribute('src') : null; })()");
+  const imgPath = img && path.join(root, img);
+  if (!img || !fs.existsSync(imgPath)) failures.push("Dr. BadDude: the comms portrait image is missing");
+  else {
+    const b = fs.readFileSync(imgPath);
+    if (b[0] !== 0xff || b[1] !== 0xd8 || b.length > 20000) failures.push("Dr. BadDude: portrait should be a small JPG (" + b.length + " bytes)");
+  }
+  if (!/The government asked about my research fund/.test(get("eventTypes.treasure.line"))) failures.push("Dr. BadDude: Treasure line not updated");
+  const ev = get(`(() => { soundLog.length = 0; if (currentEvent) endEvent(); const ok = startEvent("cityAttack", { tier: MONSTER_TIERS[2] });
+    const r = { ok, tint: document.body.classList.contains("event-alert"), shake: screenShake.left > 0, sounds: soundLog.slice() };
+    endEvent(); r.tintAfter = document.body.classList.contains("event-alert"); return r; })()`);
+  if (!ev.ok || !ev.tint || ev.tintAfter) failures.push("Dr. BadDude: the red event tint should be on during an event and off after (" + JSON.stringify(ev) + ")");
+  if (!ev.sounds.includes("klaxon")) failures.push("Dr. BadDude: no klaxon when an event starts");
+  if (!ev.shake) failures.push("Dr. BadDude: no screen shake when a creature appears");
+  const ring = get(`(() => { startEvent("rewardRing"); const r = { shake: screenShake.left, tint: document.body.classList.contains("event-alert") }; endEvent(); return r; })()`);
+  if (!ring.tint) failures.push("Dr. BadDude: the tint should show for every event");
+  step(120); // let the creature's shake finish and the frame code run with the shake
+  if (get("screenShake.left") !== 0) failures.push("Dr. BadDude: the screen shake did not end");
+}
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

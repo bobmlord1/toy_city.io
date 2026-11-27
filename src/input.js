@@ -24,6 +24,7 @@ function activateBoost() {
   }
   controlled.boostTime = 1.15;
   controlled.boostCooldown = 4.0;
+  sfx("boost");
   say("TURBO!", 700);
 }
 

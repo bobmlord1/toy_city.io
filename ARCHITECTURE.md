@@ -13,8 +13,11 @@ Owner of this file: whichever agent changes the structure. Update it in the same
 ```
 index.html          UI markup, CSS, and the boot script (loads assets, then src/ files in order)
 assets/             vehicle_meshes.json + .bin (CC0 models from Grab3D, see ASSET_CREDITS.txt)
+assets/audio/       sound effects (Kenney CC0 plus two made by tools/make_sounds.js)
+assets/images/      dr_baddude.jpg, the comms portrait (160 x 160)
 src/                all game code, one concern per file
 tools/smoke_test.js headless check, run before every handoff
+tools/make_sounds.js rebuilds the made-from-code sounds and the loops (needs ffmpeg)
 DESIGN.md           what we are making and why
 ARCHITECTURE.md     this file
 TASKS.md            what to do next
@@ -31,6 +34,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | File | Responsibility |
 | --- | --- |
 | `core.js` | Canvas, WebGL context, start button, fatal error screen, math helpers. Loads first. |
+| `audio.js` | Web Audio sound effects (`sfx()`), engine and skid loops (`updateAudio()`), sound button and M key (T-034). |
 | `renderer.js` | `MeshBuilder`, shaders, lighting modes, matrices, `draw()`. |
 | `world_config.js` | World size, street dimensions, ramp definitions, ground height (`driveSurfaceH`). |
 | `world_streets.js` | Data-driven street kit and its colliders. |
@@ -39,9 +43,9 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `vehicles.js` | Vehicle assets, `vehicle()` factory, player vehicles, semi and trailer, persistent mixed traffic fleet. |
 | `props.js` | Smashable props. |
 | `state.js` | Shared mutable state (`controlled`, `onFoot`, `player`, `keys`, `touch`). |
-| `economy.js` | Cash, crash rewards, tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
+| `economy.js` | Cash, crash rewards (with a cooldown per surface, T-050), tuning pad, upgrades, and `awardCash()` for non-crash rewards. |
 | `activities.js` | Optional activities: start pads, objective markers, minimap markers, payouts. Ships `delivery`, `smash` and `stunt`. |
-| `events.js` | Toybox Events: pool timer, comms slide-out, event map symbols, City Under Attack, Tuning Ray, Reward Ring. |
+| `events.js` | Toybox Events: pool timer, comms slide-out, event map symbols, City Under Attack, Tuning Ray, Reward Ring, Treasure, Rival, event alarm tint (T-032). |
 | `interaction.js` | `say()`, enter/exit vehicle, small vehicle helpers. |
 | `input.js` | Keyboard and touch, steering convention, boost. |
 | `collisions.js` | Collision resolution, trailer physics, suspension, airtime. |
@@ -133,7 +137,21 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
   - Turbo Overload: 100 mph top speed and `TURBO_ACCEL` (30 m/s^2, 0 to 100 mph in about 1.8 s) for `TURBO_SECONDS` (18 s since T-042). Afterwards `v.turboFade` eases the top speed back to normal over `TURBO_FADE_SECONDS`. At the 0.04 s frame cap 100 mph is about 1.8 units a frame, shorter than a car; 120 headless 100 mph wall hits never put the car inside a building.
   - Boing Bumpers: `rayBounce(v, awayX, awayZ, impact)` is called from `resolveVehicleBuilding()` and `resolveVehiclePair()`. Above `BOING_MIN_IMPACT` it adds a hard rebound (`BOING_BOUNCE` 13 m/s plus `BOING_IMPACT_SHARE` of the impact) and a hop. The car's normal reverse limit (36% of top speed, about 7 mph) used to cut the rebound off on the next frame. Since T-042 a bounce opens a `BOING_SLIDE_SECONDS` (1.8 s) window in which `rayReverseCap()` / `rayForwardCap()` (used by the speed clamp in `vehicle_update.js`) and grip ease back linearly from `BOING_SPEED_CAP` and `BOING_SLIDE_GRIP`, so the rebound carries and slows smoothly. A 15 mph wall hit now throws the car back about 19 units at up to 36 mph (v0.20: about 2.6 units). Props are not bounced off, so smashing still works.
 - **Reward Ring.** A golden ring standing on a road. Crossing it inside the ring gives one random permanent upgrade through `applyUpgrade(v, tier)` in `economy.js` (the same function the tuning pad uses).
-- **Not built yet:** Rival and Treasure (T-015).
+- **Presentation (T-032).** The comms panel shows Dr. BadDude's portrait (`assets/images/dr_baddude.jpg`). `startEvent()` plays the klaxon and comms sounds and calls `setEventAlert(true)`, which adds `event-alert` to `<body>`; the CSS fades in `#eventTint` (dark red vignette, a short flash at the start) until `endEvent()` turns it off. A creature arriving calls `startScreenShake(EVENT_SHAKE[tier], EVENT_SHAKE_SECONDS)` (`camera_render.js`); the shake only offsets the drawn view, never the camera's own position, and is reduced under prefers-reduced-motion.
+
+## Sound (T-034)
+
+`src/audio.js` loads right after `core.js` so every file can call it. The Web Audio context starts on the first tap or key press (browsers require one). Every file in `SOUND_FILES` is fetched and decoded once; a missing or undecodable file is silently skipped. Without Web Audio (headless tests) all calls do nothing, but `sfx()` still records names in `soundLog` for the smoke test.
+
+- **One-shots.** `sfx(name, volume, rate)`, `sfxVaried()` (small random pitch) and `playCrashSound(impact)`. A sound cannot replay within `SOUND_MIN_GAP` (0.06 s) and at most `SOUND_MAX_VOICES` (10) play at once, tracked by end time rather than `onended`.
+- **Loops.** `updateAudio(dt)` (from `main.js`) sets the engine loop's pitch from speed and throttle (`v.audioThrottle`, set in `vehicle_update.js`) with a per-vehicle base in `ENGINE_PITCH`, and the skid loop's volume from sideways speed on the ground. Both fall silent on foot.
+- **Level.** Three levels (on 0.55, quiet 0.2, off) on the master gain, cycled by `#soundToggle` or M and kept in localStorage. The button sits just under the dashboard; `placeSoundButton()` re-measures every 0.5 s because the dashboard height changes with the HUD layout. The context is suspended while the tab is hidden.
+- **Hooks.** Crash (every new hit, even when the cooldown blocks the cash), coins for cash, prop smash, creature hit and smash, landing thump, boost, car door, upgrade purchase, activity start, pickup and finish, skip click, event klaxon, comms, ray zap, Turbo, Super Springs hop, Boing bounce, Reward Ring and event wins.
+- **Assets.** MP3 (mono, 56 kbps) for one-shots because every browser decodes it; the two loops are short WAVs so they loop without the MP3 gap. About 290 KB in all. `tools/make_sounds.js` rebuilds the klaxon, boing and both loops; sources are in `ASSET_CREDITS.txt`.
+
+## Crash bonus cooldown (T-050)
+
+`registerCrashReward()` still pays once per new contact (up to $45, unscaled), but each surface pays at most once per `CRASH_REWARD_COOLDOWN` (8 s) of game time. A surface is one building (`crashSurfaceKey()` merges the cab and trailer keys) or one pair of vehicles. Headless (`node tools/economy_report.js 2 1`): ramming one wall earned $738 a minute before and $189 after; head-on traffic $443 before and $225 after; focused activities are now the best rate at about $234.
 
 ## Recipes
 

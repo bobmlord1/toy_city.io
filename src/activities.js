@@ -363,6 +363,7 @@ function startActivity(def) {
   if (currentActivity) return false;
   currentActivity = { def, phase: "start", t: 0 };
   activityTypes[def.type].begin(currentActivity);
+  sfx(def.type === "delivery" ? "pickup" : "activity_start");
   return true;
 }
 function completeActivity() {
@@ -373,6 +374,7 @@ function completeActivity() {
   completedActivities++;
   const f = activityTypes[act.def.type].finish(act);
   spawnConfetti(f.x, f.z, 44);
+  sfx("activity_done");
   say(f.text + "  +$" + act.def.payout, 2600);
   activityReadyAt = activityClock + ACTIVITY_RESTART_DELAY;
   drawActivityBoard(act.def.id);
@@ -383,6 +385,7 @@ function skipActivity() {
   currentActivity = null;
   const type = activityTypes[act.def.type];
   if (type.cleanup) type.cleanup(act);
+  sfx("click");
   say("No problem! Pick another marker.", 1500);
   activityReadyAt = activityClock + 0.4;
   drawActivityBoard(act.def.id);
