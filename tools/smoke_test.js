@@ -1554,6 +1554,24 @@ if (turnCheck.turnSamples === 0 || turnCheck.fastTurns > turnCheck.turnSamples *
   if (!ev.during || ev.after) failures.push("Music: event music should switch on for an event and off after (" + JSON.stringify(ev) + ")");
 }
 
+// ---- T-029: toy plastic materials ----
+{
+  const m = get(`(() => { const b = new MeshBuilder(); const r = {};
+    b.useMaterial(0.97, 0, 1); r.lawn = b.material[0];
+    b.useMaterial(0.2, 0, 0); r.toy = b.material[0];
+    b.useMaterial(0.34, 0.72, 6); r.metal = b.material[1];
+    return r; })()`);
+  if (!(m.lawn >= 0.9)) failures.push("Materials: the lawn and roads should stay satin (roughness " + m.lawn + "), or they glare like the toys");
+  if (!(m.toy <= 0.25)) failures.push("Materials: toys should stay glossy (roughness " + m.toy + ")");
+  if (!(m.metal <= 0.2)) failures.push("Materials: painted metal should not turn into chrome (metallic " + m.metal + ")");
+  const src = read("src/renderer.js");
+  for (const tag of ["TOY_REFLECT_MAX", "TOY_SHADE_SATURATION", "2.51*lum+0.03"])
+    if (!src.includes(tag)) failures.push("Materials: renderer.js lost the toy look piece " + tag);
+  if (/color=color\/\(color\+vec3/.test(src)) failures.push("Materials: the old per-channel tone curve (washes colors out) is back");
+  if (!/normalize\(TOY_LIGHT\.sunDirection\)/.test(read("src/shadows.js"))) failures.push("Materials: shadows should use the same sun as the shaders");
+  if (!(get("VEHICLE_PAINT_SATURATION") > 1)) failures.push("Materials: vehicle paint saturation boost is missing");
+}
+
 if (failures.length) {
   console.error("SMOKE TEST FAILED\n- " + failures.join("\n- "));
   process.exit(1);

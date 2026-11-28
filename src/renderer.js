@@ -12,9 +12,11 @@ class MeshBuilder {
     this.material = [0.27, 0.015, 0];
   }
   useMaterial(roughness = 0.35, metallic = 0, texture = 0) {
-    // This world is a molded-plastic toy set: glossy dielectric surfaces, not gritty photorealistic materials.
-    const toyRoughness = clamp(0.15 + clamp(roughness, 0, 1) * 0.19, 0.17, 0.36);
-    const toyMetallic = clamp(metallic, 0, 0.3) * 0.12;
+    // T-029: toys are glossy molded plastic (roughness about 0.15 to 0.35); the ground, roads and
+    // concrete are a satin play mat (about 0.8 to 0.95). The old mapping squeezed every value into
+    // 0.17 to 0.36, so the lawn and roads were as shiny as the toys and caught sky glare.
+    const toyRoughness = clamp(roughness, 0.15, 0.95);
+    const toyMetallic = clamp(metallic, 0, 0.85) * 0.2; // painted toy metal, never bare chrome
     this.material = [toyRoughness, toyMetallic, 0];
   }
   tri(a, b, c, color, na = null, nb = null, nc = null) {
@@ -130,12 +132,13 @@ uniform vec3 uFogColor; uniform vec3 uSunDirection; uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient; uniform vec3 uGroundAmbient; uniform mediump vec3 uCamera;
 varying vec3 vColor; varying vec3 vNormal; varying vec3 vWorld; varying vec3 vMaterial; varying float vFog;
 const float PI=3.14159265;
+const float TOY_AMBIENT=0.7; const float TOY_REFLECT=0.75; const float TOY_REFLECT_MAX=0.45; const float TOY_EXPOSURE=0.8; const float TOY_SHADE_SATURATION=0.3;
 vec3 fresnelSchlick(float cosTheta,vec3 f0){return f0+(1.0-f0)*pow(1.0-cosTheta,5.0);}
 float distributionGGX(vec3 N,vec3 H,float roughness){float a=roughness*roughness;float a2=a*a;float nDotH=max(dot(N,H),0.0);float n2=nDotH*nDotH;float d=n2*(a2-1.0)+1.0;return a2/max(PI*d*d,0.001);}
 float geometrySchlickGGX(float nDotV,float roughness){float r=roughness+1.0;float k=(r*r)/8.0;return nDotV/max(nDotV*(1.0-k)+k,0.001);}
 void main(){
  vec3 N=normalize(vNormal),V=normalize(uCamera-vWorld),L=normalize(uSunDirection),H=normalize(V+L);
- float roughness=clamp(vMaterial.x,0.14,0.58),metallic=clamp(vMaterial.y,0.0,0.12);
+ float roughness=clamp(vMaterial.x,0.14,0.95),metallic=clamp(vMaterial.y,0.0,0.45);
  // Flat, saturated vertex colors are intentional: every object should read as molded toy plastic.
  vec3 base=pow(max(vColor,vec3(0.0)),vec3(2.2));
  float nDotL=max(dot(N,L),0.0),nDotV=max(dot(N,V),0.001),vDotH=max(dot(V,H),0.0);
@@ -145,26 +148,44 @@ void main(){
  vec3 sunDiffuse=(1.0-F)*(1.0-metallic)*base/PI;
  vec3 directSun=(sunDiffuse+sunSpec*2.15)*uSunColor*nDotL;
  // A broad studio-style fill source creates readable glossy highlights on the toy surfaces.
+ // Studio fill: a soft second light from the opposite side so shaded faces keep their shape.
  vec3 fillL=normalize(vec3(-0.58,0.62,-0.53)),fillH=normalize(V+fillL);
- float fillNdotL=max(dot(N,fillL),0.0),fillNdotH=max(dot(N,fillH),0.0);
- vec3 fillF=fresnelSchlick(max(dot(V,fillH),0.0),F0);
+ float fillNdotL=max(dot(N,fillL),0.0);
  float fillD=distributionGGX(N,fillH,roughness*1.18);
- float fillG=geometrySchlickGGX(nDotV,roughness*1.18)*geometrySchlickGGX(fillNdotL,roughness*1.18);
- vec3 fillSpec=(fillD*fillG*fillF)/max(4.0*nDotV*max(fillNdotL,0.001),0.001);
- vec3 fillDiffuse=(1.0-fillF)*(1.0-metallic)*base/PI;
- vec3 directFill=(fillDiffuse*vec3(.18,.22,.30)+fillSpec*vec3(.85,.92,1.0)*1.25)*fillNdotL;
- // Hemispherical ambient light and a ground bounce approximate diffuse global illumination.
+ vec3 directFill=(base*(1.0-metallic)/PI*vec3(.20,.24,.32)+F0*fillD*0.18*vec3(.85,.92,1.0))*fillNdotL;
+ // Ambient multiplies the base color, so faces in shade stay saturated instead of turning grey.
  float hemi=clamp(N.y*0.5+0.5,0.0,1.0);
  vec3 ambient=mix(uGroundAmbient,uSkyAmbient,hemi);
  float groundBounce=0.16*(1.0-hemi)*clamp(1.0-vWorld.y/20.0,0.0,1.0);
- vec3 indirectDiffuse=base*(1.0-metallic)*(ambient*0.78+uGroundAmbient*groundBounce);
- vec3 environmentTint=mix(uGroundAmbient,uSkyAmbient,0.72);
- vec3 indirectSpecular=F0*environmentTint*(1.15-roughness*0.75);
- vec3 color=directSun+directFill+indirectDiffuse+indirectSpecular;
+ vec3 indirectDiffuse=base*(1.0-metallic)*(ambient*TOY_AMBIENT+uGroundAmbient*groundBounce);
+ // Glossy plastic reflects its surroundings only at glancing angles (Fresnel). A procedural
+ // sky/horizon/ground gradient stands in for an environment map: faces turned toward the camera
+ // keep their pure color, edges and faces seen side-on pick up a bright sky sheen.
+ vec3 R=reflect(-V,N);
+ float up=R.y;
+ vec3 skyLin=vec3(0.78,0.84,0.95);
+ vec3 env=mix(pow(uGroundAmbient,vec3(2.2))*0.6,vec3(1.0,1.02,1.05),smoothstep(-0.2,0.02,up));
+ env=mix(env,skyLin,smoothstep(0.05,0.55,up));
+ float glossy=1.0-smoothstep(0.15,0.6,roughness);
+ vec3 envF=min(fresnelSchlick(nDotV,F0),vec3(TOY_REFLECT_MAX))*glossy;
+ vec3 indirectSpecular=env*envF*TOY_REFLECT;
+ vec3 color=(directSun+directFill+indirectDiffuse)*(1.0-envF)+indirectSpecular;
+ color*=TOY_EXPOSURE;
  vec3 fogLinear=pow(max(uFogColor,vec3(0.0)),vec3(2.2));
  color=mix(color,fogLinear,vFog);
- color=color/(color+vec3(0.52));
- color=pow(max(color,vec3(0.0)),vec3(1.0/2.2));
+ // Filmic (ACES-style) curve on brightness only: keeps mid-tones punchy and a strong red red,
+ // where the old per-channel curve pulled every color toward grey and pink.
+ float lum=dot(color,vec3(0.2126,0.7152,0.0722));
+ float mapped=clamp(lum*(2.51*lum+0.03)/(lum*(2.43*lum+0.59)+0.14),0.0,1.0);
+ color*=mapped/max(lum,0.0001);
+ // Faces turned away from the sun keep (slightly boost) their color, so a yellow wall in shade
+ // reads as deep yellow rather than olive.
+ float shadeAmount=1.0-clamp(nDotL*1.6,0.0,1.0);
+ color=max(mix(vec3(dot(color,vec3(0.2126,0.7152,0.0722))),color,1.0+TOY_SHADE_SATURATION*shadeAmount),0.0);
+ // Anything still over 1.0 (a hot highlight) blends toward white like a real overexposed sheen.
+ float over=max(max(color.r,max(color.g,color.b))-1.0,0.0);
+ color=mix(color,vec3(1.0),clamp(over*0.6,0.0,1.0));
+ color=pow(clamp(color,0.0,1.0),vec3(1.0/2.2));
  gl_FragColor=vec4(color,1.0);
 }`;
 function shader(type, src) {
@@ -180,18 +201,35 @@ precision mediump float;
 uniform vec3 uFogColor; uniform vec3 uSunDirection; uniform vec3 uSunColor;
 uniform vec3 uSkyAmbient; uniform vec3 uGroundAmbient; uniform mediump vec3 uCamera;
 varying vec3 vColor; varying vec3 vNormal; varying vec3 vWorld; varying vec3 vMaterial; varying float vFog;
+// Simple lighting: the same toy look as the PBR shader (T-029) with a cheaper Blinn-Phong highlight.
 void main(){
  vec3 N=normalize(vNormal),V=normalize(uCamera-vWorld),L=normalize(uSunDirection);
- float roughness=clamp(vMaterial.x,0.14,0.65),metallic=clamp(vMaterial.y,0.0,0.12);
+ float roughness=clamp(vMaterial.x,0.14,0.95),metallic=clamp(vMaterial.y,0.0,0.45);
  vec3 base=pow(max(vColor,vec3(0.0)),vec3(2.2));
- float ndl=max(dot(N,L),0.0),hemi=clamp(N.y*0.5+0.5,0.0,1.0);
+ float ndl=max(dot(N,L),0.0),ndv=max(dot(N,V),0.001),hemi=clamp(N.y*0.5+0.5,0.0,1.0);
  vec3 ambient=mix(uGroundAmbient,uSkyAmbient,hemi);
- vec3 H=normalize(L+V);float shine=pow(max(dot(N,H),0.0),mix(105.0,22.0,roughness));
+ vec3 H=normalize(L+V);
+ float glossy=1.0-smoothstep(0.15,0.6,roughness);
+ float shine=pow(max(dot(N,H),0.0),mix(160.0,18.0,roughness))*mix(0.15,1.0,glossy);
  vec3 f0=mix(vec3(0.045),base,metallic);
- vec3 color=base*(ambient*.85+uSunColor*ndl*.58)*(1.0-metallic*.65)+f0*shine*ndl*1.5;
+ vec3 fillL=normalize(vec3(-0.58,0.62,-0.53));
+ vec3 color=base*(1.0-metallic)*(uSunColor*ndl/3.14159+vec3(.2,.24,.32)*max(dot(N,fillL),0.0)/3.14159+ambient*0.7)
+   +(f0+0.3)*shine*ndl*uSunColor*0.9;
+ vec3 R=reflect(-V,N);
+ vec3 env=mix(pow(uGroundAmbient,vec3(2.2))*0.6,vec3(1.0,1.02,1.05),smoothstep(-0.2,0.02,R.y));
+ env=mix(env,vec3(0.78,0.84,0.95),smoothstep(0.05,0.55,R.y));
+ float fres=min(0.045+0.955*pow(1.0-ndv,5.0),0.45)*glossy;
+ color=color*(1.0-fres)+env*fres*0.75;
+ color*=0.8;
  vec3 fogLinear=pow(max(uFogColor,vec3(0.0)),vec3(2.2));
- color=mix(color,fogLinear,vFog);color=color/(color+vec3(.58));
- gl_FragColor=vec4(pow(max(color,vec3(0.0)),vec3(1.0/2.2)),1.0);
+ color=mix(color,fogLinear,vFog);
+ float lum=dot(color,vec3(0.2126,0.7152,0.0722));
+ color*=clamp(lum*(2.51*lum+0.03)/(lum*(2.43*lum+0.59)+0.14),0.0,1.0)/max(lum,0.0001);
+ float shade=1.0-clamp(ndl*1.6,0.0,1.0);
+ color=max(mix(vec3(dot(color,vec3(0.2126,0.7152,0.0722))),color,1.0+0.3*shade),0.0);
+ float over=max(max(color.r,max(color.g,color.b))-1.0,0.0);
+ color=mix(color,vec3(1.0),clamp(over*0.6,0.0,1.0));
+ gl_FragColor=vec4(pow(clamp(color,0.0,1.0),vec3(1.0/2.2)),1.0);
 }`;
 function buildProgram(fragmentSource) {
   const p = gl.createProgram();
@@ -267,6 +305,15 @@ function locationsFor(p) {
   };
 }
 const fogColor = [0.61, 0.76, 0.81];
+// T-029 toy daylight. A strong warm sun against a softer sky fill gives each face of a block a
+// clearly different shade (about 3:1 lit to shaded), which is what makes simple shapes read as
+// solid plastic toys. The old sun was barely brighter than the ambient light, so faces looked flat.
+const TOY_LIGHT = {
+  sunDirection: [-0.45, 0.82, 0.36], // unchanged: shadows.js projects with the same direction
+  sunColor: [2.9, 2.68, 2.3],
+  skyAmbient: [0.58, 0.68, 0.84],
+  groundAmbient: [0.34, 0.36, 0.28],
+};
 function activateLighting(mode, notify = false) {
   const useAdvanced = mode === "advanced" && !!advancedProgram;
   activeLighting = useAdvanced ? "advanced" : "simple";
@@ -274,10 +321,10 @@ function activateLighting(mode, notify = false) {
   gl.useProgram(activeProgram);
   loc = locationsFor(activeProgram);
   gl.uniform3fv(loc.fog, fogColor);
-  gl.uniform3fv(loc.sunDir, normalize([-0.45, 0.82, 0.36]));
-  gl.uniform3fv(loc.sunColor, [1.85, 1.7, 1.48]);
-  gl.uniform3fv(loc.sky, [0.56, 0.67, 0.82]);
-  gl.uniform3fv(loc.ground, [0.3, 0.34, 0.25]);
+  gl.uniform3fv(loc.sunDir, normalize(TOY_LIGHT.sunDirection));
+  gl.uniform3fv(loc.sunColor, TOY_LIGHT.sunColor);
+  gl.uniform3fv(loc.sky, TOY_LIGHT.skyAmbient);
+  gl.uniform3fv(loc.ground, TOY_LIGHT.groundAmbient);
   const toggle = $("lightingToggle");
   toggle.dataset.mode = activeLighting;
   if (!advancedProgram) {

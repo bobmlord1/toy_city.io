@@ -14,20 +14,31 @@ if (!VEHICLE_ASSET_DATA || !VEHICLE_ASSET_DATA.meta || !VEHICLE_ASSET_DATA.buffe
     "Vehicle model files were not loaded. Start the game with run_game.py or the provided launcher.",
   );
 const VEHICLE_GEOMETRY_BUFFER = VEHICLE_ASSET_DATA.buffer;
+const VEHICLE_PAINT_SATURATION = 1.8;
 function createIndexedVehicleMesh(desc, tint = [1, 1, 1]) {
   const sourceVertices = new Float32Array(
     VEHICLE_GEOMETRY_BUFFER,
     desc.vertexByteOffset,
     desc.vertexCount * 12,
   );
-  let vertices = sourceVertices;
-  if (tint[0] !== 1 || tint[1] !== 1 || tint[2] !== 1) {
-    vertices = new Float32Array(sourceVertices);
-    for (let i = 0; i < vertices.length; i += 12) {
-      vertices[i + 6] = clamp(vertices[i + 6] * tint[0], 0, 1);
-      vertices[i + 7] = clamp(vertices[i + 7] * tint[1], 0, 1);
-      vertices[i + 8] = clamp(vertices[i + 8] * tint[2], 0, 1);
+  // T-029: the CC0 models ship with soft pastel paint. Push colored parts toward toy-bright
+  // paint (VEHICLE_PAINT_SATURATION); greys, whites, glass and black tires are left alone.
+  const vertices = new Float32Array(sourceVertices);
+  for (let i = 0; i < vertices.length; i += 12) {
+    let r = vertices[i + 6] * tint[0],
+      g = vertices[i + 7] * tint[1],
+      b = vertices[i + 8] * tint[2];
+    const hi = Math.max(r, g, b),
+      lo = Math.min(r, g, b);
+    if (hi > 0.08 && (hi - lo) / hi > 0.12) {
+      const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      r = l + (r - l) * VEHICLE_PAINT_SATURATION;
+      g = l + (g - l) * VEHICLE_PAINT_SATURATION;
+      b = l + (b - l) * VEHICLE_PAINT_SATURATION;
     }
+    vertices[i + 6] = clamp(r, 0, 1);
+    vertices[i + 7] = clamp(g, 0, 1);
+    vertices[i + 8] = clamp(b, 0, 1);
   }
   const indices = new Uint16Array(VEHICLE_GEOMETRY_BUFFER, desc.indexByteOffset, desc.indexCount);
   const buffer = gl.createBuffer();

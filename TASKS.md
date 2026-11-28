@@ -137,6 +137,7 @@ Files: rendering/material files and affected assets as required, `TASKS.md`.
 Why: Reinforce the molded-plastic toy aesthetic across the existing cars, roads, buildings, props, ramps and upgrade pads.
 Done when: a focused visual audit identifies and improves inconsistent materials/lighting using the existing renderer and procedural asset approach; the world reads as a cohesive toy playset; performance and legibility remain acceptable.
 Notes: No new rendering engine, external asset pipeline, or broad visual rebuild. Make a few targeted improvements and review them in-game.
+Status: first pass implemented in v0.24.0 (owner asked 2026-11-27: world looks washed out, wants glossy plastic). Fixed the shader causes of the washout, separated glossy toys from a satin play mat, shared look for both lighting modes, brighter lawn and vehicle paint. Awaiting owner visual review. Possible second pass: rounded or beveled edges on blocks so highlights run along edges.
 
 ### T-030 Free-roam discovery and world layout review
 Assigned to: project owner / ChatGPT design; Claude only for approved placement changes.

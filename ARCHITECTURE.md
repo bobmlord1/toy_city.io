@@ -37,7 +37,7 @@ The files in `src/` are **plain scripts that share one global scope**, not ES mo
 | `core.js` | Canvas, WebGL context, start button, fatal error screen, math helpers. Loads first. |
 | `audio.js` | Web Audio sound effects (`sfx()`), engine and skid loops (`updateAudio()`), sound button and M key (T-034). |
 | `music.js` | Background music playlist, event music, music button and N key (T-051). |
-| `renderer.js` | `MeshBuilder`, shaders, lighting modes, matrices, `draw()`. |
+| `renderer.js` | `MeshBuilder`, shaders (toy plastic look, T-029), `TOY_LIGHT`, lighting modes, matrices, `draw()`. |
 | `world_config.js` | World size, street dimensions, ramp definitions, ground height (`driveSurfaceH`). |
 | `world_streets.js` | Data-driven street kit and its colliders. |
 | `world_city.js` | Yard, ramp meshes, buildings, trees, lamps. Ends by building `worldMesh`. |
@@ -150,6 +150,17 @@ When a car is being held below its top speed by a slower car ahead, `trafficFoll
 - **Level.** Three levels (on 0.55, quiet 0.2, off) on the master gain, cycled by `#soundToggle` or M and kept in localStorage. The button sits just under the dashboard; `placeSoundButton()` re-measures every 0.5 s because the dashboard height changes with the HUD layout. The context is suspended while the tab is hidden.
 - **Hooks.** Crash (every new hit, even when the cooldown blocks the cash), coins for cash, prop smash, creature hit and smash, landing thump, boost, car door, upgrade purchase, activity start, pickup and finish, skip click, event klaxon, comms, ray zap, Turbo, Super Springs hop, Boing bounce, Reward Ring and event wins.
 - **Assets.** MP3 (mono, 56 kbps) for one-shots because every browser decodes it; the two loops are short WAVs so they loop without the MP3 gap. About 290 KB in all. `tools/make_sounds.js` rebuilds the klaxon, boing and both loops; sources are in `ASSET_CREDITS.txt`.
+
+## Toy plastic look (T-029)
+
+Both shaders (advanced PBR and simple Blinn-Phong) share one look, so the lighting toggle changes highlight quality, not color. Tunables are the `TOY_*` constants at the top of the shader source and `TOY_LIGHT` in `renderer.js`.
+
+- **Materials.** `MeshBuilder.useMaterial(roughness, metallic)` keeps the roughness it is given (0.15 to 0.95): toys about 0.15 to 0.35 (glossy), ground, roads and concrete about 0.8 to 0.97 (satin play mat). Metallic is scaled to at most 0.17, painted toy metal rather than chrome. Before v0.24.0 every roughness was squeezed into 0.17 to 0.36, so the lawn and roads were as shiny as the toys and threw a large sky-colored glare across the screen.
+- **Light.** `TOY_LIGHT`: a warm sun about three times the sky fill (`TOY_AMBIENT` 0.7), so the faces of a block read clearly different. Ambient light multiplies the base color, so shaded faces stay colored. The sun direction is shared with `shadows.js` (`shadowSun`).
+- **Reflections.** Glossy surfaces reflect a procedural sky, horizon and ground gradient through a Fresnel term, capped at `TOY_REFLECT_MAX` (0.45) and faded out for rough surfaces. Faces turned toward the camera keep their pure color; edges and side-on faces pick up a soft sheen. The old shader added a constant sky tint to every pixel, which lifted the dark channels of saturated colors (a red's green and blue) and turned everything pastel.
+- **Tone mapping.** A filmic (ACES-style) curve applied to brightness only, after `TOY_EXPOSURE` 0.8, so mid-tones stay punchy and hues do not drift. The old per-channel curve compressed the strongest channel most, pulling every color toward grey. Shaded faces get a small saturation boost (`TOY_SHADE_SATURATION`) so yellow in shade stays yellow instead of olive; anything above 1.0 blends toward white like a real overexposed highlight.
+- **Colors.** Lawn is play-mat green `[0.3, 0.6, 0.26]` (was sage). Vehicle paint from the CC0 models is pushed toward toy-bright with `VEHICLE_PAINT_SATURATION` (1.8) in `createIndexedVehicleMesh()`; greys, whites, glass and tires are left alone.
+- **Checking it.** No real browser is available to agents, but real WebGL renders work headless: the `gl` npm package (headless-gl) under `xvfb-run`, with the page in jsdom and typed arrays copied across realms. This produced the before and after screenshots for v0.24.0. It is not part of the repo.
 
 ## Mix and music (T-051)
 
