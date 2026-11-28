@@ -716,3 +716,14 @@ Files changed: as in the claim above.
 Status: done pending playtest
 Owner playtest of v0.23.1: music good, balance better, but everything too loud. Master levels lowered 10 dB: on 1 to 0.32, quiet 0.35 to 0.11 (`SOUND_LEVELS` in `src/audio.js`). Music follows the master, so it drops too. Smoke test checks the levels. Not verified by ear.
 Files changed: `src/audio.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+
+### 2026-11-28 | Claude -> All | CLAIM T-029 first pass (logged with the handoff below)
+Files: `src/renderer.js`, `src/vehicles.js`, `src/world_streets.js`, `src/shadows.js`, `tools/smoke_test.js`, `index.html` (version), `README.txt`, `ARCHITECTURE.md`, `TASKS.md`, `agent_comments.md`.
+Note: written at handoff. T-029 is assigned to Claude; the owner raised it directly in chat.
+
+### 2026-11-28 | Claude -> All | HANDOFF T-029 first pass (v0.24.0)
+Status: partial (first pass done; owner visual review needed)
+Diagnosis (measured, see ARCHITECTURE "Toy plastic look"): three shader causes of the washed-out look. (1) A constant sky-colored "indirect specular" was added to every pixel; for saturated colors it was 3 to 6 times larger than the weak channels, so reds and greens went pastel. (2) The per-channel tone curve compressed the strongest channel most, pulling colors toward grey (saturation 0.87 in, about 0.60 out for a red). (3) `useMaterial` squeezed every roughness into 0.17 to 0.36, so the lawn (0.97) and roads were as glossy as the toys and threw a large sky glare. The sun was also barely brighter than the ambient light, so faces looked flat.
+Done: glossy toys versus satin play mat; Fresnel-capped procedural environment reflection; brightness-only filmic tone curve; stronger sun versus fill (about 3:1); saturation kept in shade; lawn and vehicle paint brighter; simple shader rewritten to the same look. Smoke test checks the material ranges and that the old tone curve does not return.
+Verified with real WebGL renders (headless-gl under xvfb, not in the repo): four viewpoints, before and after, both lighting modes, and a prop close-up. Not verified: a real GPU and browser, phones (the shader adds a few operations), how it looks in motion.
+Next agent should: owner reviews in game. Possible second pass: beveled block edges for edge highlights, per-object colors for props.

@@ -1,4 +1,4 @@
-FREE ROAM CAR PLAYGROUND - VERSION 0.23.2
+FREE ROAM CAR PLAYGROUND - VERSION 0.24.0
 
 WHAT'S NEW
 - Imported toy vehicles now have separately animated wheels.
@@ -152,3 +152,6 @@ Version 0.23.1:
 
 Version 0.23.2:
 - Everything (sounds and music) is 10 dB quieter on both the normal and quiet settings.
+
+Version 0.24.0:
+- Brighter, more colorful toy look. Toys are glossy plastic with a soft sheen at the edges; the ground and roads are a satin play mat instead of shiny (no more big white glare). A stronger sun gives every block a clearly lit side and shaded side, and colors no longer fade toward grey. Cars have brighter paint and the grass is a play-mat green. Simple and advanced lighting now look the same apart from highlight detail.

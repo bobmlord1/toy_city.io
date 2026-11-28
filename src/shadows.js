@@ -72,7 +72,7 @@ function pushShadowTriangle(out, a, b, c, alpha, depth) {
   for (const p of [a, b, c]) out.push(p.x, shadowSurfaceH(p.x, p.z), p.z, alpha);
 }
 const staticShadowVertices = [];
-const shadowSun = normalize([-0.45, 0.82, 0.36]);
+const shadowSun = normalize(TOY_LIGHT.sunDirection); // T-029: same sun as the shaders
 function appendShadowCaster(out, caster) {
   const c = Math.cos(caster.yaw || 0),
     si = Math.sin(caster.yaw || 0);
